@@ -1,11 +1,13 @@
 import template from './vo-video-picker.html.twig';
 
-const { Component } = Shopware;
+const { Component, Mixin } = Shopware;
 
 Component.register('vo-video-picker', {
     template,
 
     inject: ['videoOptimizerApiService'],
+
+    mixins: [Mixin.getByName('notification')],
 
     props: {
         value: {
@@ -33,16 +35,34 @@ Component.register('vo-video-picker', {
         },
     },
 
+    watch: {
+        value: {
+            handler(newValue) {
+                const next = newValue || {};
+                const libraryChanged = next.libraryId !== this.libraryId;
+                this.libraryId = next.libraryId ?? null;
+                this.videoUuid = next.videoUuid ?? null;
+                if (libraryChanged) {
+                    this.loadVideos();
+                }
+            },
+        },
+    },
+
     created() {
         this.loadLibraries();
     },
 
     methods: {
         async loadLibraries() {
-            const response = await this.videoOptimizerApiService.getLibraries();
-            this.libraries = response.data ?? response;
-            if (this.libraryId) {
-                await this.loadVideos();
+            try {
+                const response = await this.videoOptimizerApiService.getLibraries();
+                this.libraries = response.data ?? response;
+                if (this.libraryId) {
+                    await this.loadVideos();
+                }
+            } catch (error) {
+                this.createNotificationError({ message: this._errorText(error) });
             }
         },
         async loadVideos() {
@@ -50,8 +70,12 @@ Component.register('vo-video-picker', {
                 this.videos = [];
                 return;
             }
-            const response = await this.videoOptimizerApiService.getVideos(this.libraryId);
-            this.videos = response.data ?? response;
+            try {
+                const response = await this.videoOptimizerApiService.getVideos(this.libraryId);
+                this.videos = response.data ?? response;
+            } catch (error) {
+                this.createNotificationError({ message: this._errorText(error) });
+            }
         },
         onLibraryChange(value) {
             this.libraryId = value;
@@ -65,6 +89,9 @@ Component.register('vo-video-picker', {
         },
         _emit() {
             this.$emit('update:value', { libraryId: this.libraryId, videoUuid: this.videoUuid });
+        },
+        _errorText(error) {
+            return error?.response?.data?.errors?.[0]?.detail ?? this.$tc('vo-media.list.genericError');
         },
     },
 });
