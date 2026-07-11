@@ -10,5 +10,21 @@
         :options="videoOptions"
         :model-value="videoUuid"
         @update:model-value="onVideoChange" />
+
+    <div v-if="libraryId" class="vo-video-picker__upload" style="margin-top:12px">
+        <mt-text-field
+            :label="$tc('vo-media.cms.uploadNew')"
+            :placeholder="$tc('vo-media.list.videoTitle')"
+            v-model="uploadTitle" />
+        <input type="file" accept="video/*" :disabled="isUploading" @change="onFileSelected" />
+        <mt-button
+            variant="secondary"
+            size="small"
+            :is-loading="isUploading"
+            :disabled="!uploadFile || isUploading"
+            @click="onUpload">
+            {{ $tc('vo-media.list.upload') }}
+        </mt-button>
+    </div>
 </div>
 {% endblock %}

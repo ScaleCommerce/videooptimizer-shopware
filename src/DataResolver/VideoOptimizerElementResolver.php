@@ -62,7 +62,25 @@ class VideoOptimizerElementResolver extends AbstractCmsElementResolver
             'poster' => $embed['poster'] ?? null,
             'title' => $embed['title'] ?? null,
             'duration' => $embed['duration'] ?? null,
+            'aspectRatio' => $this->deriveAspectRatio($embed['resolution'] ?? null),
         ];
+    }
+
+    /**
+     * Turn a "WIDTHxHEIGHT" resolution (e.g. "1260x750") into a CSS aspect-ratio
+     * value ("1260 / 750"). Falls back to null when it cannot be parsed, so the
+     * template can apply its own default.
+     */
+    private function deriveAspectRatio(?string $resolution): ?string
+    {
+        if (!is_string($resolution) || !preg_match('/^(\d+)\s*x\s*(\d+)$/i', trim($resolution), $m)) {
+            return null;
+        }
+        if ((int) $m[1] <= 0 || (int) $m[2] <= 0) {
+            return null;
+        }
+
+        return $m[1] . ' / ' . $m[2];
     }
 
     private function pickHlsSource(array $sources): ?string

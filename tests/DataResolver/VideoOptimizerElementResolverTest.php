@@ -36,6 +36,7 @@ class VideoOptimizerElementResolverTest extends TestCase
             'poster' => 'https://cdn/poster.jpg',
             'title' => 'Demo',
             'duration' => '10',
+            'resolution' => '1260x750',
         ]);
 
         $slot = $this->slotWithUuid('uuid-1');
@@ -51,6 +52,7 @@ class VideoOptimizerElementResolverTest extends TestCase
         static::assertSame('https://cdn/720p.mp4', $embed['mp4']);
         static::assertSame('https://cdn/poster.jpg', $embed['poster']);
         static::assertSame('Demo', $embed['title']);
+        static::assertSame('1260 / 750', $embed['aspectRatio']);
     }
 
     public function testEnrichHandlesMissingSourcesWithoutError(): void

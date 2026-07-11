@@ -15,6 +15,5 @@ Shopware.Service('cmsService').registerCmsElement({
         autoplay: { source: 'static', value: false },
         muted: { source: 'static', value: false },
         loop: { source: 'static', value: false },
-        aspectRatio: { source: 'static', value: '16/9' },
     },
 });

@@ -25,7 +25,7 @@
             "autoplay": "Autoplay",
             "muted": "Muted",
             "loop": "Loop",
-            "aspectRatio": "Aspect ratio (e.g. 16/9)"
+            "uploadNew": "Upload a new video"
         }
     },
     "sw-privileges": {

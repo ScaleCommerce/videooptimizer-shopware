@@ -1,7 +1,7 @@
 {% block element_vo_video %}
     {% set videoData = element.data %}
     {% set config = element.config %}
-    {% set aspectRatio = config.aspectRatio.value|default('16/9') %}
+    {% set aspectRatio = (videoData.embed.aspectRatio ?? null)|default('16 / 9') %}
     <div class="cms-element-vo-video" style="width:100%">
         {% if videoData and videoData.embed and not videoData.hasError %}
             <div class="vo-video"

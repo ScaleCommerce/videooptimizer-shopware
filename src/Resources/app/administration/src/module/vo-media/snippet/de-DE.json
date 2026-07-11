@@ -25,7 +25,7 @@
             "autoplay": "Autoplay",
             "muted": "Stummschalten",
             "loop": "Endlosschleife",
-            "aspectRatio": "Seitenverhältnis (z. B. 16/9)"
+            "uploadNew": "Neues Video hochladen"
         }
     },
     "sw-privileges": {
