@@ -1,0 +1,30 @@
+{% block element_scale_video_optimizer_video %}
+    {% set videoData = element.data %}
+    {% set config = element.config %}
+    {% set aspectRatio = (videoData.embed.aspectRatio ?? null)|default('16 / 9') %}
+    <div class="cms-element-scale-video-optimizer-video" style="width:100%">
+        {% if videoData and videoData.embed and not videoData.hasError %}
+            <div class="scale-video-optimizer-video"
+                 data-scale-video-optimizer-player="true"
+                 data-scale-video-optimizer-player-options='{{ {
+                     hls: videoData.embed.hls ?? null,
+                     mp4: videoData.embed.mp4 ?? null,
+                     poster: videoData.embed.poster ?? null,
+                     controls: config.showControls.value ?? true,
+                     autoplay: config.autoplay.value ?? false,
+                     muted: config.muted.value ?? false,
+                     loop: config.loop.value ?? false
+                 }|json_encode }}'
+                 style="position:relative;width:100%;aspect-ratio:{{ aspectRatio }}">
+                <video class="scale-video-optimizer-video__player"
+                       style="width:100%;height:100%;object-fit:cover"
+                       playsinline
+                       {% if videoData.embed.poster %}poster="{{ videoData.embed.poster }}"{% endif %}></video>
+            </div>
+        {% else %}
+            <div class="scale-video-optimizer-video scale-video-optimizer-video--empty">
+                {{ "scale-video-optimizer.storefront.unavailable"|trans|default('Video is not available.') }}
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

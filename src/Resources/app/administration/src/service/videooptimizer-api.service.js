@@ -1,9 +1,9 @@
 const { ApiService } = Shopware.Classes;
 
 export default class VideoOptimizerApiService extends ApiService {
-    constructor(httpClient, loginService, apiEndpoint = '_action/videooptimizer') {
+    constructor(httpClient, loginService, apiEndpoint = '_action/scale-video-optimizer') {
         super(httpClient, loginService, apiEndpoint);
-        this.name = 'videoOptimizerApiService';
+        this.name = 'scaleVideoOptimizerApiService';
     }
 
     getLibraries() {

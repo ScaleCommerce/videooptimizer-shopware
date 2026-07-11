@@ -1,0 +1,10 @@
+{% block element_config_scale_video_optimizer_video %}
+<div class="scale-video-optimizer-cms-element-config">
+    <scale-video-optimizer-video-picker :value="pickerValue" @update:value="onPickerChange" />
+
+    <mt-switch :label="$tc('scale-video-optimizer.cms.showControls')" v-model="element.config.showControls.value" />
+    <mt-switch :label="$tc('scale-video-optimizer.cms.autoplay')" v-model="element.config.autoplay.value" />
+    <mt-switch :label="$tc('scale-video-optimizer.cms.muted')" v-model="element.config.muted.value" />
+    <mt-switch :label="$tc('scale-video-optimizer.cms.loop')" v-model="element.config.loop.value" />
+</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% block scale_video_optimizer_video_picker %}
+<div class="scale-video-optimizer-video-picker">
+    <mt-select
+        :label="$tc('scale-video-optimizer.list.selectLibrary')"
+        :options="libraryOptions"
+        :model-value="libraryId"
+        @update:model-value="onLibraryChange" />
+    <mt-select
+        :label="$tc('scale-video-optimizer.list.videosTitle')"
+        :options="videoOptions"
+        :model-value="videoUuid"
+        @update:model-value="onVideoChange" />
+
+    <div v-if="libraryId" class="scale-video-optimizer-video-picker__upload" style="margin-top:12px">
+        <mt-text-field
+            :label="$tc('scale-video-optimizer.cms.uploadNew')"
+            :placeholder="$tc('scale-video-optimizer.list.videoTitle')"
+            v-model="uploadTitle" />
+        <input type="file" accept="video/*" :disabled="isUploading" @change="onFileSelected" />
+        <mt-button
+            variant="secondary"
+            size="small"
+            :is-loading="isUploading"
+            :disabled="!uploadFile || isUploading"
+            @click="onUpload">
+            {{ $tc('scale-video-optimizer.list.upload') }}
+        </mt-button>
+    </div>
+</div>
+{% endblock %}

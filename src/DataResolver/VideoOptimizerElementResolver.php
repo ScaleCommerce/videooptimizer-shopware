@@ -18,7 +18,7 @@ class VideoOptimizerElementResolver extends AbstractCmsElementResolver
 
     public function getType(): string
     {
-        return 'vo-video';
+        return 'scale-video-optimizer-video';
     }
 
     public function collect(CmsSlotEntity $slot, ResolverContext $resolverContext): ?CriteriaCollection
