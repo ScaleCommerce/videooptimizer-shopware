@@ -26,5 +26,12 @@
             "loop": "Endlosschleife",
             "aspectRatio": "Seitenverhältnis (z. B. 16/9)"
         }
+    },
+    "sw-privileges": {
+        "permissions": {
+            "video_optimizer": {
+                "label": "VideoOptimizer"
+            }
+        }
     }
 }

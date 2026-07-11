@@ -1,4 +1,5 @@
 import VideoOptimizerApiService from './service/videooptimizer-api.service';
+import './acl';
 import './module/vo-media';
 import './component/vo-video-picker';
 import './module/sw-cms/elements/vo-video';

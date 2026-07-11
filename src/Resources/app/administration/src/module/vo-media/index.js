@@ -16,6 +16,9 @@ Shopware.Module.register('vo-media', {
         list: {
             component: 'vo-media-list',
             path: 'list',
+            meta: {
+                privilege: 'video_optimizer.viewer',
+            },
         },
     },
     navigation: [{
@@ -24,5 +27,6 @@ Shopware.Module.register('vo-media', {
         path: 'vo.media.list',
         icon: 'regular-play-circle',
         position: 100,
+        privilege: 'video_optimizer.viewer',
     }],
 });
