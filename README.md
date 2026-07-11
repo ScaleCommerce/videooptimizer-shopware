@@ -39,6 +39,7 @@ Video is the heaviest asset on most shop pages. Where it is hosted decides your 
 - A **"VideoOptimizer video" CMS element/block** for Shopping Experiences with a video picker (and optional in-place upload).
 - Storefront playback via an **adaptive HLS player** (hls.js, with native HLS fallback on Safari); aspect ratio is derived automatically from the source video.
 - Per-element player options: controls, autoplay, muted, loop.
+- If no video is selected (or a selected video can't be loaded), the block renders nothing on the storefront — no placeholder and no message.
 - The API token is stored server-side; the storefront only uses VideoOptimizer's public embed endpoint, so your token is never exposed to visitors.
 
 ## Requirements
