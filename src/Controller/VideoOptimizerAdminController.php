@@ -88,7 +88,14 @@ class VideoOptimizerAdminController
 
     private function payload(Request $request): array
     {
-        return json_decode($request->getContent() ?: '[]', true) ?? [];
+        $content = trim((string) $request->getContent());
+        if ($content === '') {
+            return [];
+        }
+
+        // Malformed JSON must fail loudly instead of silently becoming an empty payload.
+        $decoded = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
+        return is_array($decoded) ? $decoded : [];
     }
 
     private function wrap(callable $fn, int $successStatus = Response::HTTP_OK): JsonResponse
@@ -103,6 +110,8 @@ class VideoOptimizerAdminController
             return new JsonResponse(['errors' => [['status' => '400', 'detail' => $e->getMessage()]]], 400);
         } catch (VideoOptimizerApiException $e) {
             return new JsonResponse(['errors' => [['status' => (string) $e->getStatusCode(), 'detail' => $e->getMessage()]]], $e->getStatusCode());
+        } catch (\JsonException) {
+            return new JsonResponse(['errors' => [['status' => '400', 'detail' => 'Invalid JSON body.']]], 400);
         }
     }
 }
