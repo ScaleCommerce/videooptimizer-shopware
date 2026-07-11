@@ -4,13 +4,11 @@
     {% set aspectRatio = config.aspectRatio.value|default('16/9') %}
     <div class="cms-element-vo-video" style="width:100%">
         {% if videoData and videoData.embed and not videoData.hasError %}
-            {% set sources = videoData.embed.sources|default({}) %}
             <div class="vo-video"
                  data-vo-video-player="true"
                  data-vo-video-player-options='{{ {
-                     hls: sources.hls|default(null),
-                     mp4: sources.mp4|default(null),
-                     webm: sources.webm|default(null),
+                     hls: videoData.embed.hls ?? null,
+                     mp4: videoData.embed.mp4 ?? null,
                      poster: videoData.embed.poster ?? null,
                      controls: config.showControls.value ?? true,
                      autoplay: config.autoplay.value ?? false,

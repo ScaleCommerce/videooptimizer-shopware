@@ -21,10 +21,22 @@ class VideoOptimizerElementResolverTest extends TestCase
         static::assertSame('vo-video', $resolver->getType());
     }
 
-    public function testEnrichSetsEmbedData(): void
+    public function testEnrichNormalizesEmbedSources(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
-        $client->method('getEmbed')->with('uuid-1')->willReturn(['uuid' => 'uuid-1', 'sources' => ['hls' => 'master.m3u8']]);
+        // Real /embed shape: `sources` is a list; some mp4 renditions carry a
+        // truncated (not-yet-encoded) src and must be ignored.
+        $client->method('getEmbed')->with('uuid-1')->willReturn([
+            'sources' => [
+                ['src' => 'https://cdn/master.m3u8', 'type' => 'application/vnd.apple.mpegurl', 'codec' => 'hls', 'size' => null],
+                ['src' => 'https://cdn/', 'type' => 'video/mp4', 'codec' => 'h264', 'label' => '1080p', 'size' => null],
+                ['src' => 'https://cdn/480p.mp4', 'type' => 'video/mp4', 'codec' => 'h264', 'label' => '480p', 'size' => 1000],
+                ['src' => 'https://cdn/720p.mp4', 'type' => 'video/mp4', 'codec' => 'h264', 'label' => '720p', 'size' => 2000],
+            ],
+            'poster' => 'https://cdn/poster.jpg',
+            'title' => 'Demo',
+            'duration' => '10',
+        ]);
 
         $slot = $this->slotWithUuid('uuid-1');
         $resolver = new VideoOptimizerElementResolver($client);
@@ -33,7 +45,27 @@ class VideoOptimizerElementResolverTest extends TestCase
         $data = $slot->getData();
         static::assertInstanceOf(VideoOptimizerVideoStruct::class, $data);
         static::assertFalse($data->hasError());
-        static::assertSame('master.m3u8', $data->getEmbed()['sources']['hls']);
+        $embed = $data->getEmbed();
+        static::assertSame('https://cdn/master.m3u8', $embed['hls']);
+        // Largest valid .mp4 rendition wins; the truncated CDN-root src is skipped.
+        static::assertSame('https://cdn/720p.mp4', $embed['mp4']);
+        static::assertSame('https://cdn/poster.jpg', $embed['poster']);
+        static::assertSame('Demo', $embed['title']);
+    }
+
+    public function testEnrichHandlesMissingSourcesWithoutError(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willReturn(['poster' => null]);
+
+        $slot = $this->slotWithUuid('uuid-2');
+        $resolver = new VideoOptimizerElementResolver($client);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+
+        $data = $slot->getData();
+        static::assertFalse($data->hasError());
+        static::assertNull($data->getEmbed()['hls']);
+        static::assertNull($data->getEmbed()['mp4']);
     }
 
     public function testEnrichHandlesApiErrorGracefully(): void
