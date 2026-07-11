@@ -17,8 +17,8 @@ class VideoOptimizerClientTest extends TestCase
     {
         $config = $this->createMock(SystemConfigService::class);
         $config->method('getString')->willReturnMap([
-            ['VideoOptimizer.config.apiToken', null, $token],
-            ['VideoOptimizer.config.apiBaseUrl', null, 'https://api.videooptimizer.eu/api/v1'],
+            ['ScaleVideoOptimizer.config.apiToken', null, $token],
+            ['ScaleVideoOptimizer.config.apiBaseUrl', null, 'https://api.videooptimizer.eu/api/v1'],
         ]);
         return $config;
     }

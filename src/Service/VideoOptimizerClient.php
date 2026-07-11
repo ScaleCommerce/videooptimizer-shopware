@@ -108,7 +108,7 @@ class VideoOptimizerClient
 
     private function token(): string
     {
-        $token = $this->systemConfig->getString('VideoOptimizer.config.apiToken');
+        $token = $this->systemConfig->getString('ScaleVideoOptimizer.config.apiToken');
         if ($token === '') {
             throw new MissingApiTokenException();
         }
@@ -118,7 +118,7 @@ class VideoOptimizerClient
 
     private function baseUrl(): string
     {
-        $base = $this->systemConfig->getString('VideoOptimizer.config.apiBaseUrl');
+        $base = $this->systemConfig->getString('ScaleVideoOptimizer.config.apiBaseUrl');
 
         return rtrim($base !== '' ? $base : self::DEFAULT_BASE_URL, '/');
     }

@@ -1,0 +1,23 @@
+{
+  "base": "/bundles/videooptimizer/administration/",
+  "entryPoints": {
+    "video-optimizer": {
+      "css": [],
+      "dynamic": [],
+      "js": [
+        "/bundles/videooptimizer/administration/assets/video-optimizer-CH_nlzf8.js"
+      ],
+      "legacy": false,
+      "preload": []
+    }
+  },
+  "legacy": false,
+  "metadatas": {},
+  "version": [
+    "7.1.0",
+    7,
+    1,
+    0
+  ],
+  "viteServer": null
+}

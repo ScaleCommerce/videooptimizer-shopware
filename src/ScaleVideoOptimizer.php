@@ -4,6 +4,6 @@ namespace ScaleCommerce\VideoOptimizer;
 
 use Shopware\Core\Framework\Plugin;
 
-class VideoOptimizer extends Plugin
+class ScaleVideoOptimizer extends Plugin
 {
 }

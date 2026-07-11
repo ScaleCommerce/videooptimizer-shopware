@@ -1,6 +1,8 @@
-# VideoOptimizer
+# ScaleVideoOptimizer
 
 Shopware 6 plugin to manage and play VideoOptimizer platform videos: upload and organize videos in libraries via an administration module, and embed them on storefront pages through a dedicated CMS element.
+
+Maintained by ScaleCommerce GmbH. Composer package: `scalecommerce/shopware-videooptimizer`.
 
 ## Requirements
 
@@ -10,13 +12,13 @@ Shopware 6 plugin to manage and play VideoOptimizer platform videos: upload and 
 ## Installation
 
 ```bash
-bin/console plugin:install --activate VideoOptimizer
+bin/console plugin:install --activate ScaleVideoOptimizer
 ```
 
 Build the frontend assets:
 
 ```bash
-cd custom/plugins/VideoOptimizer/src/Resources/app/storefront
+cd custom/plugins/ScaleVideoOptimizer/src/Resources/app/storefront
 npm install
 ```
 

@@ -1,10 +1,10 @@
 {
-    "name": "scale-commerce/videooptimizer",
+    "name": "scalecommerce/shopware-videooptimizer",
     "description": "Manage and play VideoOptimizer videos in Shopware",
     "version": "0.1.0",
     "type": "shopware-platform-plugin",
     "license": "MIT",
-    "authors": [{ "name": "Scale Commerce" }],
+    "authors": [{ "name": "ScaleCommerce GmbH" }],
     "require": {
         "shopware/core": "~6.7.0",
         "symfony/http-client": "^7.0",
@@ -17,7 +17,7 @@
         "psr-4": { "ScaleCommerce\\VideoOptimizer\\Tests\\": "tests/" }
     },
     "extra": {
-        "shopware-plugin-class": "ScaleCommerce\\VideoOptimizer\\VideoOptimizer",
+        "shopware-plugin-class": "ScaleCommerce\\VideoOptimizer\\ScaleVideoOptimizer",
         "label": {
             "de-DE": "VideoOptimizer",
             "en-GB": "VideoOptimizer"
