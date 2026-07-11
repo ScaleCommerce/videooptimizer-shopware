@@ -126,7 +126,7 @@ Component.register('vo-media-list', {
                         return;
                     }
                 } catch (error) {
-                    /* keep polling on transient errors */
+                    console.warn('[VideoOptimizer] polling video status failed, retrying', error);
                 }
                 this._pollUntilReady(uuid, attempt + 1);
             }, 5000);
@@ -142,6 +142,9 @@ Component.register('vo-media-list', {
         },
 
         async onRenameVideo(uuid, title) {
+            if (!title) {
+                return;
+            }
             try {
                 await this.videoOptimizerApiService.updateVideo(uuid, { title });
                 await this.loadVideos();

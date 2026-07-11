@@ -14,6 +14,7 @@
             "uploadStarted": "Upload gestartet, wird verarbeitet…",
             "videosTitle": "Videos",
             "delete": "Löschen",
+            "rename": "Umbenennen",
             "genericError": "VideoOptimizer-Anfrage fehlgeschlagen"
         },
         "cms": {

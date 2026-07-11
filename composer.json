@@ -7,8 +7,8 @@
     "authors": [{ "name": "Scale Commerce" }],
     "require": {
         "shopware/core": "~6.7.0",
-        "symfony/http-client": "*",
-        "symfony/mime": "*"
+        "symfony/http-client": "^7.0",
+        "symfony/mime": "^7.0"
     },
     "autoload": {
         "psr-4": { "ScaleCommerce\\VideoOptimizer\\": "src/" }
