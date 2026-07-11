@@ -19,6 +19,7 @@
         },
         "cms": {
             "label": "VideoOptimizer-Video",
+            "blockLabel": "VideoOptimizer-Video",
             "selectVideo": "Video auswählen",
             "showControls": "Steuerung anzeigen",
             "autoplay": "Autoplay",
