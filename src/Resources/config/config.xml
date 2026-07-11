@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/shopware/platform/trunk/src/Core/System/SystemConfig/Schema/config.xsd">
+    <card>
+        <title>VideoOptimizer</title>
+        <title lang="de-DE">VideoOptimizer</title>
+        <input-field type="password">
+            <name>apiToken</name>
+            <label>API token</label>
+            <label lang="de-DE">API-Token</label>
+            <helpText>Personal VideoOptimizer API token (vp_...)</helpText>
+        </input-field>
+        <input-field>
+            <name>apiBaseUrl</name>
+            <label>API base URL</label>
+            <label lang="de-DE">API-Basis-URL</label>
+            <defaultValue>https://api.videooptimizer.eu/api/v1</defaultValue>
+        </input-field>
+    </card>
+</config>
