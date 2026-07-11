@@ -103,7 +103,11 @@ class VideoOptimizerAdminController
         try {
             $data = $fn();
             if ($successStatus === Response::HTTP_NO_CONTENT) {
-                return new JsonResponse(null, $successStatus);
+                // 204 responses carry no body; JsonResponse(null) would emit "{}".
+                $response = new JsonResponse(null, $successStatus);
+                $response->setContent('');
+
+                return $response;
             }
             return new JsonResponse(['data' => $data], $successStatus);
         } catch (MissingApiTokenException $e) {
