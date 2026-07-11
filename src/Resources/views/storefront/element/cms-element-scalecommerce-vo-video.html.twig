@@ -1,9 +1,10 @@
 {% block element_scalecommerce_vo_video %}
     {% set videoData = element.data %}
     {% set config = element.config %}
-    {% set aspectRatio = (videoData.embed.aspectRatio ?? null)|default('16 / 9') %}
-    <div class="cms-element-scalecommerce-vo-video" style="width:100%">
-        {% if videoData and videoData.embed and not videoData.hasError %}
+    {# Render nothing when no video is selected or it cannot be loaded - no placeholder, no message. #}
+    {% if videoData and videoData.embed and not videoData.hasError %}
+        {% set aspectRatio = (videoData.embed.aspectRatio ?? null)|default('16 / 9') %}
+        <div class="cms-element-scalecommerce-vo-video" style="width:100%">
             <div class="scalecommerce-vo-video"
                  data-scalecommerce-vo-player="true"
                  data-scalecommerce-vo-player-options='{{ {
@@ -21,10 +22,6 @@
                        playsinline
                        {% if videoData.embed.poster %}poster="{{ videoData.embed.poster }}"{% endif %}></video>
             </div>
-        {% else %}
-            <div class="scalecommerce-vo-video scalecommerce-vo-video--empty">
-                {{ "scalecommerce-vo.storefront.unavailable"|trans|default('Video is not available.') }}
-            </div>
-        {% endif %}
-    </div>
+        </div>
+    {% endif %}
 {% endblock %}
