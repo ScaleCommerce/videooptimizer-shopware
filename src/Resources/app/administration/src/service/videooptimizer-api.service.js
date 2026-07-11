@@ -49,11 +49,14 @@ export default class VideoOptimizerApiService extends ApiService {
         if (title) {
             formData.append('title', title);
         }
-        // Do not set Content-Type manually: the browser must add the multipart boundary itself.
+        // getBasicHeaders() defaults Content-Type to application/json; remove it so
+        // the browser sets multipart/form-data with the correct boundary, otherwise
+        // the server cannot parse the file and rejects the upload.
+        const headers = this.getBasicHeaders();
+        delete headers['Content-Type'];
+
         return this.httpClient
-            .post(`${this.getApiBasePath()}/videos`, formData, {
-                headers: this.getBasicHeaders(),
-            })
+            .post(`${this.getApiBasePath()}/videos`, formData, { headers })
             .then((response) => ApiService.handleResponse(response));
     }
 
