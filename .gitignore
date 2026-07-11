@@ -1,2 +1,5 @@
 /src/Resources/app/*/node_modules/
 /vendor/
+.superpowers/
+.phpunit.result.cache
+/.phpunit.cache/
