@@ -15,10 +15,10 @@ use Shopware\Core\Content\Cms\DataResolver\ResolverContext\ResolverContext;
 
 class VideoOptimizerElementResolverTest extends TestCase
 {
-    public function testGetTypeIsVoVideo(): void
+    public function testGetTypeIsScaleVideoOptimizerVideo(): void
     {
         $resolver = new VideoOptimizerElementResolver($this->createMock(VideoOptimizerClient::class));
-        static::assertSame('vo-video', $resolver->getType());
+        static::assertSame('scale-video-optimizer-video', $resolver->getType());
     }
 
     public function testEnrichNormalizesEmbedSources(): void
@@ -86,7 +86,7 @@ class VideoOptimizerElementResolverTest extends TestCase
     {
         $slot = new CmsSlotEntity();
         $slot->setUniqueIdentifier('slot-1');
-        $slot->setType('vo-video');
+        $slot->setType('scale-video-optimizer-video');
         $config = new FieldConfigCollection();
         $config->add(new FieldConfig('videoUuid', FieldConfig::SOURCE_STATIC, $uuid));
         $slot->setFieldConfig($config);
