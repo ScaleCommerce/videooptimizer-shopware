@@ -11,5 +11,10 @@
         <service id="ScaleCommerce\VideoOptimizer\Controller\VideoOptimizerAdminController" public="true">
             <argument type="service" id="ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient"/>
         </service>
+
+        <service id="ScaleCommerce\VideoOptimizer\DataResolver\VideoOptimizerElementResolver">
+            <argument type="service" id="ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient"/>
+            <tag name="shopware.cms.data_resolver"/>
+        </service>
     </services>
 </container>
