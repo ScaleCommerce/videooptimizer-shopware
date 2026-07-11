@@ -7,5 +7,9 @@
             <argument type="service" id="Symfony\Contracts\HttpClient\HttpClientInterface"/>
             <argument type="service" id="Shopware\Core\System\SystemConfig\SystemConfigService"/>
         </service>
+
+        <service id="ScaleCommerce\VideoOptimizer\Controller\VideoOptimizerAdminController" public="true">
+            <argument type="service" id="ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient"/>
+        </service>
     </services>
 </container>
