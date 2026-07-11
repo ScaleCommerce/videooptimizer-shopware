@@ -44,6 +44,6 @@ class VideoOptimizerVideoStruct extends Struct
 
     public function getApiAlias(): string
     {
-        return 'scale_video_optimizer_video';
+        return 'scalecommerce_vo_video';
     }
 }

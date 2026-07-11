@@ -1,0 +1,10 @@
+{% block element_config_scalecommerce_vo_video %}
+<div class="scalecommerce-vo-cms-element-config">
+    <scalecommerce-vo-video-picker :value="pickerValue" @update:value="onPickerChange" />
+
+    <mt-switch :label="$tc('scalecommerce-vo.cms.showControls')" v-model="element.config.showControls.value" />
+    <mt-switch :label="$tc('scalecommerce-vo.cms.autoplay')" v-model="element.config.autoplay.value" />
+    <mt-switch :label="$tc('scalecommerce-vo.cms.muted')" v-model="element.config.muted.value" />
+    <mt-switch :label="$tc('scalecommerce-vo.cms.loop')" v-model="element.config.loop.value" />
+</div>
+{% endblock %}

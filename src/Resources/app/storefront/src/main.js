@@ -1,4 +1,4 @@
-import ScaleVideoOptimizerPlayer from './scale-video-optimizer-player/scale-video-optimizer-player.plugin';
+import ScalecommerceVoPlayer from './scalecommerce-vo-player/scalecommerce-vo-player.plugin';
 
 const PluginManager = window.PluginManager;
-PluginManager.register('ScaleVideoOptimizerPlayer', ScaleVideoOptimizerPlayer, '[data-scale-video-optimizer-player]');
+PluginManager.register('ScalecommerceVoPlayer', ScalecommerceVoPlayer, '[data-scalecommerce-vo-player]');

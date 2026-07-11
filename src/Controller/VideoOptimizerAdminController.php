@@ -19,25 +19,25 @@ class VideoOptimizerAdminController
     {
     }
 
-    #[Route(path: '/api/_action/scale-video-optimizer/libraries', name: 'api.action.scale-video-optimizer.libraries.list', methods: ['GET'], defaults: ['_acl' => ['scale_video_optimizer:read']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/libraries', name: 'api.action.scalecommerce-vo.libraries.list', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
     public function listLibraries(): JsonResponse
     {
         return $this->wrap(fn () => $this->client->listLibraries());
     }
 
-    #[Route(path: '/api/_action/scale-video-optimizer/libraries', name: 'api.action.scale-video-optimizer.libraries.create', methods: ['POST'], defaults: ['_acl' => ['scale_video_optimizer:create']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/libraries', name: 'api.action.scalecommerce-vo.libraries.create', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:create']])]
     public function createLibrary(Request $request): JsonResponse
     {
         return $this->wrap(fn () => $this->client->createLibrary($this->payload($request)));
     }
 
-    #[Route(path: '/api/_action/scale-video-optimizer/libraries/{id}', name: 'api.action.scale-video-optimizer.libraries.update', methods: ['PATCH'], defaults: ['_acl' => ['scale_video_optimizer:update']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/libraries/{id}', name: 'api.action.scalecommerce-vo.libraries.update', methods: ['PATCH'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
     public function updateLibrary(string $id, Request $request): JsonResponse
     {
         return $this->wrap(fn () => $this->client->updateLibrary($id, $this->payload($request)));
     }
 
-    #[Route(path: '/api/_action/scale-video-optimizer/libraries/{id}', name: 'api.action.scale-video-optimizer.libraries.delete', methods: ['DELETE'], defaults: ['_acl' => ['scale_video_optimizer:delete']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/libraries/{id}', name: 'api.action.scalecommerce-vo.libraries.delete', methods: ['DELETE'], defaults: ['_acl' => ['scalecommerce_vo:delete']])]
     public function deleteLibrary(string $id): JsonResponse
     {
         return $this->wrap(function () use ($id): array {
@@ -46,13 +46,13 @@ class VideoOptimizerAdminController
         }, Response::HTTP_NO_CONTENT);
     }
 
-    #[Route(path: '/api/_action/scale-video-optimizer/libraries/{id}/videos', name: 'api.action.scale-video-optimizer.videos.list', methods: ['GET'], defaults: ['_acl' => ['scale_video_optimizer:read']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/libraries/{id}/videos', name: 'api.action.scalecommerce-vo.videos.list', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
     public function listVideos(string $id): JsonResponse
     {
         return $this->wrap(fn () => $this->client->listVideos($id));
     }
 
-    #[Route(path: '/api/_action/scale-video-optimizer/videos', name: 'api.action.scale-video-optimizer.videos.upload', methods: ['POST'], defaults: ['_acl' => ['scale_video_optimizer:create']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/videos', name: 'api.action.scalecommerce-vo.videos.upload', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:create']])]
     public function uploadVideo(Request $request): JsonResponse
     {
         $file = $request->files->get('file');
@@ -65,19 +65,19 @@ class VideoOptimizerAdminController
         return $this->wrap(fn () => $this->client->uploadVideo($libraryId, $file, $title !== null ? (string) $title : null));
     }
 
-    #[Route(path: '/api/_action/scale-video-optimizer/videos/{uuid}', name: 'api.action.scale-video-optimizer.videos.get', methods: ['GET'], defaults: ['_acl' => ['scale_video_optimizer:read']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}', name: 'api.action.scalecommerce-vo.videos.get', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
     public function getVideo(string $uuid): JsonResponse
     {
         return $this->wrap(fn () => $this->client->getVideo($uuid));
     }
 
-    #[Route(path: '/api/_action/scale-video-optimizer/videos/{uuid}', name: 'api.action.scale-video-optimizer.videos.update', methods: ['PATCH'], defaults: ['_acl' => ['scale_video_optimizer:update']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}', name: 'api.action.scalecommerce-vo.videos.update', methods: ['PATCH'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
     public function updateVideo(string $uuid, Request $request): JsonResponse
     {
         return $this->wrap(fn () => $this->client->updateVideo($uuid, $this->payload($request)));
     }
 
-    #[Route(path: '/api/_action/scale-video-optimizer/videos/{uuid}', name: 'api.action.scale-video-optimizer.videos.delete', methods: ['DELETE'], defaults: ['_acl' => ['scale_video_optimizer:delete']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}', name: 'api.action.scalecommerce-vo.videos.delete', methods: ['DELETE'], defaults: ['_acl' => ['scalecommerce_vo:delete']])]
     public function deleteVideo(string $uuid): JsonResponse
     {
         return $this->wrap(function () use ($uuid): array {

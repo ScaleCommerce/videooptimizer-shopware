@@ -1,0 +1,49 @@
+{% block scalecommerce_vo_list %}
+<sw-page class="scalecommerce-vo-list">
+    <template #content>
+        <sw-card-view>
+            <mt-card :title="$tc('scalecommerce-vo.list.librariesTitle')" position-identifier="scalecommerce-vo-libraries">
+                <mt-select
+                    :label="$tc('scalecommerce-vo.list.selectLibrary')"
+                    :options="libraryOptions"
+                    v-model="selectedLibraryId"
+                    @update:model-value="loadVideos" />
+                <div class="scalecommerce-vo-list__library-actions">
+                    <mt-button variant="secondary" @click="onCreateLibrary(window.prompt($tc('scalecommerce-vo.list.newLibraryName')))">
+                        {{ $tc('scalecommerce-vo.list.createLibrary') }}
+                    </mt-button>
+                    <mt-button v-if="selectedLibraryId" variant="critical" @click="onDeleteLibrary(selectedLibraryId)">
+                        {{ $tc('scalecommerce-vo.list.deleteLibrary') }}
+                    </mt-button>
+                </div>
+            </mt-card>
+
+            <mt-card :title="$tc('scalecommerce-vo.list.uploadTitle')" position-identifier="scalecommerce-vo-upload">
+                <mt-text-field v-model="uploadTitle" :label="$tc('scalecommerce-vo.list.videoTitle')" />
+                <input type="file" accept="video/*" @change="onFileSelected" />
+                <mt-button variant="primary" :disabled="!uploadFile || !selectedLibraryId" @click="onUpload">
+                    {{ $tc('scalecommerce-vo.list.upload') }}
+                </mt-button>
+            </mt-card>
+
+            <mt-card :title="$tc('scalecommerce-vo.list.videosTitle')" position-identifier="scalecommerce-vo-videos" :is-loading="isLoading">
+                <div class="scalecommerce-vo-list__grid">
+                    <div v-for="video in videos" :key="video.uuid" class="scalecommerce-vo-list__item">
+                        <img v-if="video.thumbnail_url" :src="video.thumbnail_url" :alt="video.title" />
+                        <div class="scalecommerce-vo-list__meta">
+                            <strong>{{ video.title }}</strong>
+                            <span>{{ video.status }}</span>
+                        </div>
+                        <mt-button size="small" variant="secondary" @click="onRenameVideo(video.uuid, window.prompt($tc('scalecommerce-vo.list.rename'), video.title))">
+                            {{ $tc('scalecommerce-vo.list.rename') }}
+                        </mt-button>
+                        <mt-button size="small" variant="critical" @click="onDeleteVideo(video.uuid)">
+                            {{ $tc('scalecommerce-vo.list.delete') }}
+                        </mt-button>
+                    </div>
+                </div>
+            </mt-card>
+        </sw-card-view>
+    </template>
+</sw-page>
+{% endblock %}

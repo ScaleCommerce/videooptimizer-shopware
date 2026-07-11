@@ -18,7 +18,7 @@ class VideoOptimizerElementResolverTest extends TestCase
     public function testGetTypeIsScaleVideoOptimizerVideo(): void
     {
         $resolver = new VideoOptimizerElementResolver($this->createMock(VideoOptimizerClient::class));
-        static::assertSame('scale-video-optimizer-video', $resolver->getType());
+        static::assertSame('scalecommerce-vo-video', $resolver->getType());
     }
 
     public function testEnrichNormalizesEmbedSources(): void
@@ -86,7 +86,7 @@ class VideoOptimizerElementResolverTest extends TestCase
     {
         $slot = new CmsSlotEntity();
         $slot->setUniqueIdentifier('slot-1');
-        $slot->setType('scale-video-optimizer-video');
+        $slot->setType('scalecommerce-vo-video');
         $config = new FieldConfigCollection();
         $config->add(new FieldConfig('videoUuid', FieldConfig::SOURCE_STATIC, $uuid));
         $slot->setFieldConfig($config);
