@@ -49,9 +49,10 @@ export default class VideoOptimizerApiService extends ApiService {
         if (title) {
             formData.append('title', title);
         }
+        // Do not set Content-Type manually: the browser must add the multipart boundary itself.
         return this.httpClient
             .post(`${this.getApiBasePath()}/videos`, formData, {
-                headers: { ...this.getBasicHeaders(), 'Content-Type': 'multipart/form-data' },
+                headers: this.getBasicHeaders(),
             })
             .then((response) => ApiService.handleResponse(response));
     }
