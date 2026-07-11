@@ -1,5 +1,6 @@
 import VideoOptimizerApiService from './service/videooptimizer-api.service';
 import './module/vo-media';
+import './component/vo-video-picker';
 
 Shopware.Service().register('videoOptimizerApiService', (container) => {
     const initContainer = Shopware.Application.getContainer('init');
