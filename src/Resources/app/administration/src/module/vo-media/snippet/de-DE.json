@@ -1,0 +1,20 @@
+{
+    "vo-media": {
+        "general": { "mainMenuItemGeneral": "VideoOptimizer" },
+        "list": {
+            "librariesTitle": "Bibliotheken",
+            "selectLibrary": "Bibliothek",
+            "createLibrary": "Neue Bibliothek",
+            "deleteLibrary": "Bibliothek löschen",
+            "newLibraryName": "Name der Bibliothek",
+            "libraryCreated": "Bibliothek angelegt",
+            "uploadTitle": "Video hochladen",
+            "videoTitle": "Titel",
+            "upload": "Hochladen",
+            "uploadStarted": "Upload gestartet, wird verarbeitet…",
+            "videosTitle": "Videos",
+            "delete": "Löschen",
+            "genericError": "VideoOptimizer-Anfrage fehlgeschlagen"
+        }
+    }
+}

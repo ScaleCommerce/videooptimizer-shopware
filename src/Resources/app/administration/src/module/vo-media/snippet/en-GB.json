@@ -1,0 +1,20 @@
+{
+    "vo-media": {
+        "general": { "mainMenuItemGeneral": "VideoOptimizer" },
+        "list": {
+            "librariesTitle": "Libraries",
+            "selectLibrary": "Library",
+            "createLibrary": "New library",
+            "deleteLibrary": "Delete library",
+            "newLibraryName": "Library name",
+            "libraryCreated": "Library created",
+            "uploadTitle": "Upload video",
+            "videoTitle": "Title",
+            "upload": "Upload",
+            "uploadStarted": "Upload started, processing…",
+            "videosTitle": "Videos",
+            "delete": "Delete",
+            "genericError": "VideoOptimizer request failed"
+        }
+    }
+}
