@@ -1,11 +1,11 @@
 {
-  "base": "/bundles/videooptimizer/administration/",
+  "base": "/bundles/scalevideooptimizer/administration/",
   "entryPoints": {
-    "video-optimizer": {
+    "scale-video-optimizer": {
       "css": [],
       "dynamic": [],
       "js": [
-        "/bundles/videooptimizer/administration/assets/video-optimizer-CH_nlzf8.js"
+        "/bundles/scalevideooptimizer/administration/assets/scale-video-optimizer-BpQklfjU.js"
       ],
       "legacy": false,
       "preload": []
