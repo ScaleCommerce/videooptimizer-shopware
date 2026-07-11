@@ -15,6 +15,15 @@
             "videosTitle": "Videos",
             "delete": "Delete",
             "genericError": "VideoOptimizer request failed"
+        },
+        "cms": {
+            "label": "VideoOptimizer video",
+            "selectVideo": "Select a video",
+            "showControls": "Show controls",
+            "autoplay": "Autoplay",
+            "muted": "Muted",
+            "loop": "Loop",
+            "aspectRatio": "Aspect ratio (e.g. 16/9)"
         }
     }
 }

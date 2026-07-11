@@ -15,6 +15,15 @@
             "videosTitle": "Videos",
             "delete": "Löschen",
             "genericError": "VideoOptimizer-Anfrage fehlgeschlagen"
+        },
+        "cms": {
+            "label": "VideoOptimizer-Video",
+            "selectVideo": "Video auswählen",
+            "showControls": "Steuerung anzeigen",
+            "autoplay": "Autoplay",
+            "muted": "Stummschalten",
+            "loop": "Endlosschleife",
+            "aspectRatio": "Seitenverhältnis (z. B. 16/9)"
         }
     }
 }
