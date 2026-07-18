@@ -12,6 +12,12 @@ export default class VideoOptimizerApiService extends ApiService {
             .then((response) => ApiService.handleResponse(response));
     }
 
+    getEncodings() {
+        return this.httpClient
+            .get(`${this.getApiBasePath()}/encodings`, { headers: this.getBasicHeaders() })
+            .then((response) => ApiService.handleResponse(response));
+    }
+
     createLibrary(payload) {
         return this.httpClient
             .post(`${this.getApiBasePath()}/libraries`, payload, { headers: this.getBasicHeaders() })

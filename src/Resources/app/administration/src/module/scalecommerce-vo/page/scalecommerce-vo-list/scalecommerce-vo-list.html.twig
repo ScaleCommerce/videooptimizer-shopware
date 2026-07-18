@@ -2,23 +2,73 @@
 <sw-page class="scalecommerce-vo-list">
     <template #content>
         <sw-card-view>
-            <mt-card :title="$tc('scalecommerce-vo.list.librariesTitle')" position-identifier="scalecommerce-vo-libraries">
-                <mt-select
-                    :label="$tc('scalecommerce-vo.list.selectLibrary')"
-                    :options="libraryOptions"
-                    v-model="selectedLibraryId" />
-                <div class="scalecommerce-vo-list__library-actions">
-                    <mt-button variant="secondary" @click="onCreateLibrary(window.prompt($tc('scalecommerce-vo.list.newLibraryName')))">
-                        {{ $tc('scalecommerce-vo.list.createLibrary') }}
+            <mt-card :title="$tc('scalecommerce-vo.library.title')" position-identifier="scalecommerce-vo-libraries">
+                <div class="scalecommerce-vo-list__library-head">
+                    <mt-select
+                        :label="$tc('scalecommerce-vo.list.selectLibrary')"
+                        :options="libraryOptions"
+                        :model-value="selectedLibraryId"
+                        :disabled="mode === 'create'"
+                        @update:model-value="onSelectLibrary" />
+                    <mt-button variant="secondary" @click="onNewLibrary">
+                        {{ $tc('scalecommerce-vo.library.new') }}
                     </mt-button>
-                    <mt-button v-if="selectedLibraryId" variant="critical" @click="onDeleteLibrary(selectedLibraryId)">
-                        {{ $tc('scalecommerce-vo.list.deleteLibrary') }}
-                    </mt-button>
+                </div>
+
+                <div class="scalecommerce-vo-list__form">
+                    <mt-text-field :label="$tc('scalecommerce-vo.library.name')" v-model="formName" required />
+                    <mt-textarea :label="$tc('scalecommerce-vo.library.description')" v-model="formDescription" />
+
+                    <p v-if="!mediaManaged" class="scalecommerce-vo-list__hint">
+                        {{ $tc('scalecommerce-vo.library.deliveryOnly') }}
+                    </p>
+
+                    <div class="scalecommerce-vo-list__ladder">
+                        <strong>{{ $tc('scalecommerce-vo.library.codecs') }}</strong>
+                        <div class="scalecommerce-vo-list__options">
+                            <mt-checkbox
+                                v-for="option in encodings.codecs"
+                                :key="option.key"
+                                :label="optionLabel(option)"
+                                :checked="selectedCodecs.includes(option.key)"
+                                :disabled="optionDisabled(option)"
+                                @update:checked="toggleCodec(option.key)" />
+                        </div>
+                    </div>
+
+                    <div class="scalecommerce-vo-list__ladder">
+                        <strong>{{ $tc('scalecommerce-vo.library.resolutions') }}</strong>
+                        <div class="scalecommerce-vo-list__options">
+                            <mt-checkbox
+                                v-for="option in encodings.resolutions"
+                                :key="option.key"
+                                :label="optionLabel(option)"
+                                :checked="selectedResolutions.includes(option.key)"
+                                :disabled="optionDisabled(option)"
+                                @update:checked="toggleResolution(option.key)" />
+                        </div>
+                    </div>
+
+                    <div class="scalecommerce-vo-list__form-actions">
+                        <mt-button variant="primary" :disabled="!canSave" @click="onSave">
+                            {{ $tc('scalecommerce-vo.library.save') }}
+                        </mt-button>
+                        <mt-button v-if="mode === 'create'" variant="secondary" @click="onCancelCreate">
+                            {{ $tc('scalecommerce-vo.library.cancel') }}
+                        </mt-button>
+                        <mt-button v-else-if="selectedLibraryId" variant="critical" @click="onDeleteLibrary">
+                            {{ $tc('scalecommerce-vo.library.delete') }}
+                        </mt-button>
+                    </div>
+
+                    <p v-if="mode !== 'create' && activeLibrary" class="scalecommerce-vo-list__info">
+                        {{ activeLibrary.video_count }} {{ $tc('scalecommerce-vo.library.videoCount') }} · {{ storageLabel }}<template v-if="createdLabel"> · {{ $tc('scalecommerce-vo.library.since') }} {{ createdLabel }}</template>
+                    </p>
                 </div>
             </mt-card>
 
             <mt-card :title="$tc('scalecommerce-vo.list.videosTitle')" position-identifier="scalecommerce-vo-videos">
-                <scalecommerce-vo-video-gallery :library-id="selectedLibraryId" mode="manage" />
+                <scalecommerce-vo-video-gallery :library-id="galleryLibraryId" mode="manage" />
             </mt-card>
         </sw-card-view>
     </template>

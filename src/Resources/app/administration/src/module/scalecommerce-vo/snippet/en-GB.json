@@ -2,14 +2,26 @@
     "scalecommerce-vo": {
         "general": { "mainMenuItemGeneral": "VideoOptimizer" },
         "list": {
-            "librariesTitle": "Libraries",
             "selectLibrary": "Library",
-            "createLibrary": "New library",
-            "deleteLibrary": "Delete library",
-            "newLibraryName": "Library name",
-            "libraryCreated": "Library created",
             "videosTitle": "Videos",
             "genericError": "VideoOptimizer request failed"
+        },
+        "library": {
+            "title": "Libraries",
+            "new": "New library",
+            "name": "Name",
+            "description": "Description",
+            "codecs": "Codecs",
+            "resolutions": "Resolutions",
+            "addon": "add-on",
+            "deliveryOnly": "Delivery-only library: the encoding ladder cannot be changed.",
+            "save": "Save",
+            "cancel": "Cancel",
+            "delete": "Delete",
+            "videoCount": "videos",
+            "since": "since",
+            "saved": "Library saved.",
+            "created": "Library created."
         },
         "cms": {
             "label": "VideoOptimizer video",
