@@ -3,6 +3,11 @@
 All notable changes to `scalecommerce/videooptimizer-shopware` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.2.2] - 2026-07-18
+
+### Fixed
+- The VideoOptimizer admin module now appears in the sidebar under "Content"; it was previously only reachable via its direct URL because its navigation entry had no parent (which also caused a console error in the admin menu).
+
 ## [0.2.1] - 2026-07-18
 
 ### Added
