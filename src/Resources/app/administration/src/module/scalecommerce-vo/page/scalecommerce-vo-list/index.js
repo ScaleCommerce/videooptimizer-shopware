@@ -90,26 +90,47 @@ Component.register('scalecommerce-vo-list', {
         },
 
         async onUpload() {
-            if (!this.uploadFile || !this.selectedLibraryId) {
+            const file = this.uploadFile;
+            if (!file || !this.selectedLibraryId) {
                 return;
             }
             this.isLoading = true;
             try {
-                const response = await this.scalecommerceVoApiService.uploadVideo(
-                    this.selectedLibraryId,
-                    this.uploadFile,
-                    this.uploadTitle,
-                );
-                const uploaded = response.data ?? response;
+                const uuid = await this._uploadPresigned(this.selectedLibraryId, file, this.uploadTitle);
                 this.uploadFile = null;
                 this.uploadTitle = '';
                 this.createNotificationSuccess({ message: this.$tc('scalecommerce-vo.list.uploadStarted') });
-                this._pollUntilReady(uploaded.uuid);
+                this._pollUntilReady(uuid);
             } catch (error) {
                 this.createNotificationError({ message: this._errorText(error) });
             } finally {
                 this.isLoading = false;
             }
+        },
+
+        // initiate (proxy) -> PUT parts straight to storage -> complete (proxy). Returns the video uuid.
+        async _uploadPresigned(libraryId, file, title) {
+            const initiateResponse = await this.scalecommerceVoApiService.initiateUpload({
+                libraryId,
+                filename: file.name,
+                contentType: file.type || 'application/octet-stream',
+                fileSize: file.size,
+            });
+            const init = initiateResponse.data ?? initiateResponse;
+            const parts = await this.scalecommerceVoApiService.uploadParts(file, init.parts, init.partSize);
+            const payload = {
+                libraryId,
+                uuid: init.uuid,
+                key: init.key,
+                uploadId: init.uploadId,
+                parts,
+            };
+            if (title) {
+                payload.title = title;
+            }
+            const completeResponse = await this.scalecommerceVoApiService.completeUpload(payload);
+            const completed = completeResponse.data ?? completeResponse;
+            return completed.uuid ?? init.uuid;
         },
 
         _pollUntilReady(uuid, attempt = 0) {
