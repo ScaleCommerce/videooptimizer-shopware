@@ -1,9 +1,18 @@
 {% block element_scalecommerce_vo_video %}
-<div class="scalecommerce-vo-cms-element" style="display:flex;align-items:center;justify-content:center;min-height:120px;background:#f0f2f5;border-radius:4px">
-    <template v-if="videoUuid">
-        <mt-icon name="regular-play-circle" size="32" />
-        <span style="margin-left:8px">{{ videoUuid }}</span>
+<div class="scalecommerce-vo-cms-element">
+    <template v-if="video">
+        <div class="scalecommerce-vo-cms-element__poster">
+            <img v-if="posterUrl" :src="posterUrl" :alt="video.title" />
+            <mt-icon v-else name="regular-play-circle" size="40" />
+        </div>
+        <div class="scalecommerce-vo-cms-element__meta">
+            <span class="scalecommerce-vo-cms-element__title">{{ video.title || video.uuid }}</span>
+            <sw-label :variant="statusVariant(video.status)" size="small" :ghost="true">{{ video.status }}</sw-label>
+        </div>
     </template>
-    <span v-else>{{ $tc('scalecommerce-vo.cms.selectVideo') }}</span>
+    <div v-else class="scalecommerce-vo-cms-element__empty">
+        <mt-icon name="regular-play-circle" size="32" />
+        <span>{{ $tc('scalecommerce-vo.cms.selectVideo') }}</span>
+    </div>
 </div>
 {% endblock %}

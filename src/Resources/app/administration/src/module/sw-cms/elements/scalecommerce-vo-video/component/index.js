@@ -1,14 +1,58 @@
 import template from './scalecommerce-vo-cms-element.html.twig';
+import './scalecommerce-vo-cms-element.scss';
 
 Shopware.Component.register('scalecommerce-vo-cms-element', {
     template,
     mixins: ['cms-element'],
-    created() {
-        this.initElementConfig('scalecommerce-vo-video');
+
+    inject: ['scalecommerceVoApiService'],
+
+    data() {
+        return {
+            video: null,
+        };
     },
+
     computed: {
         videoUuid() {
             return this.element.config.videoUuid.value;
+        },
+        posterUrl() {
+            if (!this.video) return null;
+            return this.video.poster_url || this.video.thumbnail_url || null;
+        },
+    },
+
+    watch: {
+        videoUuid: {
+            immediate: true,
+            handler() {
+                this.loadVideo();
+            },
+        },
+    },
+
+    created() {
+        this.initElementConfig('scalecommerce-vo-video');
+    },
+
+    methods: {
+        async loadVideo() {
+            if (!this.videoUuid) {
+                this.video = null;
+                return;
+            }
+            try {
+                const response = await this.scalecommerceVoApiService.getVideo(this.videoUuid);
+                this.video = response.data ?? response;
+            } catch (error) {
+                this.video = null;
+            }
+        },
+        statusVariant(status) {
+            if (status === 'ready') return 'success';
+            if (status === 'failed') return 'danger';
+            return 'warning';
         },
     },
 });
