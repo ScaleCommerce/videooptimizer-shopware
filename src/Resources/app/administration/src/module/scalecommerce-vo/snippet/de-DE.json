@@ -62,6 +62,7 @@
             "posterUpdated": "Vorschaubild aktualisiert.",
             "posterFailed": "Das eigene Vorschaubild konnte nicht verarbeitet werden.",
             "done": "Fertig",
+            "frame": "Bild",
             "genericError": "Anfrage fehlgeschlagen.",
             "orientation_portrait": "hochkant",
             "orientation_landscape": "quer",

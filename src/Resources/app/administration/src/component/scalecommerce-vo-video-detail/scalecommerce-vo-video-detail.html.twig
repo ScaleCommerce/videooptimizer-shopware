@@ -18,6 +18,7 @@
                 type="button"
                 class="scalecommerce-vo-detail__frame"
                 :disabled="busy"
+                :aria-label="$tc('scalecommerce-vo.detail.frame') + ' ' + (thumb.index + 1)"
                 @click="onPickFrame(thumb.index)">
                 <img v-if="frameSrcById[thumb.index]" :src="frameSrcById[thumb.index]" alt="" />
                 <span v-else class="scalecommerce-vo-detail__frame-loading"></span>

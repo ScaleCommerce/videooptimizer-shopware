@@ -179,6 +179,7 @@ Component.register('scalecommerce-vo-video-detail', {
 
         async onRemoveCustomPoster() {
             this.busy = true;
+            this.statusText = this.$tc('scalecommerce-vo.detail.applying');
             try {
                 await this.scalecommerceVoApiService.deletePoster(this.uuid);
                 await this._pollPoster((video) => video.poster?.source !== 'custom');
@@ -187,6 +188,7 @@ Component.register('scalecommerce-vo-video-detail', {
                 this.createNotificationError({ message: this._errorText(error) });
             } finally {
                 this.busy = false;
+                this.statusText = '';
             }
         },
 
@@ -214,7 +216,9 @@ Component.register('scalecommerce-vo-video-detail', {
         },
 
         _errorText(error) {
-            return error?.response?.data?.errors?.[0]?.detail ?? this.$tc('scalecommerce-vo.detail.genericError');
+            return error?.response?.data?.errors?.[0]?.detail
+                ?? error?.message
+                ?? this.$tc('scalecommerce-vo.detail.genericError');
         },
     },
 });

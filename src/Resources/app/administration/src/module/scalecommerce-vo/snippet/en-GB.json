@@ -62,6 +62,7 @@
             "posterUpdated": "Preview image updated.",
             "posterFailed": "The custom preview image could not be processed.",
             "done": "Done",
+            "frame": "Frame",
             "genericError": "Request failed.",
             "orientation_portrait": "portrait",
             "orientation_landscape": "landscape",
