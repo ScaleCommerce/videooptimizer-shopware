@@ -111,7 +111,7 @@ Component.register('scalecommerce-vo-video-gallery', {
                 }
                 return;
             }
-            if (video.status !== 'ready') {
+            if (this.mode !== 'select' || video.status !== 'ready') {
                 return;
             }
             this.$emit('select', video.uuid);

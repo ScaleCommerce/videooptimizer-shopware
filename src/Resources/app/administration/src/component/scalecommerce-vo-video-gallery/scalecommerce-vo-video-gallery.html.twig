@@ -9,8 +9,8 @@
                 'is-selected': video.uuid === selectedUuid,
                 'is-selectable': (mode === 'select' || mode === 'manage') && video.status === 'ready'
             }"
-            :role="mode === 'select' && video.status === 'ready' ? 'button' : null"
-            :tabindex="mode === 'select' && video.status === 'ready' ? 0 : null"
+            :role="(mode === 'select' || mode === 'manage') && video.status === 'ready' ? 'button' : null"
+            :tabindex="(mode === 'select' || mode === 'manage') && video.status === 'ready' ? 0 : null"
             @click="onSelect(video)"
             @keydown.enter="onSelect(video)"
             @keydown.space.prevent="onSelect(video)">

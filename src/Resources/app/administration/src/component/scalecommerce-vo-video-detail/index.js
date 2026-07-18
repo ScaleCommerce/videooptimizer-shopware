@@ -15,6 +15,8 @@ Component.register('scalecommerce-vo-video-detail', {
         uuid: { type: String, required: true },
     },
 
+    emits: ['close', 'updated'],
+
     data() {
         return {
             video: null,
@@ -66,6 +68,7 @@ Component.register('scalecommerce-vo-video-detail', {
     },
 
     beforeUnmount() {
+        this._unmounted = true;
         Object.values(this.frameSrcById).forEach((src) => URL.revokeObjectURL(src));
     },
 
@@ -86,7 +89,12 @@ Component.register('scalecommerce-vo-video-detail', {
         async _loadFrame(index) {
             try {
                 const blob = await this.scalecommerceVoApiService.getThumbnailImage(this.uuid, index);
-                this.frameSrcById = { ...this.frameSrcById, [index]: URL.createObjectURL(blob) };
+                const url = URL.createObjectURL(blob);
+                if (this._unmounted) {
+                    URL.revokeObjectURL(url);
+                    return;
+                }
+                this.frameSrcById = { ...this.frameSrcById, [index]: url };
             } catch (error) {
                 // A single frame failing is non-fatal; leave a placeholder.
                 console.warn('[VideoOptimizer] failed to load thumbnail frame', index, error);
