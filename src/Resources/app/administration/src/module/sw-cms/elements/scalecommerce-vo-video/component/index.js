@@ -15,7 +15,7 @@ Shopware.Component.register('scalecommerce-vo-cms-element', {
 
     computed: {
         videoUuid() {
-            return this.element.config.videoUuid.value;
+            return this.element.config?.videoUuid?.value ?? null;
         },
         posterUrl() {
             if (!this.video) return null;
@@ -46,6 +46,7 @@ Shopware.Component.register('scalecommerce-vo-cms-element', {
                 const response = await this.scalecommerceVoApiService.getVideo(this.videoUuid);
                 this.video = response.data ?? response;
             } catch (error) {
+                console.warn('[VideoOptimizer] failed to load video for preview', error);
                 this.video = null;
             }
         },
