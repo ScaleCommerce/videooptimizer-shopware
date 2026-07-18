@@ -8,10 +8,13 @@ use Shopware\Core\Content\Cms\Aggregate\CmsSlot\CmsSlotEntity;
 use Shopware\Core\Content\Cms\DataResolver\CriteriaCollection;
 use Shopware\Core\Content\Cms\DataResolver\Element\AbstractCmsElementResolver;
 use Shopware\Core\Content\Cms\DataResolver\Element\ElementDataCollection;
+use Shopware\Core\Content\Cms\DataResolver\FieldConfigCollection;
 use Shopware\Core\Content\Cms\DataResolver\ResolverContext\ResolverContext;
 
 class VideoOptimizerElementResolver extends AbstractCmsElementResolver
 {
+    private const EMBED_BASE_URL = 'https://videooptimizer.eu';
+
     public function __construct(private readonly VideoOptimizerClient $client)
     {
     }
@@ -31,19 +34,47 @@ class VideoOptimizerElementResolver extends AbstractCmsElementResolver
         $struct = new VideoOptimizerVideoStruct();
         $slot->setData($struct);
 
-        $fieldConfig = $slot->getFieldConfig()->get('videoUuid');
-        $uuid = $fieldConfig?->getValue();
+        $fieldConfig = $slot->getFieldConfig();
+        $uuid = $fieldConfig->get('videoUuid')?->getValue();
         if (!is_string($uuid) || $uuid === '') {
             return;
         }
 
         $struct->setVideoUuid($uuid);
 
+        $playerMode = $fieldConfig->get('playerMode')?->getValue() === 'embed' ? 'embed' : 'native';
+        $struct->setPlayerMode($playerMode);
+        $struct->setEmbedUrl($this->buildEmbedUrl($uuid, $fieldConfig));
+
+        // Embed mode: the hosted iframe loads poster + sources itself, no upstream call needed.
+        if ($playerMode === 'embed') {
+            return;
+        }
+
         try {
             $struct->setEmbed($this->normalizeEmbed($this->client->getEmbed($uuid)));
         } catch (\Throwable) {
             $struct->setError(true);
         }
+    }
+
+    private function buildEmbedUrl(string $uuid, FieldConfigCollection $config): string
+    {
+        $query = http_build_query([
+            'autoplay' => $this->boolOption($config, 'autoplay', false) ? '1' : '0',
+            'muted' => $this->boolOption($config, 'muted', false) ? '1' : '0',
+            'loop' => $this->boolOption($config, 'loop', false) ? '1' : '0',
+            'controls' => $this->boolOption($config, 'showControls', true) ? '1' : '0',
+        ]);
+
+        return self::EMBED_BASE_URL . '/embed/' . rawurlencode($uuid) . '?' . $query;
+    }
+
+    private function boolOption(FieldConfigCollection $config, string $key, bool $default): bool
+    {
+        $value = $config->get($key)?->getValue();
+
+        return is_bool($value) ? $value : $default;
     }
 
     /**

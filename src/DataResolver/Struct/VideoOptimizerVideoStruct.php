@@ -12,6 +12,10 @@ class VideoOptimizerVideoStruct extends Struct
 
     protected bool $error = false;
 
+    protected ?string $playerMode = null;
+
+    protected ?string $embedUrl = null;
+
     public function getVideoUuid(): ?string
     {
         return $this->videoUuid;
@@ -40,6 +44,26 @@ class VideoOptimizerVideoStruct extends Struct
     public function setError(bool $error): void
     {
         $this->error = $error;
+    }
+
+    public function getPlayerMode(): ?string
+    {
+        return $this->playerMode;
+    }
+
+    public function setPlayerMode(?string $playerMode): void
+    {
+        $this->playerMode = $playerMode;
+    }
+
+    public function getEmbedUrl(): ?string
+    {
+        return $this->embedUrl;
+    }
+
+    public function setEmbedUrl(?string $embedUrl): void
+    {
+        $this->embedUrl = $embedUrl;
     }
 
     public function getApiAlias(): string

@@ -82,13 +82,59 @@ class VideoOptimizerElementResolverTest extends TestCase
         static::assertTrue($slot->getData()->hasError());
     }
 
-    private function slotWithUuid(string $uuid): CmsSlotEntity
+    public function testEmbedModeBuildsEmbedUrlAndSkipsGetEmbed(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('getEmbed');
+
+        $slot = $this->slotWithUuid('uuid-embed', [
+            'playerMode' => 'embed',
+            'autoplay' => true,
+            'muted' => true,
+            'loop' => false,
+            'showControls' => false,
+        ]);
+        $resolver = new VideoOptimizerElementResolver($client);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+
+        $data = $slot->getData();
+        static::assertSame('embed', $data->getPlayerMode());
+        $url = $data->getEmbedUrl();
+        static::assertStringStartsWith('https://videooptimizer.eu/embed/uuid-embed?', $url);
+        static::assertStringContainsString('autoplay=1', $url);
+        static::assertStringContainsString('muted=1', $url);
+        static::assertStringContainsString('loop=0', $url);
+        static::assertStringContainsString('controls=0', $url);
+    }
+
+    public function testNativeModeFetchesEmbedAndSetsMode(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('getEmbed')->with('uuid-native')->willReturn([
+            'sources' => [['src' => 'https://cdn/master.m3u8', 'type' => 'application/vnd.apple.mpegurl', 'codec' => 'hls']],
+            'poster' => 'https://cdn/p.jpg',
+        ]);
+
+        $slot = $this->slotWithUuid('uuid-native', ['playerMode' => 'native']);
+        $resolver = new VideoOptimizerElementResolver($client);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+
+        $data = $slot->getData();
+        static::assertSame('native', $data->getPlayerMode());
+        static::assertSame('https://cdn/master.m3u8', $data->getEmbed()['hls']);
+        static::assertStringStartsWith('https://videooptimizer.eu/embed/uuid-native?', $data->getEmbedUrl());
+    }
+
+    private function slotWithUuid(string $uuid, array $extraConfig = []): CmsSlotEntity
     {
         $slot = new CmsSlotEntity();
         $slot->setUniqueIdentifier('slot-1');
         $slot->setType('scalecommerce-vo-video');
         $config = new FieldConfigCollection();
         $config->add(new FieldConfig('videoUuid', FieldConfig::SOURCE_STATIC, $uuid));
+        foreach ($extraConfig as $name => $value) {
+            $config->add(new FieldConfig($name, FieldConfig::SOURCE_STATIC, $value));
+        }
         $slot->setFieldConfig($config);
         return $slot;
     }
