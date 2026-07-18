@@ -1,0 +1,47 @@
+{% block scalecommerce_vo_video_gallery %}
+<div class="scalecommerce-vo-gallery">
+    <div class="scalecommerce-vo-gallery__grid">
+        <button
+            v-for="video in videos"
+            :key="video.uuid"
+            type="button"
+            class="scalecommerce-vo-gallery__card"
+            :class="{
+                'is-selected': video.uuid === selectedUuid,
+                'is-selectable': mode === 'select' && video.status === 'ready'
+            }"
+            @click="onSelect(video)">
+            <div class="scalecommerce-vo-gallery__poster">
+                <img v-if="posterFor(video)" :src="posterFor(video)" :alt="video.title" />
+                <mt-icon v-else name="regular-play-circle" size="32" />
+            </div>
+            <div class="scalecommerce-vo-gallery__meta">
+                <span class="scalecommerce-vo-gallery__title">{{ video.title || video.uuid }}</span>
+                <sw-label :variant="statusVariant(video.status)" size="small" :ghost="true">
+                    {{ video.status }}
+                </sw-label>
+            </div>
+            <div v-if="mode === 'manage'" class="scalecommerce-vo-gallery__actions">
+                <mt-button size="x-small" variant="secondary" @click.stop="onRename(video)">
+                    {{ $tc('scalecommerce-vo.gallery.rename') }}
+                </mt-button>
+                <mt-button size="x-small" variant="critical" @click.stop="onDelete(video)">
+                    {{ $tc('scalecommerce-vo.gallery.delete') }}
+                </mt-button>
+            </div>
+        </button>
+
+        <div class="scalecommerce-vo-gallery__card scalecommerce-vo-gallery__upload">
+            <mt-text-field v-model="uploadTitle" :label="$tc('scalecommerce-vo.gallery.uploadTitle')" size="small" />
+            <input type="file" accept="video/*" @change="onFileSelected" />
+            <mt-button size="small" variant="primary" :disabled="!uploadFile || isUploading || !libraryId" @click="onUpload">
+                {{ $tc('scalecommerce-vo.gallery.upload') }}
+            </mt-button>
+        </div>
+    </div>
+
+    <div v-if="!isLoading && !videos.length" class="scalecommerce-vo-gallery__empty">
+        {{ $tc('scalecommerce-vo.gallery.empty') }}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+.scalecommerce-vo-gallery {
+    &__grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 16px;
+    }
+
+    &__card {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 8px;
+        border: 1px solid #d1d9e0;
+        border-radius: 8px;
+        background: #fff;
+        text-align: left;
+        cursor: default;
+
+        &.is-selectable {
+            cursor: pointer;
+        }
+
+        &.is-selectable:hover {
+            border-color: #189eff;
+        }
+
+        &.is-selected {
+            border-color: #189eff;
+            box-shadow: 0 0 0 2px rgba(24, 158, 255, 0.35);
+        }
+    }
+
+    &__poster {
+        position: relative;
+        aspect-ratio: 16 / 9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f0f2f5;
+        border-radius: 4px;
+        overflow: hidden;
+
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    }
+
+    &__meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    &__title {
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    &__upload {
+        justify-content: center;
+    }
+
+    &__empty {
+        padding: 24px;
+        color: #758ca3;
+        text-align: center;
+    }
+}

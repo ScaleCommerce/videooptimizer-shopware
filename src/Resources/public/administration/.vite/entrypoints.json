@@ -2,10 +2,12 @@
   "base": "/bundles/scalevideooptimizer/administration/",
   "entryPoints": {
     "scale-video-optimizer": {
-      "css": [],
+      "css": [
+        "/bundles/scalevideooptimizer/administration/assets/scale-video-optimizer-BNgRrqbn.css"
+      ],
       "dynamic": [],
       "js": [
-        "/bundles/scalevideooptimizer/administration/assets/scale-video-optimizer-CopzhmsV.js"
+        "/bundles/scalevideooptimizer/administration/assets/scale-video-optimizer-Bb6D1XtE.js"
       ],
       "legacy": false,
       "preload": []

@@ -26,6 +26,16 @@
             "muted": "Stummschalten",
             "loop": "Endlosschleife",
             "uploadNew": "Neues Video hochladen"
+        },
+        "gallery": {
+            "upload": "Hochladen",
+            "uploadTitle": "Titel (optional)",
+            "uploadStarted": "Upload gestartet – das Video wird verarbeitet.",
+            "rename": "Umbenennen",
+            "renamePrompt": "Neuer Titel",
+            "delete": "Löschen",
+            "empty": "Keine Videos in dieser Bibliothek.",
+            "genericError": "Anfrage fehlgeschlagen."
         }
     },
     "sw-privileges": {

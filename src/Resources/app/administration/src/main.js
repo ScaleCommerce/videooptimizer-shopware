@@ -2,6 +2,7 @@ import VideoOptimizerApiService from './service/videooptimizer-api.service';
 import './acl';
 import './module/scalecommerce-vo';
 import './component/scalecommerce-vo-video-picker';
+import './component/scalecommerce-vo-video-gallery';
 import './module/sw-cms/elements/scalecommerce-vo-video';
 import './module/sw-cms/blocks/video/scalecommerce-vo-video';
 

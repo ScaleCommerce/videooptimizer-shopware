@@ -26,6 +26,16 @@
             "muted": "Muted",
             "loop": "Loop",
             "uploadNew": "Upload a new video"
+        },
+        "gallery": {
+            "upload": "Upload",
+            "uploadTitle": "Title (optional)",
+            "uploadStarted": "Upload started – the video is being processed.",
+            "rename": "Rename",
+            "renamePrompt": "New title",
+            "delete": "Delete",
+            "empty": "No videos in this library.",
+            "genericError": "Request failed."
         }
     },
     "sw-privileges": {
