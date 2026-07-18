@@ -14,9 +14,6 @@ Component.register('scalecommerce-vo-list', {
             isLoading: false,
             libraries: [],
             selectedLibraryId: null,
-            videos: [],
-            uploadTitle: '',
-            uploadFile: null,
         };
     },
 
@@ -38,23 +35,7 @@ Component.register('scalecommerce-vo-list', {
                 this.libraries = response.data ?? response;
                 if (this.libraries.length && !this.selectedLibraryId) {
                     this.selectedLibraryId = this.libraries[0].id;
-                    await this.loadVideos();
                 }
-            } catch (error) {
-                this.createNotificationError({ message: this._errorText(error) });
-            } finally {
-                this.isLoading = false;
-            }
-        },
-
-        async loadVideos() {
-            if (!this.selectedLibraryId) {
-                return;
-            }
-            this.isLoading = true;
-            try {
-                const response = await this.scalecommerceVoApiService.getVideos(this.selectedLibraryId);
-                this.videos = response.data ?? response;
             } catch (error) {
                 this.createNotificationError({ message: this._errorText(error) });
             } finally {
@@ -80,95 +61,6 @@ Component.register('scalecommerce-vo-list', {
                 await this.scalecommerceVoApiService.deleteLibrary(id);
                 this.selectedLibraryId = null;
                 await this.loadLibraries();
-            } catch (error) {
-                this.createNotificationError({ message: this._errorText(error) });
-            }
-        },
-
-        onFileSelected(event) {
-            this.uploadFile = event.target.files[0] ?? null;
-        },
-
-        async onUpload() {
-            const file = this.uploadFile;
-            if (!file || !this.selectedLibraryId) {
-                return;
-            }
-            this.isLoading = true;
-            try {
-                const uuid = await this._uploadPresigned(this.selectedLibraryId, file, this.uploadTitle);
-                this.uploadFile = null;
-                this.uploadTitle = '';
-                this.createNotificationSuccess({ message: this.$tc('scalecommerce-vo.list.uploadStarted') });
-                this._pollUntilReady(uuid);
-            } catch (error) {
-                this.createNotificationError({ message: this._errorText(error) });
-            } finally {
-                this.isLoading = false;
-            }
-        },
-
-        // initiate (proxy) -> PUT parts straight to storage -> complete (proxy). Returns the video uuid.
-        async _uploadPresigned(libraryId, file, title) {
-            const initiateResponse = await this.scalecommerceVoApiService.initiateUpload({
-                libraryId,
-                filename: file.name,
-                contentType: file.type || 'application/octet-stream',
-                fileSize: file.size,
-            });
-            const init = initiateResponse.data ?? initiateResponse;
-            const parts = await this.scalecommerceVoApiService.uploadParts(file, init.parts, init.partSize);
-            const payload = {
-                libraryId,
-                uuid: init.uuid,
-                key: init.key,
-                uploadId: init.uploadId,
-                parts,
-            };
-            if (title) {
-                payload.title = title;
-            }
-            const completeResponse = await this.scalecommerceVoApiService.completeUpload(payload);
-            const completed = completeResponse.data ?? completeResponse;
-            return completed.uuid ?? init.uuid;
-        },
-
-        _pollUntilReady(uuid, attempt = 0) {
-            if (!uuid || attempt > 60) {
-                this.loadVideos();
-                return;
-            }
-            window.setTimeout(async () => {
-                try {
-                    const response = await this.scalecommerceVoApiService.getVideo(uuid);
-                    const video = response.data ?? response;
-                    if (video.status === 'ready') {
-                        this.loadVideos();
-                        return;
-                    }
-                } catch (error) {
-                    console.warn('[VideoOptimizer] polling video status failed, retrying', error);
-                }
-                this._pollUntilReady(uuid, attempt + 1);
-            }, 5000);
-        },
-
-        async onDeleteVideo(uuid) {
-            try {
-                await this.scalecommerceVoApiService.deleteVideo(uuid);
-                await this.loadVideos();
-            } catch (error) {
-                this.createNotificationError({ message: this._errorText(error) });
-            }
-        },
-
-        async onRenameVideo(uuid, title) {
-            if (!title) {
-                return;
-            }
-            try {
-                await this.scalecommerceVoApiService.updateVideo(uuid, { title });
-                await this.loadVideos();
             } catch (error) {
                 this.createNotificationError({ message: this._errorText(error) });
             }
