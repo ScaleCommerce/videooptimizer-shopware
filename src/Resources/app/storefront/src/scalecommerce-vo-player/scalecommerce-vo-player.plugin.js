@@ -27,7 +27,9 @@ export default class ScalecommerceVoPlayer extends Plugin {
         this.video.controls = !!this.options.controls;
         this.video.autoplay = !!this.options.autoplay;
         this.video.loop = !!this.options.loop;
-        this.video.muted = !!this.options.muted;
+        // Browsers block autoplay with sound, so a video set to autoplay must start muted
+        // (mirrors the hosted VideoOptimizer embed). An explicit "muted" option still applies.
+        this.video.muted = !!this.options.muted || !!this.options.autoplay;
         if (this.options.poster) {
             this.video.poster = this.options.poster;
         }
@@ -40,6 +42,11 @@ export default class ScalecommerceVoPlayer extends Plugin {
             const player = new Hls();
             player.loadSource(hls);
             player.attachMedia(this.video);
+            // With hls.js the media is fed via MSE; the autoplay attribute alone is unreliable,
+            // so kick off playback once the manifest is ready (already muted when autoplay is on).
+            if (this.options.autoplay) {
+                player.on(Hls.Events.MANIFEST_PARSED, () => this.video.play().catch(() => {}));
+            }
             return;
         }
 
