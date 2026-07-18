@@ -24,6 +24,7 @@
                     {{ video.status }}
                 </sw-label>
             </div>
+            <span v-if="metaLine(video)" class="scalecommerce-vo-gallery__meta-info">{{ metaLine(video) }}</span>
             <div v-if="mode === 'manage'" class="scalecommerce-vo-gallery__actions">
                 <mt-button size="x-small" variant="secondary" @click.stop="onRename(video)">
                     {{ $tc('scalecommerce-vo.gallery.rename') }}
@@ -35,12 +36,21 @@
         </div>
 
         <div class="scalecommerce-vo-gallery__card scalecommerce-vo-gallery__upload">
+            <span class="scalecommerce-vo-gallery__upload-heading">{{ $tc('scalecommerce-vo.gallery.uploadHeading') }}</span>
             <mt-text-field v-model="uploadTitle" :label="$tc('scalecommerce-vo.gallery.uploadTitle')" size="small" />
             <input type="file" accept="video/*" @change="onFileSelected" />
             <mt-button size="small" variant="primary" :disabled="!uploadFile || isUploading || !libraryId" @click="onUpload">
                 {{ $tc('scalecommerce-vo.gallery.upload') }}
             </mt-button>
         </div>
+    </div>
+
+    <div v-if="mode === 'select' && selectedVideo" class="scalecommerce-vo-gallery__detail">
+        <span class="scalecommerce-vo-gallery__detail-title">{{ selectedVideo.title || selectedVideo.uuid }}</span>
+        <span v-if="metaLine(selectedVideo)" class="scalecommerce-vo-gallery__meta-info">{{ metaLine(selectedVideo) }}</span>
+        <sw-label :variant="statusVariant(selectedVideo.status)" size="small" :ghost="true">
+            {{ selectedVideo.status }}
+        </sw-label>
     </div>
 
     <div v-if="!isLoading && !videos.length" class="scalecommerce-vo-gallery__empty">

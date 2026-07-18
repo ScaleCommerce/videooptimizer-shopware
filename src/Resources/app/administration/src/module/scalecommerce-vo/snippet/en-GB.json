@@ -29,11 +29,15 @@
             "upload": "Upload",
             "uploadTitle": "Title (optional)",
             "uploadStarted": "Upload started – the video is being processed.",
+            "uploadHeading": "Upload a new video",
             "rename": "Rename",
             "renamePrompt": "New title",
             "delete": "Delete",
             "empty": "No videos in this library.",
-            "genericError": "Request failed."
+            "genericError": "Request failed.",
+            "orientationPortrait": "portrait",
+            "orientationLandscape": "landscape",
+            "orientationSquare": "square"
         }
     },
     "sw-privileges": {

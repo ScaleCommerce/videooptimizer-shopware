@@ -1,5 +1,6 @@
 import template from './scalecommerce-vo-video-gallery.html.twig';
 import './scalecommerce-vo-video-gallery.scss';
+import { parseResolution, formatDuration, orientationKey } from '../../helper/video-meta';
 
 const { Component, Mixin } = Shopware;
 
@@ -34,11 +35,48 @@ Component.register('scalecommerce-vo-video-gallery', {
         },
     },
 
+    computed: {
+        selectedVideo() {
+            return this.videos.find((video) => video.uuid === this.selectedUuid) ?? null;
+        },
+    },
+
     created() {
         this.loadVideos();
     },
 
     methods: {
+        dimensions(video) {
+            const parsed = parseResolution(video.resolution);
+            return parsed ? `${parsed.width}×${parsed.height}` : null;
+        },
+
+        duration(video) {
+            if (video.duration === null || video.duration === undefined) {
+                return null;
+            }
+            return formatDuration(video.duration);
+        },
+
+        orientationLabel(video) {
+            const key = orientationKey(video.resolution);
+            if (!key) {
+                return null;
+            }
+            const labels = {
+                portrait: 'scalecommerce-vo.gallery.orientationPortrait',
+                landscape: 'scalecommerce-vo.gallery.orientationLandscape',
+                square: 'scalecommerce-vo.gallery.orientationSquare',
+            };
+            return this.$tc(labels[key]);
+        },
+
+        metaLine(video) {
+            return [this.dimensions(video), this.duration(video), this.orientationLabel(video)]
+                .filter((part) => part !== null)
+                .join(' · ');
+        },
+
         async loadVideos() {
             if (!this.libraryId) {
                 this.videos = [];

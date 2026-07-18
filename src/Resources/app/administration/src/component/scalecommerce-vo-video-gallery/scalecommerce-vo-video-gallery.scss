@@ -61,6 +61,11 @@
         white-space: nowrap;
     }
 
+    &__meta-info {
+        font-size: 12px;
+        color: #758ca3;
+    }
+
     &__actions {
         display: flex;
         gap: 8px;
@@ -68,6 +73,25 @@
 
     &__upload {
         justify-content: center;
+    }
+
+    &__upload-heading {
+        font-weight: 600;
+    }
+
+    &__detail {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 16px;
+        padding: 12px 16px;
+        border: 1px solid #d1d9e0;
+        border-radius: 8px;
+        background: #fff;
+    }
+
+    &__detail-title {
+        font-weight: 600;
     }
 
     &__empty {

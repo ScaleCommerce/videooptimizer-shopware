@@ -29,11 +29,15 @@
             "upload": "Hochladen",
             "uploadTitle": "Titel (optional)",
             "uploadStarted": "Upload gestartet – das Video wird verarbeitet.",
+            "uploadHeading": "Neues Video hochladen",
             "rename": "Umbenennen",
             "renamePrompt": "Neuer Titel",
             "delete": "Löschen",
             "empty": "Keine Videos in dieser Bibliothek.",
-            "genericError": "Anfrage fehlgeschlagen."
+            "genericError": "Anfrage fehlgeschlagen.",
+            "orientationPortrait": "hochkant",
+            "orientationLandscape": "quer",
+            "orientationSquare": "quadratisch"
         }
     },
     "sw-privileges": {
