@@ -3,6 +3,11 @@
 All notable changes to `scalecommerce/videooptimizer-shopware` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-07-18
+
+### Added
+- Video detail overlay (opened by clicking a video in the management gallery): choose the video's preview image from the 10 auto-generated frames or upload a custom image (from a file or the Shopware media library), and remove a custom one. Shows a poster preview and the video's dimensions, duration and orientation.
+
 ## [0.3.0] - 2026-07-18
 
 ### Added
