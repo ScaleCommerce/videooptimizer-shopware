@@ -25,7 +25,12 @@
             "autoplay": "Autoplay",
             "muted": "Muted",
             "loop": "Loop",
-            "uploadNew": "Upload a new video"
+            "uploadNew": "Upload a new video",
+            "library": "Library",
+            "playerMode": "Player",
+            "playerModeNative": "Native player",
+            "playerModeEmbed": "VideoOptimizer embed",
+            "autoplayHint": "Autoplay only works together with \"Muted\" (browser policy)."
         },
         "gallery": {
             "upload": "Upload",
