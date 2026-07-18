@@ -111,6 +111,66 @@ class VideoOptimizerClient
         return $this->requestData('GET', '/embed/' . rawurlencode($uuid), ['max_duration' => 3.0], false);
     }
 
+    public function listThumbnails(string $uuid): array
+    {
+        return $this->requestData('GET', '/videos/' . rawurlencode($uuid) . '/thumbnails');
+    }
+
+    /**
+     * Fetches a single thumbnail frame's raw image bytes (the frame URLs are API-hosted and
+     * Bearer-protected, so the admin cannot load them directly — the controller proxies them).
+     *
+     * @return array{content: string, contentType: string}
+     */
+    public function getThumbnailImage(string $uuid, int $index): array
+    {
+        $url = $this->baseUrl() . '/videos/' . rawurlencode($uuid) . '/thumbnails/' . $index;
+        $response = $this->httpClient->request('GET', $url, [
+            'headers' => ['Authorization: Bearer ' . $this->token(), 'Accept' => 'image/*'],
+        ]);
+        if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 300) {
+            throw VideoOptimizerApiException::fromResponse($response->getStatusCode(), $response->getContent(false));
+        }
+
+        return [
+            'content' => $response->getContent(),
+            'contentType' => $response->getHeaders()['content-type'][0] ?? 'image/jpeg',
+        ];
+    }
+
+    public function selectThumbnail(string $uuid, int $index): array
+    {
+        return $this->requestData('POST', '/videos/' . rawurlencode($uuid) . '/thumbnail', ['json' => ['thumbnailIndex' => $index]]);
+    }
+
+    /**
+     * @param array<string, mixed> $payload expects contentType (image/jpeg|png|webp) and fileSize
+     *
+     * @return array<string, mixed> {key, uploadUrl}
+     */
+    public function initiatePosterUpload(string $uuid, array $payload): array
+    {
+        return $this->requestData('POST', '/videos/' . rawurlencode($uuid) . '/poster/initiate', ['json' => $payload]);
+    }
+
+    public function completePosterUpload(string $uuid, string $key): array
+    {
+        return $this->requestData('POST', '/videos/' . rawurlencode($uuid) . '/poster/complete', ['json' => ['key' => $key]]);
+    }
+
+    /**
+     * @param array<string, mixed> $payload expects source (custom|thumbnail) and optional thumbnailIndex
+     */
+    public function selectPoster(string $uuid, array $payload): array
+    {
+        return $this->requestData('POST', '/videos/' . rawurlencode($uuid) . '/poster/select', ['json' => $payload]);
+    }
+
+    public function deletePoster(string $uuid): void
+    {
+        $this->request('DELETE', '/videos/' . rawurlencode($uuid) . '/poster');
+    }
+
     /**
      * Fetches every page of a cursor-paginated list endpoint and returns the merged items.
      */

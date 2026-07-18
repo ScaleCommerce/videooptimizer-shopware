@@ -243,4 +243,56 @@ class VideoOptimizerClientTest extends TestCase
         static::assertSame('h264', $result['codecs'][0]['key']);
         static::assertSame('1080p', $result['resolutions'][0]['key']);
     }
+
+    public function testListThumbnailsUnwrapsData(): void
+    {
+        $http = new MockHttpClient(new MockResponse(json_encode([
+            'data' => ['thumbnails' => [['index' => 0, 'url' => 'https://api/x/thumbnails/0']]],
+        ])));
+        $client = new VideoOptimizerClient($http, $this->config());
+        $result = $client->listThumbnails('vid-1');
+        static::assertSame(0, $result['thumbnails'][0]['index']);
+    }
+
+    public function testSelectThumbnailPostsIndex(): void
+    {
+        $captured = null;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$captured): MockResponse {
+            $captured = ['method' => $method, 'url' => $url, 'body' => $options['body'] ?? null];
+            return new MockResponse(json_encode(['data' => ['poster' => ['source' => 'thumbnail']]]));
+        });
+        $client = new VideoOptimizerClient($http, $this->config());
+        $client->selectThumbnail('vid-1', 3);
+        static::assertSame('POST', $captured['method']);
+        static::assertStringEndsWith('/videos/vid-1/thumbnail', $captured['url']);
+        static::assertSame(json_encode(['thumbnailIndex' => 3]), $captured['body']);
+    }
+
+    public function testPosterInitiateCompleteSelectDelete(): void
+    {
+        $urls = [];
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$urls): MockResponse {
+            $urls[] = "$method $url" . (isset($options['body']) ? ' ' . $options['body'] : '');
+            return new MockResponse(json_encode(['data' => ['key' => 'k', 'uploadUrl' => 'https://s3/put']]));
+        });
+        $client = new VideoOptimizerClient($http, $this->config());
+        $init = $client->initiatePosterUpload('vid-1', ['contentType' => 'image/png', 'fileSize' => 10]);
+        static::assertSame('k', $init['key']);
+        $client->completePosterUpload('vid-1', 'k');
+        $client->selectPoster('vid-1', ['source' => 'custom']);
+        $client->deletePoster('vid-1');
+        static::assertStringContainsString('POST https://api.videooptimizer.eu/api/v1/videos/vid-1/poster/initiate', $urls[0]);
+        static::assertStringContainsString('POST https://api.videooptimizer.eu/api/v1/videos/vid-1/poster/complete {"key":"k"}', $urls[1]);
+        static::assertStringContainsString('POST https://api.videooptimizer.eu/api/v1/videos/vid-1/poster/select {"source":"custom"}', $urls[2]);
+        static::assertStringContainsString('DELETE https://api.videooptimizer.eu/api/v1/videos/vid-1/poster', $urls[3]);
+    }
+
+    public function testGetThumbnailImageReturnsRawBytes(): void
+    {
+        $http = new MockHttpClient(new MockResponse('IMG-BYTES', ['response_headers' => ['content-type' => 'image/jpeg']]));
+        $client = new VideoOptimizerClient($http, $this->config());
+        $image = $client->getThumbnailImage('vid-1', 2);
+        static::assertSame('IMG-BYTES', $image['content']);
+        static::assertSame('image/jpeg', $image['contentType']);
+    }
 }
