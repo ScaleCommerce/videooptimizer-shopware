@@ -52,17 +52,23 @@ class VideoOptimizerAdminController
         return $this->wrap(fn () => $this->client->listVideos($id));
     }
 
-    #[Route(path: '/api/_action/scalecommerce-vo/videos', name: 'api.action.scalecommerce-vo.videos.upload', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:create']])]
-    public function uploadVideo(Request $request): JsonResponse
+    #[Route(path: '/api/_action/scalecommerce-vo/videos', name: 'api.action.scalecommerce-vo.videos.list-all', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
+    public function listAllVideos(Request $request): JsonResponse
     {
-        $file = $request->files->get('file');
-        $libraryId = (string) $request->request->get('libraryId');
-        $title = $request->request->get('title');
-        if ($file === null || $libraryId === '') {
-            return new JsonResponse(['errors' => [['status' => '400', 'detail' => 'file and libraryId are required.']]], 400);
-        }
+        $libraryId = $request->query->get('libraryId');
+        return $this->wrap(fn () => $this->client->listAllVideos($libraryId !== null ? (string) $libraryId : null));
+    }
 
-        return $this->wrap(fn () => $this->client->uploadVideo($libraryId, $file, $title !== null ? (string) $title : null));
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/upload/initiate', name: 'api.action.scalecommerce-vo.videos.upload-initiate', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:create']])]
+    public function initiateUpload(Request $request): JsonResponse
+    {
+        return $this->wrap(fn () => $this->client->initiateUpload($this->payload($request)));
+    }
+
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/upload/complete', name: 'api.action.scalecommerce-vo.videos.upload-complete', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:create']])]
+    public function completeUpload(Request $request): JsonResponse
+    {
+        return $this->wrap(fn () => $this->client->completeUpload($this->payload($request)));
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}', name: 'api.action.scalecommerce-vo.videos.get', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]

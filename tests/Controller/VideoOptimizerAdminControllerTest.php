@@ -61,16 +61,45 @@ class VideoOptimizerAdminControllerTest extends TestCase
         static::assertSame('', $response->getContent());
     }
 
-    public function testUploadWithoutFileReturns400(): void
+    public function testListAllVideosReturnsClientData(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
-        $client->expects(static::never())->method('uploadVideo');
+        $client->method('listAllVideos')->with(null)->willReturn([['uuid' => 'v1']]);
 
         $controller = new VideoOptimizerAdminController($client);
-        $request = new Request([], ['libraryId' => ''], [], [], [], []);
-        $response = $controller->uploadVideo($request);
+        $response = $controller->listAllVideos(new Request());
 
-        static::assertSame(400, $response->getStatusCode());
+        static::assertSame(200, $response->getStatusCode());
+        static::assertSame(['data' => [['uuid' => 'v1']]], json_decode((string) $response->getContent(), true));
+    }
+
+    public function testInitiateUploadPassesJsonPayload(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('initiateUpload')
+            ->with(['libraryId' => 'lib-1', 'filename' => 'a.mp4'])
+            ->willReturn(['uuid' => 'v1', 'uploadId' => 'u1']);
+
+        $controller = new VideoOptimizerAdminController($client);
+        $request = new Request([], [], [], [], [], [], json_encode(['libraryId' => 'lib-1', 'filename' => 'a.mp4']));
+        $response = $controller->initiateUpload($request);
+
+        static::assertSame(200, $response->getStatusCode());
+        static::assertSame('u1', json_decode((string) $response->getContent(), true)['data']['uploadId']);
+    }
+
+    public function testCompleteUploadPassesJsonPayload(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('completeUpload')
+            ->with(['uuid' => 'v1', 'parts' => [['partNumber' => 1, 'etag' => '"abc"']]])
+            ->willReturn(['uuid' => 'v1', 'status' => 'processing']);
+
+        $controller = new VideoOptimizerAdminController($client);
+        $request = new Request([], [], [], [], [], [], json_encode(['uuid' => 'v1', 'parts' => [['partNumber' => 1, 'etag' => '"abc"']]]));
+        $response = $controller->completeUpload($request);
+
+        static::assertSame(200, $response->getStatusCode());
     }
 
     public function testMalformedJsonReturns400(): void
