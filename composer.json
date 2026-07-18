@@ -6,9 +6,7 @@
     "license": "MIT",
     "authors": [{ "name": "ScaleCommerce GmbH" }],
     "require": {
-        "shopware/core": "~6.7.0",
-        "symfony/http-client": "^7.0",
-        "symfony/mime": "^7.0"
+        "shopware/core": ">=6.6.0.0 <6.8.0.0"
     },
     "autoload": {
         "psr-4": { "ScaleCommerce\\VideoOptimizer\\": "src/" }

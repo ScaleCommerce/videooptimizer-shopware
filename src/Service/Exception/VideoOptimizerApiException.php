@@ -17,9 +17,15 @@ class VideoOptimizerApiException extends \RuntimeException
     public static function fromResponse(int $statusCode, string $body): self
     {
         $decoded = json_decode($body, true);
-        $message = is_array($decoded) && isset($decoded['message'])
-            ? (string) $decoded['message']
-            : sprintf('VideoOptimizer API request failed with status %d.', $statusCode);
+        $message = sprintf('VideoOptimizer API request failed with status %d.', $statusCode);
+        if (is_array($decoded)) {
+            foreach (['message', 'statusMessage'] as $key) {
+                if (isset($decoded[$key]) && is_string($decoded[$key]) && $decoded[$key] !== '') {
+                    $message = $decoded[$key];
+                    break;
+                }
+            }
+        }
 
         return new self($statusCode, $message);
     }

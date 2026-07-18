@@ -9,7 +9,6 @@ use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
-use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 class VideoOptimizerClientTest extends TestCase
 {
@@ -23,7 +22,7 @@ class VideoOptimizerClientTest extends TestCase
         return $config;
     }
 
-    public function testListLibrariesUnwrapsDataAndSendsBearerToken(): void
+    public function testListLibrariesSendsBearerTokenAndUnwrapsData(): void
     {
         $capturedUrl = null;
         $capturedAuth = null;
@@ -40,9 +39,57 @@ class VideoOptimizerClientTest extends TestCase
         $client = new VideoOptimizerClient($http, $this->config());
         $result = $client->listLibraries();
 
-        static::assertSame('https://api.videooptimizer.eu/api/v1/libraries', $capturedUrl);
+        static::assertStringContainsString('https://api.videooptimizer.eu/api/v1/libraries', $capturedUrl);
+        static::assertStringContainsString('limit=100', $capturedUrl);
         static::assertSame('Authorization: Bearer vp_test', $capturedAuth);
         static::assertSame([['id' => 'lib-1', 'name' => 'Demo']], $result);
+    }
+
+    public function testListMergesAllCursorPages(): void
+    {
+        $urls = [];
+        $responses = [
+            new MockResponse(json_encode([
+                'data' => [['id' => 'lib-1']],
+                'pagination' => ['has_more' => true, 'next_cursor' => 'c2'],
+            ])),
+            new MockResponse(json_encode([
+                'data' => [['id' => 'lib-2']],
+                'pagination' => ['has_more' => false, 'next_cursor' => null],
+            ])),
+        ];
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$urls, &$responses): MockResponse {
+            $urls[] = $url;
+            return array_shift($responses);
+        });
+
+        $client = new VideoOptimizerClient($http, $this->config());
+        $result = $client->listLibraries();
+
+        static::assertSame([['id' => 'lib-1'], ['id' => 'lib-2']], $result);
+        static::assertCount(2, $urls);
+        static::assertStringContainsString('cursor=c2', $urls[1]);
+    }
+
+    public function testRetriesOnceAfter429(): void
+    {
+        $count = 0;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$count): MockResponse {
+            ++$count;
+            if ($count === 1) {
+                return new MockResponse(json_encode(['statusMessage' => 'slow down']), [
+                    'http_code' => 429,
+                    'response_headers' => ['retry-after' => '0'],
+                ]);
+            }
+            return new MockResponse(json_encode(['data' => [['id' => 'lib-1']]]));
+        });
+
+        $client = new VideoOptimizerClient($http, $this->config());
+        $result = $client->listLibraries();
+
+        static::assertSame(2, $count);
+        static::assertSame([['id' => 'lib-1']], $result);
     }
 
     public function testMissingTokenThrows(): void
@@ -69,6 +116,23 @@ class VideoOptimizerClientTest extends TestCase
         }
     }
 
+    public function testErrorFallsBackToStatusMessage(): void
+    {
+        $http = new MockHttpClient(new MockResponse(
+            json_encode(['statusCode' => 403, 'statusMessage' => 'Forbidden here']),
+            ['http_code' => 403]
+        ));
+        $client = new VideoOptimizerClient($http, $this->config());
+
+        try {
+            $client->listLibraries();
+            static::fail('Expected VideoOptimizerApiException');
+        } catch (VideoOptimizerApiException $e) {
+            static::assertSame(403, $e->getStatusCode());
+            static::assertStringContainsString('Forbidden here', $e->getMessage());
+        }
+    }
+
     public function testGetEmbedDoesNotRequireToken(): void
     {
         $http = new MockHttpClient(new MockResponse(json_encode(['data' => ['uuid' => 'v1', 'sources' => []]])));
@@ -77,89 +141,61 @@ class VideoOptimizerClientTest extends TestCase
         static::assertSame('v1', $result['uuid']);
     }
 
-    public function testUploadVideoSendsMultipartHeadersWithTitle(): void
+    public function testInitiateUploadPostsPayloadAndUnwrapsData(): void
     {
-        $path = sys_get_temp_dir() . '/' . uniqid('video-optimizer-test-', true) . '.mp4';
-        file_put_contents($path, 'fake-video-bytes');
+        $captured = null;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$captured): MockResponse {
+            $captured = ['method' => $method, 'url' => $url, 'body' => $options['body'] ?? null];
+            return new MockResponse(json_encode(['data' => [
+                'uuid' => 'v1', 'key' => 'k', 'uploadId' => 'u1', 'partSize' => 5242880, 'partCount' => 1,
+                'parts' => [['partNumber' => 1, 'url' => 'https://storage/put/1']],
+            ]]));
+        });
 
-        try {
-            $file = new UploadedFile($path, 'clip.mp4', 'video/mp4', null, true);
+        $client = new VideoOptimizerClient($http, $this->config());
+        $result = $client->initiateUpload(['libraryId' => 'lib-1', 'filename' => 'a.mp4', 'contentType' => 'video/mp4', 'fileSize' => 10]);
 
-            $capturedOptions = null;
-            $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$capturedOptions): MockResponse {
-                $capturedOptions = $options;
-                return new MockResponse(json_encode(['data' => ['uuid' => 'vid-1']]));
-            });
-
-            $client = new VideoOptimizerClient($http, $this->config());
-            $result = $client->uploadVideo('lib-9', $file, 'My Clip');
-
-            $headers = $capturedOptions['headers'] ?? [];
-
-            $libraryHeader = null;
-            $titleHeader = null;
-            $contentTypeHeader = null;
-            foreach ($headers as $header) {
-                $header = (string) $header;
-                if (str_starts_with(strtolower($header), 'x-library-id:')) {
-                    $libraryHeader = $header;
-                }
-                if (str_starts_with(strtolower($header), 'x-title:')) {
-                    $titleHeader = $header;
-                }
-                if (str_starts_with(strtolower($header), 'content-type:') && str_contains(strtolower($header), 'multipart/form-data')) {
-                    $contentTypeHeader = $header;
-                }
-            }
-
-            static::assertNotNull($libraryHeader);
-            static::assertStringStartsWith('x-library-id: lib-9', $libraryHeader);
-            static::assertNotNull($titleHeader);
-            static::assertStringStartsWith('x-title: My Clip', $titleHeader);
-            static::assertNotNull($contentTypeHeader);
-            static::assertSame(['uuid' => 'vid-1'], $result);
-        } finally {
-            @unlink($path);
-        }
+        static::assertSame('POST', $captured['method']);
+        static::assertStringEndsWith('/videos/upload/initiate', $captured['url']);
+        static::assertSame(json_encode(['libraryId' => 'lib-1', 'filename' => 'a.mp4', 'contentType' => 'video/mp4', 'fileSize' => 10]), $captured['body']);
+        static::assertSame('u1', $result['uploadId']);
+        static::assertSame([['partNumber' => 1, 'url' => 'https://storage/put/1']], $result['parts']);
     }
 
-    public function testUploadVideoOmitsTitleHeaderWhenNull(): void
+    public function testCompleteUploadPostsParts(): void
     {
-        $path = sys_get_temp_dir() . '/' . uniqid('video-optimizer-test-', true) . '.mp4';
-        file_put_contents($path, 'fake-video-bytes');
+        $captured = null;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$captured): MockResponse {
+            $captured = ['url' => $url, 'body' => $options['body'] ?? null];
+            return new MockResponse(json_encode(['data' => ['uuid' => 'v1', 'status' => 'processing']]));
+        });
 
-        try {
-            $file = new UploadedFile($path, 'clip.mp4', 'video/mp4', null, true);
+        $client = new VideoOptimizerClient($http, $this->config());
+        $payload = ['libraryId' => 'lib-1', 'uuid' => 'v1', 'key' => 'k', 'uploadId' => 'u1', 'parts' => [['partNumber' => 1, 'etag' => '"abc"']]];
+        $result = $client->completeUpload($payload);
 
-            $capturedOptions = null;
-            $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$capturedOptions): MockResponse {
-                $capturedOptions = $options;
-                return new MockResponse(json_encode(['data' => ['uuid' => 'vid-1']]));
-            });
+        static::assertStringEndsWith('/videos/upload/complete', $captured['url']);
+        // Compare decoded payloads, not raw JSON strings: Symfony's HttpClientTrait encodes the
+        // 'json' option with JSON_HEX_QUOT et al., so a literal quote in the ETag value (e.g.
+        // '"abc"') is escaped differently on the wire than plain json_encode() would produce.
+        static::assertSame($payload, json_decode((string) $captured['body'], true));
+        static::assertSame('processing', $result['status']);
+    }
 
-            $client = new VideoOptimizerClient($http, $this->config());
-            $client->uploadVideo('lib-9', $file, null);
+    public function testListAllVideosFiltersByLibrary(): void
+    {
+        $capturedUrl = null;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$capturedUrl): MockResponse {
+            $capturedUrl = $url;
+            return new MockResponse(json_encode(['data' => [['uuid' => 'v1', 'library_id' => 'lib-1']]]));
+        });
 
-            $headers = $capturedOptions['headers'] ?? [];
+        $client = new VideoOptimizerClient($http, $this->config());
+        $result = $client->listAllVideos('lib-1');
 
-            $libraryHeader = null;
-            $titleHeaderFound = false;
-            foreach ($headers as $header) {
-                $header = (string) $header;
-                if (str_starts_with(strtolower($header), 'x-library-id:')) {
-                    $libraryHeader = $header;
-                }
-                if (str_starts_with(strtolower($header), 'x-title:')) {
-                    $titleHeaderFound = true;
-                }
-            }
-
-            static::assertNotNull($libraryHeader);
-            static::assertStringStartsWith('x-library-id: lib-9', $libraryHeader);
-            static::assertFalse($titleHeaderFound);
-        } finally {
-            @unlink($path);
-        }
+        static::assertStringContainsString('/videos', $capturedUrl);
+        static::assertStringContainsString('library_id=lib-1', $capturedUrl);
+        static::assertSame([['uuid' => 'v1', 'library_id' => 'lib-1']], $result);
     }
 
     public function testCreateLibrarySendsJsonPayload(): void
