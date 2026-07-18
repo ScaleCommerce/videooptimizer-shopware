@@ -18,6 +18,7 @@
     },
     "extra": {
         "shopware-plugin-class": "ScaleCommerce\\VideoOptimizer\\ScaleVideoOptimizer",
+        "plugin-icon": "src/Resources/config/logo.png",
         "label": {
             "de-DE": "VideoOptimizer",
             "en-GB": "VideoOptimizer"
