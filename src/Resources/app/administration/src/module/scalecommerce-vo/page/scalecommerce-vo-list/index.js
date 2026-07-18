@@ -1,4 +1,5 @@
 import template from './scalecommerce-vo-list.html.twig';
+import './scalecommerce-vo-list.scss';
 
 const { Component, Mixin } = Shopware;
 
@@ -113,6 +114,10 @@ Component.register('scalecommerce-vo-list', {
         _loadForm() {
             const library = this.activeLibrary;
             if (!library) {
+                this.formName = '';
+                this.formDescription = '';
+                this.selectedCodecs = [];
+                this.selectedResolutions = [];
                 return;
             }
             this.formName = library.name || '';

@@ -1,0 +1,38 @@
+.scalecommerce-vo-list {
+    &__library-head {
+        display: flex;
+        align-items: flex-end;
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    &__form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    &__ladder {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    &__options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 24px;
+    }
+
+    &__form-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    &__info,
+    &__hint {
+        color: #758ca3;
+        font-size: 13px;
+    }
+}

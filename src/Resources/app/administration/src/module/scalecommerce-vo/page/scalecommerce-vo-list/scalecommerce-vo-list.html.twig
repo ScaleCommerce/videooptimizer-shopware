@@ -30,9 +30,9 @@
                                 v-for="option in encodings.codecs"
                                 :key="option.key"
                                 :label="optionLabel(option)"
-                                :checked="selectedCodecs.includes(option.key)"
+                                :model-value="selectedCodecs.includes(option.key)"
                                 :disabled="optionDisabled(option)"
-                                @update:checked="toggleCodec(option.key)" />
+                                @update:model-value="toggleCodec(option.key)" />
                         </div>
                     </div>
 
@@ -43,9 +43,9 @@
                                 v-for="option in encodings.resolutions"
                                 :key="option.key"
                                 :label="optionLabel(option)"
-                                :checked="selectedResolutions.includes(option.key)"
+                                :model-value="selectedResolutions.includes(option.key)"
                                 :disabled="optionDisabled(option)"
-                                @update:checked="toggleResolution(option.key)" />
+                                @update:model-value="toggleResolution(option.key)" />
                         </div>
                     </div>
 
