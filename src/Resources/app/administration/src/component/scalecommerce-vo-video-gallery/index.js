@@ -16,6 +16,8 @@ Component.register('scalecommerce-vo-video-gallery', {
         mode: { type: String, required: false, default: 'select' },
     },
 
+    emits: ['select', 'upload-complete', 'renamed', 'deleted'],
+
     data() {
         return {
             videos: [],

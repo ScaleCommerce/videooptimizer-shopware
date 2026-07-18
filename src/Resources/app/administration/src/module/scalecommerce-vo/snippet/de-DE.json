@@ -8,13 +8,7 @@
             "deleteLibrary": "Bibliothek löschen",
             "newLibraryName": "Name der Bibliothek",
             "libraryCreated": "Bibliothek angelegt",
-            "uploadTitle": "Video hochladen",
-            "videoTitle": "Titel",
-            "upload": "Hochladen",
-            "uploadStarted": "Upload gestartet, wird verarbeitet…",
             "videosTitle": "Videos",
-            "delete": "Löschen",
-            "rename": "Umbenennen",
             "genericError": "VideoOptimizer-Anfrage fehlgeschlagen"
         },
         "cms": {
@@ -30,7 +24,7 @@
             "playerMode": "Player",
             "playerModeNative": "Nativer Player",
             "playerModeEmbed": "VideoOptimizer-Embed",
-            "autoplayHint": "Autoplay wirkt nur zusammen mit „Stummschalten\" (Browser-Vorgabe)."
+            "autoplayHint": "Autoplay wirkt nur zusammen mit „Stummschalten“ (Browser-Vorgabe)."
         },
         "gallery": {
             "upload": "Hochladen",

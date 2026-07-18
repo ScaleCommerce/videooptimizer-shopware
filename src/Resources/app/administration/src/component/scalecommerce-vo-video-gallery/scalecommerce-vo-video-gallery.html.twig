@@ -1,16 +1,19 @@
 {% block scalecommerce_vo_video_gallery %}
 <div class="scalecommerce-vo-gallery">
     <div class="scalecommerce-vo-gallery__grid">
-        <button
+        <div
             v-for="video in videos"
             :key="video.uuid"
-            type="button"
             class="scalecommerce-vo-gallery__card"
             :class="{
                 'is-selected': video.uuid === selectedUuid,
                 'is-selectable': mode === 'select' && video.status === 'ready'
             }"
-            @click="onSelect(video)">
+            :role="mode === 'select' && video.status === 'ready' ? 'button' : null"
+            :tabindex="mode === 'select' && video.status === 'ready' ? 0 : null"
+            @click="onSelect(video)"
+            @keydown.enter="onSelect(video)"
+            @keydown.space.prevent="onSelect(video)">
             <div class="scalecommerce-vo-gallery__poster">
                 <img v-if="posterFor(video)" :src="posterFor(video)" :alt="video.title" />
                 <mt-icon v-else name="regular-play-circle" size="32" />
@@ -29,7 +32,7 @@
                     {{ $tc('scalecommerce-vo.gallery.delete') }}
                 </mt-button>
             </div>
-        </button>
+        </div>
 
         <div class="scalecommerce-vo-gallery__card scalecommerce-vo-gallery__upload">
             <mt-text-field v-model="uploadTitle" :label="$tc('scalecommerce-vo.gallery.uploadTitle')" size="small" />
