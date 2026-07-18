@@ -26,6 +26,7 @@ Component.register('scalecommerce-vo-video-gallery', {
             uploadTitle: '',
             uploadFile: null,
             isUploading: false,
+            detailUuid: null,
         };
     },
 
@@ -104,10 +105,24 @@ Component.register('scalecommerce-vo-video-gallery', {
         },
 
         onSelect(video) {
-            if (this.mode !== 'select' || video.status !== 'ready') {
+            if (this.mode === 'manage') {
+                if (video.status === 'ready') {
+                    this.detailUuid = video.uuid;
+                }
+                return;
+            }
+            if (video.status !== 'ready') {
                 return;
             }
             this.$emit('select', video.uuid);
+        },
+
+        onDetailClose() {
+            this.detailUuid = null;
+        },
+
+        onDetailUpdated() {
+            this.loadVideos();
         },
 
         onFileSelected(event) {

@@ -50,6 +50,22 @@
             "orientationPortrait": "hochkant",
             "orientationLandscape": "quer",
             "orientationSquare": "quadratisch"
+        },
+        "detail": {
+            "previewImage": "Vorschaubild",
+            "uploadCustom": "Eigenes Bild hochladen",
+            "fromMedia": "Aus Mediathek",
+            "removeCustom": "Eigenes entfernen",
+            "applying": "Wird übernommen …",
+            "uploading": "Wird hochgeladen …",
+            "processing": "Wird verarbeitet …",
+            "posterUpdated": "Vorschaubild aktualisiert.",
+            "posterFailed": "Das eigene Vorschaubild konnte nicht verarbeitet werden.",
+            "done": "Fertig",
+            "genericError": "Anfrage fehlgeschlagen.",
+            "orientation_portrait": "hochkant",
+            "orientation_landscape": "quer",
+            "orientation_square": "quadratisch"
         }
     },
     "sw-privileges": {

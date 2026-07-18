@@ -7,7 +7,7 @@
             class="scalecommerce-vo-gallery__card"
             :class="{
                 'is-selected': video.uuid === selectedUuid,
-                'is-selectable': mode === 'select' && video.status === 'ready'
+                'is-selectable': (mode === 'select' || mode === 'manage') && video.status === 'ready'
             }"
             :role="mode === 'select' && video.status === 'ready' ? 'button' : null"
             :tabindex="mode === 'select' && video.status === 'ready' ? 0 : null"
@@ -56,5 +56,11 @@
     <div v-if="!isLoading && !videos.length" class="scalecommerce-vo-gallery__empty">
         {{ $tc('scalecommerce-vo.gallery.empty') }}
     </div>
+
+    <scalecommerce-vo-video-detail
+        v-if="detailUuid"
+        :uuid="detailUuid"
+        @close="onDetailClose"
+        @updated="onDetailUpdated" />
 </div>
 {% endblock %}

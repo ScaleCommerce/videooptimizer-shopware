@@ -1,0 +1,50 @@
+.scalecommerce-vo-detail {
+    &__poster {
+        aspect-ratio: 16 / 9;
+        background: #f0f2f5;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 8px;
+
+        img { width: 100%; height: 100%; object-fit: contain; }
+    }
+
+    &__meta { color: #758ca3; margin-bottom: 16px; }
+
+    &__frames {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+        margin: 8px 0 16px;
+    }
+
+    &__frame {
+        aspect-ratio: 16 / 9;
+        border: 1px solid #d1d9e0;
+        border-radius: 4px;
+        overflow: hidden;
+        background: #f0f2f5;
+        cursor: pointer;
+        padding: 0;
+
+        &:hover:not(:disabled) { border-color: #189eff; }
+        &:disabled { cursor: default; opacity: 0.7; }
+
+        img { width: 100%; height: 100%; object-fit: cover; }
+    }
+
+    &__custom {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    &__file {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    &__status { color: #758ca3; margin-top: 12px; }
+}

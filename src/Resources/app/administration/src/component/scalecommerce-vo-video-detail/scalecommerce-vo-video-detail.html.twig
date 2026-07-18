@@ -1,0 +1,54 @@
+{% block scalecommerce_vo_video_detail %}
+<sw-modal
+    class="scalecommerce-vo-detail"
+    :title="video ? (video.title || video.uuid) : ''"
+    @modal-close="onClose">
+
+    <template v-if="video">
+        <div class="scalecommerce-vo-detail__poster">
+            <img v-if="posterSrc" :src="posterSrc" :alt="video.title" />
+        </div>
+        <p class="scalecommerce-vo-detail__meta">{{ metaLine }}</p>
+
+        <strong>{{ $tc('scalecommerce-vo.detail.previewImage') }}</strong>
+        <div class="scalecommerce-vo-detail__frames">
+            <button
+                v-for="thumb in thumbnails"
+                :key="thumb.index"
+                type="button"
+                class="scalecommerce-vo-detail__frame"
+                :disabled="busy"
+                @click="onPickFrame(thumb.index)">
+                <img v-if="frameSrcById[thumb.index]" :src="frameSrcById[thumb.index]" alt="" />
+                <span v-else class="scalecommerce-vo-detail__frame-loading"></span>
+            </button>
+        </div>
+
+        <div class="scalecommerce-vo-detail__custom">
+            <label class="scalecommerce-vo-detail__file">
+                <input type="file" accept="image/jpeg,image/png,image/webp" :disabled="busy" @change="onFileSelected" />
+                {{ $tc('scalecommerce-vo.detail.uploadCustom') }}
+            </label>
+            <mt-button size="small" variant="secondary" :disabled="busy" @click="mediaModalOpen = true">
+                {{ $tc('scalecommerce-vo.detail.fromMedia') }}
+            </mt-button>
+            <mt-button v-if="hasCustomPoster" size="small" variant="critical" :disabled="busy" @click="onRemoveCustomPoster">
+                {{ $tc('scalecommerce-vo.detail.removeCustom') }}
+            </mt-button>
+        </div>
+
+        <p v-if="statusText" class="scalecommerce-vo-detail__status">{{ statusText }}</p>
+    </template>
+
+    <template #modal-footer>
+        <mt-button variant="primary" @click="onClose">{{ $tc('scalecommerce-vo.detail.done') }}</mt-button>
+    </template>
+
+    <sw-media-modal-v2
+        v-if="mediaModalOpen"
+        :allow-multi-select="false"
+        entity-context="product"
+        @media-modal-selection-change="onMediaSelected"
+        @modal-close="onMediaModalClose" />
+</sw-modal>
+{% endblock %}

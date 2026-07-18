@@ -50,6 +50,22 @@
             "orientationPortrait": "portrait",
             "orientationLandscape": "landscape",
             "orientationSquare": "square"
+        },
+        "detail": {
+            "previewImage": "Preview image",
+            "uploadCustom": "Upload your own image",
+            "fromMedia": "From media library",
+            "removeCustom": "Remove custom",
+            "applying": "Applying …",
+            "uploading": "Uploading …",
+            "processing": "Processing …",
+            "posterUpdated": "Preview image updated.",
+            "posterFailed": "The custom preview image could not be processed.",
+            "done": "Done",
+            "genericError": "Request failed.",
+            "orientation_portrait": "portrait",
+            "orientation_landscape": "landscape",
+            "orientation_square": "square"
         }
     },
     "sw-privileges": {
