@@ -220,4 +220,27 @@ class VideoOptimizerClientTest extends TestCase
         static::assertSame(json_encode(['name' => 'Demo']), $capturedOptions['body'] ?? null);
         static::assertSame(['id' => 'lib-9', 'name' => 'Demo'], $result);
     }
+
+    public function testListEncodingsReturnsUnwrappedPayloadWithToken(): void
+    {
+        $capturedAuth = null;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$capturedAuth): MockResponse {
+            foreach ($options['headers'] ?? [] as $header) {
+                if (str_starts_with((string) $header, 'Authorization:')) {
+                    $capturedAuth = $header;
+                }
+            }
+            return new MockResponse(json_encode([
+                'codecs' => [['key' => 'h264', 'label' => 'H.264', 'access' => 'included', 'available' => true]],
+                'resolutions' => [['key' => '1080p', 'label' => '1080p', 'access' => 'included', 'available' => true]],
+            ]));
+        });
+
+        $client = new VideoOptimizerClient($http, $this->config());
+        $result = $client->listEncodings();
+
+        static::assertSame('Authorization: Bearer vp_test', $capturedAuth);
+        static::assertSame('h264', $result['codecs'][0]['key']);
+        static::assertSame('1080p', $result['resolutions'][0]['key']);
+    }
 }

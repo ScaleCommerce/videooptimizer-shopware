@@ -57,6 +57,15 @@ class VideoOptimizerClient
         return $this->requestAllPages('/videos', $query);
     }
 
+    /**
+     * Lists the codecs and resolutions the organization may enable on a library. Returned as-is
+     * ({codecs, resolutions}), NOT wrapped in { data } — so use the low-level request() directly.
+     */
+    public function listEncodings(): array
+    {
+        return $this->request('GET', '/encodings');
+    }
+
     public function getVideo(string $uuid): array
     {
         return $this->requestData('GET', '/videos/' . rawurlencode($uuid));
