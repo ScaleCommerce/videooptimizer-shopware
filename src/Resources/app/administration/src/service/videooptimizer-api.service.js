@@ -42,22 +42,46 @@ export default class VideoOptimizerApiService extends ApiService {
             .then((response) => ApiService.handleResponse(response));
     }
 
-    uploadVideo(libraryId, file, title) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('libraryId', libraryId);
-        if (title) {
-            formData.append('title', title);
-        }
-        // getBasicHeaders() defaults Content-Type to application/json; remove it so
-        // the browser sets multipart/form-data with the correct boundary, otherwise
-        // the server cannot parse the file and rejects the upload.
-        const headers = this.getBasicHeaders();
-        delete headers['Content-Type'];
-
+    getAllVideos(libraryId) {
+        const query = libraryId ? `?libraryId=${encodeURIComponent(libraryId)}` : '';
         return this.httpClient
-            .post(`${this.getApiBasePath()}/videos`, formData, { headers })
+            .get(`${this.getApiBasePath()}/videos${query}`, { headers: this.getBasicHeaders() })
             .then((response) => ApiService.handleResponse(response));
+    }
+
+    initiateUpload(payload) {
+        return this.httpClient
+            .post(`${this.getApiBasePath()}/videos/upload/initiate`, payload, { headers: this.getBasicHeaders() })
+            .then((response) => ApiService.handleResponse(response));
+    }
+
+    completeUpload(payload) {
+        return this.httpClient
+            .post(`${this.getApiBasePath()}/videos/upload/complete`, payload, { headers: this.getBasicHeaders() })
+            .then((response) => ApiService.handleResponse(response));
+    }
+
+    // PUTs each file part directly to its presigned storage URL and collects the ETags the
+    // complete step needs. Cross-origin, so no auth header; the bucket must expose ETag via CORS.
+    uploadParts(file, parts, partSize) {
+        return parts.reduce(
+            (chain, part) => chain.then((etags) => {
+                const start = (part.partNumber - 1) * partSize;
+                const blob = file.slice(start, start + partSize);
+                return fetch(part.url, { method: 'PUT', body: blob }).then((response) => {
+                    if (!response.ok) {
+                        throw new Error(`Part upload failed (${response.status})`);
+                    }
+                    const etag = response.headers.get('ETag');
+                    if (!etag) {
+                        throw new Error('Missing ETag on uploaded part - check bucket CORS (expose ETag).');
+                    }
+                    etags.push({ partNumber: part.partNumber, etag });
+                    return etags;
+                });
+            }),
+            Promise.resolve([]),
+        );
     }
 
     updateVideo(uuid, payload) {
