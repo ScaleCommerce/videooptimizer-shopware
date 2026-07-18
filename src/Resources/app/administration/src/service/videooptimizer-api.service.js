@@ -55,6 +55,62 @@ export default class VideoOptimizerApiService extends ApiService {
             .then((response) => ApiService.handleResponse(response));
     }
 
+    getThumbnails(uuid) {
+        return this.httpClient
+            .get(`${this.getApiBasePath()}/videos/${uuid}/thumbnails`, { headers: this.getBasicHeaders() })
+            .then((response) => ApiService.handleResponse(response));
+    }
+
+    // Fetches a frame image as an authenticated blob (the frame URLs are Bearer-protected and
+    // proxied by our controller); callers create an object URL for the <img>.
+    getThumbnailImage(uuid, index) {
+        return this.httpClient
+            .get(`${this.getApiBasePath()}/videos/${uuid}/thumbnails/${index}`, {
+                headers: this.getBasicHeaders(),
+                responseType: 'blob',
+            })
+            .then((response) => response.data);
+    }
+
+    selectThumbnail(uuid, index) {
+        return this.httpClient
+            .post(`${this.getApiBasePath()}/videos/${uuid}/thumbnail`, { thumbnailIndex: index }, { headers: this.getBasicHeaders() })
+            .then((response) => ApiService.handleResponse(response));
+    }
+
+    initiatePosterUpload(uuid, payload) {
+        return this.httpClient
+            .post(`${this.getApiBasePath()}/videos/${uuid}/poster/initiate`, payload, { headers: this.getBasicHeaders() })
+            .then((response) => ApiService.handleResponse(response));
+    }
+
+    // Single presigned PUT straight to storage (poster is not multipart). No auth header.
+    uploadPoster(uploadUrl, blob) {
+        return fetch(uploadUrl, { method: 'PUT', body: blob, headers: { 'Content-Type': blob.type } }).then((response) => {
+            if (!response.ok) {
+                throw new Error(`Poster upload failed (${response.status})`);
+            }
+        });
+    }
+
+    completePosterUpload(uuid, key) {
+        return this.httpClient
+            .post(`${this.getApiBasePath()}/videos/${uuid}/poster/complete`, { key }, { headers: this.getBasicHeaders() })
+            .then((response) => ApiService.handleResponse(response));
+    }
+
+    selectPoster(uuid, payload) {
+        return this.httpClient
+            .post(`${this.getApiBasePath()}/videos/${uuid}/poster/select`, payload, { headers: this.getBasicHeaders() })
+            .then((response) => ApiService.handleResponse(response));
+    }
+
+    deletePoster(uuid) {
+        return this.httpClient
+            .delete(`${this.getApiBasePath()}/videos/${uuid}/poster`, { headers: this.getBasicHeaders() })
+            .then((response) => ApiService.handleResponse(response));
+    }
+
     initiateUpload(payload) {
         return this.httpClient
             .post(`${this.getApiBasePath()}/videos/upload/initiate`, payload, { headers: this.getBasicHeaders() })
