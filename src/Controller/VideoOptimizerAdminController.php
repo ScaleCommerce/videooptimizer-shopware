@@ -98,6 +98,60 @@ class VideoOptimizerAdminController
         }, Response::HTTP_NO_CONTENT);
     }
 
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/thumbnails', name: 'api.action.scalecommerce-vo.thumbnails.list', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
+    public function listThumbnails(string $uuid): JsonResponse
+    {
+        return $this->wrap(fn () => $this->client->listThumbnails($uuid));
+    }
+
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/thumbnails/{index}', name: 'api.action.scalecommerce-vo.thumbnails.image', methods: ['GET'], requirements: ['index' => '\d+'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
+    public function getThumbnailImage(string $uuid, string $index): Response
+    {
+        try {
+            $image = $this->client->getThumbnailImage($uuid, (int) $index);
+            return new Response($image['content'], Response::HTTP_OK, ['Content-Type' => $image['contentType']]);
+        } catch (MissingApiTokenException $e) {
+            return new JsonResponse(['errors' => [['status' => '400', 'detail' => $e->getMessage()]]], 400);
+        } catch (VideoOptimizerApiException $e) {
+            return new JsonResponse(['errors' => [['status' => (string) $e->getStatusCode(), 'detail' => $e->getMessage()]]], $e->getStatusCode());
+        }
+    }
+
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/thumbnail', name: 'api.action.scalecommerce-vo.thumbnail.select', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
+    public function selectThumbnail(string $uuid, Request $request): JsonResponse
+    {
+        $index = (int) ($this->payload($request)['thumbnailIndex'] ?? 0);
+        return $this->wrap(fn () => $this->client->selectThumbnail($uuid, $index));
+    }
+
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/poster/initiate', name: 'api.action.scalecommerce-vo.poster.initiate', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
+    public function initiatePosterUpload(string $uuid, Request $request): JsonResponse
+    {
+        return $this->wrap(fn () => $this->client->initiatePosterUpload($uuid, $this->payload($request)));
+    }
+
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/poster/complete', name: 'api.action.scalecommerce-vo.poster.complete', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
+    public function completePosterUpload(string $uuid, Request $request): JsonResponse
+    {
+        $key = (string) ($this->payload($request)['key'] ?? '');
+        return $this->wrap(fn () => $this->client->completePosterUpload($uuid, $key));
+    }
+
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/poster/select', name: 'api.action.scalecommerce-vo.poster.select', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
+    public function selectPoster(string $uuid, Request $request): JsonResponse
+    {
+        return $this->wrap(fn () => $this->client->selectPoster($uuid, $this->payload($request)));
+    }
+
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/poster', name: 'api.action.scalecommerce-vo.poster.delete', methods: ['DELETE'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
+    public function deletePoster(string $uuid): JsonResponse
+    {
+        return $this->wrap(function () use ($uuid): array {
+            $this->client->deletePoster($uuid);
+            return [];
+        }, Response::HTTP_NO_CONTENT);
+    }
+
     private function payload(Request $request): array
     {
         $content = trim((string) $request->getContent());

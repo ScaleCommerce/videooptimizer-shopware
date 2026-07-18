@@ -128,4 +128,44 @@ class VideoOptimizerAdminControllerTest extends TestCase
             json_decode((string) $response->getContent(), true)
         );
     }
+
+    public function testListThumbnailsReturnsClientData(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('listThumbnails')->with('v1')->willReturn(['thumbnails' => [['index' => 0]]]);
+        $controller = new VideoOptimizerAdminController($client);
+        $response = $controller->listThumbnails('v1');
+        static::assertSame(200, $response->getStatusCode());
+        static::assertSame(['data' => ['thumbnails' => [['index' => 0]]]], json_decode((string) $response->getContent(), true));
+    }
+
+    public function testGetThumbnailImageStreamsBytes(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('getThumbnailImage')->with('v1', 2)->willReturn(['content' => 'IMG', 'contentType' => 'image/jpeg']);
+        $controller = new VideoOptimizerAdminController($client);
+        $response = $controller->getThumbnailImage('v1', '2');
+        static::assertSame(200, $response->getStatusCode());
+        static::assertSame('IMG', $response->getContent());
+        static::assertSame('image/jpeg', $response->headers->get('Content-Type'));
+    }
+
+    public function testSelectThumbnailPassesIndex(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('selectThumbnail')->with('v1', 3)->willReturn(['poster' => ['source' => 'thumbnail']]);
+        $controller = new VideoOptimizerAdminController($client);
+        $request = new Request([], [], [], [], [], [], json_encode(['thumbnailIndex' => 3]));
+        $response = $controller->selectThumbnail('v1', $request);
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testDeletePosterReturns204(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('deletePoster')->with('v1');
+        $controller = new VideoOptimizerAdminController($client);
+        $response = $controller->deletePoster('v1');
+        static::assertSame(204, $response->getStatusCode());
+    }
 }
