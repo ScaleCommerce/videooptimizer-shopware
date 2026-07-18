@@ -3,6 +3,17 @@
 All notable changes to `scalecommerce/videooptimizer-shopware` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.2.1] - 2026-07-18
+
+### Added
+- Video metadata (dimensions, duration, orientation) shown on the gallery cards, in the CMS element preview, and in a detail panel when a video is selected.
+
+### Changed
+- The upload tile now has a clear "Upload a new video" heading, making it obvious the tile uploads a video (the optional title is the video title).
+
+### Fixed
+- The native storefront player now starts muted when autoplay is enabled, so autoplay actually plays (browsers block autoplay with sound). Playback is kicked off once the HLS manifest is ready.
+
 ## [0.2.0] - 2026-07-18
 
 First tagged release. Runs on the current VideoOptimizer API and supports Shopware 6.6 and 6.7.
