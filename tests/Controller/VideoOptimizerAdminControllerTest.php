@@ -113,4 +113,19 @@ class VideoOptimizerAdminControllerTest extends TestCase
 
         static::assertSame(400, $response->getStatusCode());
     }
+
+    public function testListEncodingsReturnsClientData(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('listEncodings')->willReturn(['codecs' => [['key' => 'h264']], 'resolutions' => []]);
+
+        $controller = new VideoOptimizerAdminController($client);
+        $response = $controller->listEncodings();
+
+        static::assertSame(200, $response->getStatusCode());
+        static::assertSame(
+            ['data' => ['codecs' => [['key' => 'h264']], 'resolutions' => []]],
+            json_decode((string) $response->getContent(), true)
+        );
+    }
 }

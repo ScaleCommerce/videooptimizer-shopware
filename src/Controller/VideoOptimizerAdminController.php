@@ -59,6 +59,12 @@ class VideoOptimizerAdminController
         return $this->wrap(fn () => $this->client->listAllVideos($libraryId !== null ? (string) $libraryId : null));
     }
 
+    #[Route(path: '/api/_action/scalecommerce-vo/encodings', name: 'api.action.scalecommerce-vo.encodings.list', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
+    public function listEncodings(): JsonResponse
+    {
+        return $this->wrap(fn () => $this->client->listEncodings());
+    }
+
     #[Route(path: '/api/_action/scalecommerce-vo/videos/upload/initiate', name: 'api.action.scalecommerce-vo.videos.upload-initiate', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:create']])]
     public function initiateUpload(Request $request): JsonResponse
     {
