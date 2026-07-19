@@ -3,6 +3,11 @@
 All notable changes to `scalecommerce/videooptimizer-shopware` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.2] - 2026-07-19
+
+### Added
+- New CMS content element and block **"VideoOptimizer Background hero"** for Shopping Experiences: a full-bleed, autoplaying, muted, looping background video with an overlay scrim and overlaid content (eyebrow, headline, multi-line subline and a call-to-action button). Configurable overlay (gradient / dark / none), section height (full / large / medium), headline and text colours, and an "above the fold" priority flag that preloads the video for a hero at the top of the page. Renders nothing when no video is selected. The background video streams adaptively (HLS) with an MP4/poster fallback.
+
 ## [0.4.1] - 2026-07-19
 
 ### Added
