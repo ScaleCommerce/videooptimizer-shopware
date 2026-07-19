@@ -1,0 +1,61 @@
+{% block element_config_scalecommerce_vo_media_split %}
+<div class="scalecommerce-vo-media-split-config">
+    <mt-select
+        :label="$tc('scalecommerce-vo.cms.library')"
+        :options="libraryOptions"
+        :model-value="selectedLibraryId"
+        @update:model-value="onLibraryChange" />
+
+    <scalecommerce-vo-video-gallery
+        :library-id="selectedLibraryId"
+        :selected-uuid="selectedVideoUuid"
+        mode="select"
+        @select="onVideoSelect"
+        @upload-complete="onVideoSelect" />
+
+    <mt-select
+        :label="$tc('scalecommerce-vo.mediaSplit.side')"
+        :options="sideOptions"
+        :model-value="element.config.side.value"
+        @update:model-value="onSideChange" />
+
+    <mt-text-field
+        :label="$tc('scalecommerce-vo.mediaSplit.eyebrow')"
+        v-model="element.config.eyebrow.value" />
+
+    <mt-text-field
+        :label="$tc('scalecommerce-vo.mediaSplit.headline')"
+        v-model="element.config.headline.value" />
+
+    <sw-text-editor
+        :label="$tc('scalecommerce-vo.mediaSplit.text')"
+        :value="element.config.text.value"
+        @update:value="onTextChange" />
+
+    <mt-text-field
+        :label="$tc('scalecommerce-vo.mediaSplit.ctaLabel')"
+        v-model="element.config.ctaLabel.value" />
+
+    <mt-text-field
+        :label="$tc('scalecommerce-vo.mediaSplit.ctaUrl')"
+        v-model="element.config.ctaUrl.value" />
+
+    <mt-select
+        :label="$tc('scalecommerce-vo.mediaSplit.presentation')"
+        :options="presentationOptions"
+        :model-value="element.config.presentation.value"
+        @update:model-value="onPresentationChange" />
+
+    <mt-select
+        :label="$tc('scalecommerce-vo.mediaSplit.player')"
+        :options="playerModeOptions"
+        :model-value="element.config.playerMode.value"
+        @update:model-value="onPlayerModeChange" />
+
+    <mt-switch :label="$tc('scalecommerce-vo.cms.showControls')" v-model="element.config.showControls.value" />
+    <mt-switch :label="$tc('scalecommerce-vo.cms.autoplay')" v-model="element.config.autoplay.value" />
+    <p class="scalecommerce-vo-media-split-config__hint">{{ $tc('scalecommerce-vo.cms.autoplayHint') }}</p>
+    <mt-switch :label="$tc('scalecommerce-vo.cms.muted')" v-model="element.config.muted.value" />
+    <mt-switch :label="$tc('scalecommerce-vo.cms.loop')" v-model="element.config.loop.value" />
+</div>
+{% endblock %}
