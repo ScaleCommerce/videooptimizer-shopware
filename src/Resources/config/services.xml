@@ -21,5 +21,10 @@
             <argument type="service" id="ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient"/>
             <tag name="shopware.cms.data_resolver"/>
         </service>
+
+        <service id="ScaleCommerce\VideoOptimizer\DataResolver\BackgroundHeroElementResolver">
+            <argument type="service" id="ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient"/>
+            <tag name="shopware.cms.data_resolver"/>
+        </service>
     </services>
 </container>
