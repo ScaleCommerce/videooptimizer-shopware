@@ -1,0 +1,19 @@
+{% block element_scalecommerce_vo_spotlight %}
+<div class="scalecommerce-vo-spotlight-component">
+    <template v-if="video">
+        <div class="scalecommerce-vo-spotlight-component__poster">
+            <img v-if="posterUrl" :src="posterUrl" :alt="headline" />
+            <mt-icon v-else name="regular-play-circle" size="40" />
+        </div>
+        <div class="scalecommerce-vo-spotlight-component__meta">
+            <span class="scalecommerce-vo-spotlight-component__title">{{ headline }}</span>
+            <sw-label :variant="statusVariant(video.status)" size="small" :ghost="true">{{ video.status }}</sw-label>
+        </div>
+        <span v-if="metaLine()" class="scalecommerce-vo-spotlight-component__meta-info">{{ metaLine() }}</span>
+    </template>
+    <div v-else class="scalecommerce-vo-spotlight-component__empty">
+        <mt-icon name="regular-play-circle" size="32" />
+        <span>{{ $tc('scalecommerce-vo.cms.selectVideo') }}</span>
+    </div>
+</div>
+{% endblock %}

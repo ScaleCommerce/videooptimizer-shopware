@@ -78,6 +78,20 @@
             "priority": "Above the fold (LCP)",
             "priorityHint": "Loads the background video with priority when the hero starts in the viewport."
         },
+        "spotlight": {
+            "label": "VideoOptimizer Spotlight",
+            "blockLabel": "VideoOptimizer Spotlight",
+            "eyebrow": "Eyebrow",
+            "headline": "Headline",
+            "caption": "Caption",
+            "presentation": "Presentation",
+            "presentationFacade": "Poster with play button",
+            "presentationLightbox": "Lightbox",
+            "presentationDirect": "Embedded directly",
+            "player": "Player",
+            "playerNative": "Native player",
+            "playerEmbed": "VideoOptimizer embed"
+        },
         "gallery": {
             "upload": "Upload",
             "uploadTitle": "Title (optional)",
