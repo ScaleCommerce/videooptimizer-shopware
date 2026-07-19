@@ -57,6 +57,27 @@
             "playerNative": "Nativer Player",
             "playerEmbed": "VideoOptimizer-Embed"
         },
+        "backgroundHero": {
+            "label": "VideoOptimizer Hintergrund-Hero",
+            "blockLabel": "VideoOptimizer Hintergrund-Hero",
+            "eyebrow": "Kicker",
+            "headline": "Überschrift",
+            "subline": "Unterzeile",
+            "ctaLabel": "Button-Beschriftung",
+            "ctaUrl": "Button-Link",
+            "overlay": "Overlay",
+            "overlayGradient": "Verlauf",
+            "overlayDark": "Abgedunkelt",
+            "overlayNone": "Kein Overlay",
+            "height": "Höhe",
+            "heightFull": "Vollbild",
+            "heightLarge": "Groß",
+            "heightMedium": "Mittel",
+            "headlineColor": "Überschrift-Farbe",
+            "textColor": "Textfarbe",
+            "priority": "Above the Fold (LCP)",
+            "priorityHint": "Lädt das Hintergrundvideo bevorzugt, wenn der Hero im sichtbaren Bereich beginnt."
+        },
         "gallery": {
             "upload": "Hochladen",
             "uploadTitle": "Titel (optional)",

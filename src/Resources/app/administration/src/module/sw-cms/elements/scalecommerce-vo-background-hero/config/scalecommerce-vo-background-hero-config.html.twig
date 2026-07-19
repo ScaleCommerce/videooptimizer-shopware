@@ -1,0 +1,59 @@
+{% block element_config_scalecommerce_vo_background_hero %}
+<div class="scalecommerce-vo-background-hero-config">
+    <mt-select
+        :label="$tc('scalecommerce-vo.cms.library')"
+        :options="libraryOptions"
+        :model-value="selectedLibraryId"
+        @update:model-value="onLibraryChange" />
+
+    <scalecommerce-vo-video-gallery
+        :library-id="selectedLibraryId"
+        :selected-uuid="selectedVideoUuid"
+        mode="select"
+        @select="onVideoSelect"
+        @upload-complete="onVideoSelect" />
+
+    <mt-text-field
+        :label="$tc('scalecommerce-vo.backgroundHero.eyebrow')"
+        v-model="element.config.eyebrow.value" />
+
+    <mt-text-field
+        :label="$tc('scalecommerce-vo.backgroundHero.headline')"
+        v-model="element.config.headline.value" />
+
+    <mt-textarea
+        :label="$tc('scalecommerce-vo.backgroundHero.subline')"
+        v-model="element.config.subline.value" />
+
+    <mt-text-field
+        :label="$tc('scalecommerce-vo.backgroundHero.ctaLabel')"
+        v-model="element.config.ctaLabel.value" />
+
+    <mt-text-field
+        :label="$tc('scalecommerce-vo.backgroundHero.ctaUrl')"
+        v-model="element.config.ctaUrl.value" />
+
+    <mt-select
+        :label="$tc('scalecommerce-vo.backgroundHero.overlay')"
+        :options="overlayOptions"
+        :model-value="element.config.overlay.value"
+        @update:model-value="onOverlayChange" />
+
+    <mt-select
+        :label="$tc('scalecommerce-vo.backgroundHero.height')"
+        :options="heightOptions"
+        :model-value="element.config.height.value"
+        @update:model-value="onHeightChange" />
+
+    <mt-colorpicker
+        :label="$tc('scalecommerce-vo.backgroundHero.headlineColor')"
+        v-model="element.config.headlineColor.value" />
+
+    <mt-colorpicker
+        :label="$tc('scalecommerce-vo.backgroundHero.textColor')"
+        v-model="element.config.textColor.value" />
+
+    <mt-switch :label="$tc('scalecommerce-vo.backgroundHero.priority')" v-model="element.config.priority.value" />
+    <p class="scalecommerce-vo-background-hero-config__hint">{{ $tc('scalecommerce-vo.backgroundHero.priorityHint') }}</p>
+</div>
+{% endblock %}

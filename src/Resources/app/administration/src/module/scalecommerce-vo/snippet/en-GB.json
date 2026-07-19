@@ -57,6 +57,27 @@
             "playerNative": "Native player",
             "playerEmbed": "VideoOptimizer embed"
         },
+        "backgroundHero": {
+            "label": "VideoOptimizer Background hero",
+            "blockLabel": "VideoOptimizer Background hero",
+            "eyebrow": "Eyebrow",
+            "headline": "Headline",
+            "subline": "Subline",
+            "ctaLabel": "Button label",
+            "ctaUrl": "Button link",
+            "overlay": "Overlay",
+            "overlayGradient": "Gradient",
+            "overlayDark": "Dark",
+            "overlayNone": "None",
+            "height": "Height",
+            "heightFull": "Full screen",
+            "heightLarge": "Large",
+            "heightMedium": "Medium",
+            "headlineColor": "Headline colour",
+            "textColor": "Text colour",
+            "priority": "Above the fold (LCP)",
+            "priorityHint": "Loads the background video with priority when the hero starts in the viewport."
+        },
         "gallery": {
             "upload": "Upload",
             "uploadTitle": "Title (optional)",
