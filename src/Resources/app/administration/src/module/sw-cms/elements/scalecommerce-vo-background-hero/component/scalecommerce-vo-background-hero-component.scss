@@ -1,0 +1,36 @@
+.scalecommerce-vo-background-hero-component {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    &__poster {
+        position: relative;
+        aspect-ratio: 21 / 9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f0f2f5;
+        border-radius: 4px;
+        overflow: hidden;
+
+        img { width: 100%; height: 100%; object-fit: cover; }
+    }
+
+    &__headline {
+        position: absolute;
+        left: 16px;
+        bottom: 16px;
+        color: #fff;
+        font-weight: 600;
+        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+    }
+
+    &__meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    &__title { font-weight: 600; }
+    &__meta-info { font-size: 12px; color: #758ca3; }
+
+    &__empty {
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        min-height: 120px; background: #f0f2f5; border-radius: 4px; color: #758ca3;
+    }
+}

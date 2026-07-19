@@ -4,3 +4,4 @@
 // only works in webpack hot mode, not in the production build, so all plugin
 // styles must be routed through this entry point instead.
 @import '../scalecommerce-vo-blocks/scalecommerce-vo-blocks';
+@import '../scalecommerce-vo-hero/scalecommerce-vo-hero';
