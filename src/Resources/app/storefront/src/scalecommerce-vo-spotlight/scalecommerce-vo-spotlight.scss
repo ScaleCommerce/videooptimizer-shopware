@@ -1,0 +1,19 @@
+.scalecommerce-vo-spotlight {
+    &__eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        opacity: 0.75;
+        margin-bottom: 0.5rem;
+    }
+    &__headline {
+        margin-bottom: 1.5rem;
+    }
+    &__media {
+        margin: 0 auto;
+    }
+    &__caption {
+        margin-top: 1rem;
+        font-size: 0.95rem;
+        opacity: 0.75;
+    }
+}

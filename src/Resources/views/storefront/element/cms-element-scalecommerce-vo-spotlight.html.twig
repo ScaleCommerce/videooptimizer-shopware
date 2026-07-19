@@ -1,0 +1,16 @@
+{% import "@ScaleVideoOptimizer/storefront/element/_scalecommerce-vo-surface.html.twig" as vo %}
+{% block element_scalecommerce_vo_spotlight %}
+    {% set data = element.data %}
+    {% if data and data.videoUuid %}
+        <div class="scalecommerce-vo-spotlight" style="max-width:60rem;margin:0 auto;text-align:center">
+            {% if data.eyebrow %}<p class="scalecommerce-vo-spotlight__eyebrow">{{ data.eyebrow }}</p>{% endif %}
+            {% if data.headline %}<h2 class="scalecommerce-vo-spotlight__headline">{{ data.headline }}</h2>{% endif %}
+            <div class="scalecommerce-vo-spotlight__media">
+                {% if data.videoUuid and (data.playerMode == 'embed' or (data.embed and not data.hasError)) %}
+                    {{ vo.surface(data.embed, data.presentation, data.playerMode, data.embedUrl, data.headline|default('Video')) }}
+                {% endif %}
+            </div>
+            {% if data.caption %}<p class="scalecommerce-vo-spotlight__caption">{{ data.caption }}</p>{% endif %}
+        </div>
+    {% endif %}
+{% endblock %}

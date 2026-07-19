@@ -78,6 +78,20 @@
             "priority": "Above the Fold (LCP)",
             "priorityHint": "Lädt das Hintergrundvideo bevorzugt, wenn der Hero im sichtbaren Bereich beginnt."
         },
+        "spotlight": {
+            "label": "VideoOptimizer Spotlight",
+            "blockLabel": "VideoOptimizer Spotlight",
+            "eyebrow": "Kicker",
+            "headline": "Überschrift",
+            "caption": "Bildunterschrift",
+            "presentation": "Darstellung",
+            "presentationFacade": "Vorschaubild mit Play-Button",
+            "presentationLightbox": "Lightbox",
+            "presentationDirect": "Direkt eingebettet",
+            "player": "Player",
+            "playerNative": "Nativer Player",
+            "playerEmbed": "VideoOptimizer-Embed"
+        },
         "gallery": {
             "upload": "Hochladen",
             "uploadTitle": "Titel (optional)",
