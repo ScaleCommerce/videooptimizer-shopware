@@ -28,8 +28,13 @@ export default class ScalecommerceVoBlocks extends Plugin {
     _buildPlayer(playerMode, embedUrl, nativeOptions, autoplay) {
         if (playerMode === 'embed') {
             const iframe = document.createElement('iframe');
-            const url = embedUrl + (embedUrl.indexOf('?') === -1 ? '?' : '&') + 'autoplay=1&muted=1';
-            iframe.src = url;
+            // The user clicked to play, so force autoplay (muted to satisfy browser
+            // autoplay policies), overriding the defaults already in the embed URL
+            // rather than appending duplicate query keys.
+            const url = new URL(embedUrl);
+            url.searchParams.set('autoplay', '1');
+            url.searchParams.set('muted', '1');
+            iframe.src = url.toString();
             iframe.setAttribute('allow', 'autoplay; fullscreen');
             iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
             iframe.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0';
