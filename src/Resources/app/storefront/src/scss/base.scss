@@ -1,0 +1,6 @@
+// Shopware's theme compiler only picks up a "base.scss" file at this exact
+// location (Resources/app/storefront/src/scss/base.scss) to add plugin styles
+// to the compiled storefront theme CSS. Importing .scss directly from main.js
+// only works in webpack hot mode, not in the production build, so all plugin
+// styles must be routed through this entry point instead.
+@import '../scalecommerce-vo-blocks/scalecommerce-vo-blocks';
