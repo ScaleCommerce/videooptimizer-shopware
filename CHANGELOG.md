@@ -3,6 +3,11 @@
 All notable changes to `scalecommerce/videooptimizer-shopware` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.3] - 2026-07-19
+
+### Added
+- New CMS content element and block **"VideoOptimizer Spotlight"** for Shopping Experiences: a centered, stacked layout with an eyebrow, headline, a click-to-play video and a caption below it. The video defaults to opening in a **lightbox** on click, and supports the same presentation modes (poster/facade, lightbox, embedded) and native/embed player options as the media split element. Renders nothing when no video is selected.
+
 ## [0.4.2] - 2026-07-19
 
 ### Added
