@@ -50,7 +50,7 @@ class MediaSplitElementResolver extends AbstractCmsElementResolver
         }
         $struct->setVideoUuid($uuid);
 
-        $surface = $this->buildVideoSurface($config, $uuid, $this->client);
+        $surface = $this->buildVideoSurface($config, $uuid, $this->client, $struct->getPresentation());
         $struct->setPlayerMode($surface['playerMode']);
         $struct->setEmbedUrl($surface['embedUrl']);
         $struct->setEmbed($surface['embed']);

@@ -16,13 +16,24 @@ trait VideoSurfaceTrait
     /**
      * @return array{playerMode: string, embedUrl: string, embed: array<string, mixed>|null, error: bool}
      */
-    protected function buildVideoSurface(FieldConfigCollection $config, string $uuid, VideoOptimizerClient $client): array
+    protected function buildVideoSurface(FieldConfigCollection $config, string $uuid, VideoOptimizerClient $client, string $presentation = 'direct'): array
     {
         $playerMode = $config->get('playerMode')?->getValue() === 'embed' ? 'embed' : 'native';
         $embedUrl = $this->buildEmbedUrl($uuid, $config);
 
         if ($playerMode === 'embed') {
-            return ['playerMode' => 'embed', 'embedUrl' => $embedUrl, 'embed' => null, 'error' => false];
+            // The hosted iframe is self-contained, but facade/lightbox show a poster before the
+            // click, so those still need the upstream embed data. Direct embed needs nothing.
+            if ($presentation === 'direct') {
+                return ['playerMode' => 'embed', 'embedUrl' => $embedUrl, 'embed' => null, 'error' => false];
+            }
+
+            try {
+                return ['playerMode' => 'embed', 'embedUrl' => $embedUrl, 'embed' => $this->normalizeEmbed($client->getEmbed($uuid)), 'error' => false];
+            } catch (\Throwable) {
+                // No poster available, but the iframe still plays on click - not a hard error.
+                return ['playerMode' => 'embed', 'embedUrl' => $embedUrl, 'embed' => null, 'error' => false];
+            }
         }
 
         try {

@@ -1,7 +1,7 @@
 {% import "@ScaleVideoOptimizer/storefront/element/_scalecommerce-vo-surface.html.twig" as vo %}
 {% block element_scalecommerce_vo_media_split %}
     {% set data = element.data %}
-    {% if data %}
+    {% if data and data.videoUuid %}
         <div class="scalecommerce-vo-media-split{{ data.side == 'right' ? ' is-reversed' : '' }}"
              style="display:flex;gap:32px;flex-wrap:wrap;align-items:center">
             <div class="scalecommerce-vo-media-split__media" style="flex:1 1 320px;min-width:280px">

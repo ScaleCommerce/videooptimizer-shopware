@@ -48,6 +48,57 @@ class MediaSplitElementResolverTest extends TestCase
         static::assertStringContainsString('/embed/uuid-1?', $data->getEmbedUrl());
     }
 
+    public function testEmbedModeWithFacadeStillResolvesPosterForPreview(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('getEmbed')->with('uuid-2')->willReturn([
+            'sources' => [],
+            'poster' => 'https://cdn/poster.jpg',
+            'resolution' => '1920x1080',
+        ]);
+
+        $slot = $this->slot(['video' => 'uuid-2', 'playerMode' => 'embed', 'presentation' => 'facade']);
+        $resolver = new MediaSplitElementResolver($client);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+
+        $data = $slot->getData();
+        static::assertSame('embed', $data->getPlayerMode());
+        static::assertNotNull($data->getEmbed());
+        static::assertSame('https://cdn/poster.jpg', $data->getEmbed()['poster']);
+        static::assertFalse($data->hasError());
+    }
+
+    public function testEmbedModeWithDirectSkipsUpstreamCall(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('getEmbed');
+
+        $slot = $this->slot(['video' => 'uuid-3', 'playerMode' => 'embed', 'presentation' => 'direct']);
+        $resolver = new MediaSplitElementResolver($client);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+
+        $data = $slot->getData();
+        static::assertSame('embed', $data->getPlayerMode());
+        static::assertNull($data->getEmbed());
+        static::assertFalse($data->hasError());
+    }
+
+    public function testEmbedModeWithFacadeToleratesEmbedFetchFailure(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willThrowException(new \RuntimeException('upstream down'));
+
+        $slot = $this->slot(['video' => 'uuid-4', 'playerMode' => 'embed', 'presentation' => 'lightbox']);
+        $resolver = new MediaSplitElementResolver($client);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+
+        $data = $slot->getData();
+        static::assertSame('embed', $data->getPlayerMode());
+        static::assertNull($data->getEmbed());
+        // The hosted iframe still plays on click, so a missing poster is not a hard error.
+        static::assertFalse($data->hasError());
+    }
+
     public function testEnrichWithoutVideoRendersNothingHarmlessly(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
