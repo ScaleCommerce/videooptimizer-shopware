@@ -37,6 +37,26 @@
             "playerModeEmbed": "VideoOptimizer embed",
             "autoplayHint": "Autoplay only works together with \"Muted\" (browser policy)."
         },
+        "mediaSplit": {
+            "label": "VideoOptimizer media split",
+            "blockLabel": "VideoOptimizer media split",
+            "video": "Video",
+            "side": "Side",
+            "sideLeft": "Left",
+            "sideRight": "Right",
+            "eyebrow": "Eyebrow",
+            "headline": "Headline",
+            "text": "Text",
+            "ctaLabel": "Button label",
+            "ctaUrl": "Button link",
+            "presentation": "Presentation",
+            "presentationFacade": "Poster with play button",
+            "presentationLightbox": "Lightbox",
+            "presentationDirect": "Embedded directly",
+            "player": "Player",
+            "playerNative": "Native player",
+            "playerEmbed": "VideoOptimizer embed"
+        },
         "gallery": {
             "upload": "Upload",
             "uploadTitle": "Title (optional)",

@@ -37,6 +37,26 @@
             "playerModeEmbed": "VideoOptimizer-Embed",
             "autoplayHint": "Autoplay wirkt nur zusammen mit „Stummschalten“ (Browser-Vorgabe)."
         },
+        "mediaSplit": {
+            "label": "VideoOptimizer Media Split",
+            "blockLabel": "VideoOptimizer Media Split",
+            "video": "Video",
+            "side": "Seite",
+            "sideLeft": "Links",
+            "sideRight": "Rechts",
+            "eyebrow": "Kicker",
+            "headline": "Überschrift",
+            "text": "Text",
+            "ctaLabel": "Button-Beschriftung",
+            "ctaUrl": "Button-Link",
+            "presentation": "Darstellung",
+            "presentationFacade": "Vorschaubild mit Play-Button",
+            "presentationLightbox": "Lightbox",
+            "presentationDirect": "Direkt eingebettet",
+            "player": "Player",
+            "playerNative": "Nativer Player",
+            "playerEmbed": "VideoOptimizer-Embed"
+        },
         "gallery": {
             "upload": "Hochladen",
             "uploadTitle": "Titel (optional)",

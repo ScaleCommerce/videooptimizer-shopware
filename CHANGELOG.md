@@ -3,6 +3,14 @@
 All notable changes to `scalecommerce/videooptimizer-shopware` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.1] - 2026-07-19
+
+### Added
+- New CMS content element and block **"VideoOptimizer Media split"** for Shopping Experiences: a video paired with editorial text (eyebrow, headline, rich text and a call-to-action button) side by side. The video column can sit on the left or right, and the video can be presented as a click-to-play poster (facade), a poster that opens a full-screen lightbox, or embedded directly. Works with both the native adaptive player and the hosted embed player. This is the first of several planned content layouts built on a shared, reusable video "surface".
+
+### Notes
+- In the media split element, the per-element player options (show controls, muted, loop, and autoplay) are currently applied only to the **hosted embed player**. The **native** player shows controls and plays on click but does not yet honour those switches; this is a tracked follow-up. The default combination (native player, click-to-play poster) behaves as expected.
+
 ## [0.4.0] - 2026-07-18
 
 ### Added

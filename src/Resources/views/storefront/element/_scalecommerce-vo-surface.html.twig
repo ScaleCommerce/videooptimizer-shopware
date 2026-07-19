@@ -1,0 +1,31 @@
+{% macro surface(embed, presentation, playerMode, embedUrl, label) %}
+    {% set aspect = (embed.aspectRatio ?? null)|default('16 / 9') %}
+    <div class="scalecommerce-vo-surface" style="position:relative;width:100%;aspect-ratio:{{ aspect }}"
+         data-scalecommerce-vo-block="true"
+         data-vo-presentation="{{ presentation }}"
+         data-vo-player-mode="{{ playerMode }}"
+         data-vo-embed-url="{{ embedUrl }}"
+         data-vo-native-options='{{ { hls: embed.hls ?? null, mp4: embed.mp4 ?? null, poster: embed.poster ?? null }|json_encode }}'>
+        {% if presentation == 'direct' %}
+            {% if playerMode == 'embed' %}
+                <iframe src="{{ embedUrl }}" allow="autoplay; fullscreen" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"
+                        style="position:absolute;inset:0;width:100%;height:100%;border:0"></iframe>
+            {% else %}
+                <div class="scalecommerce-vo-video" data-scalecommerce-vo-player="true"
+                     data-scalecommerce-vo-player-options='{{ { hls: embed.hls ?? null, mp4: embed.mp4 ?? null, poster: embed.poster ?? null, controls: true }|json_encode }}'
+                     style="position:absolute;inset:0;width:100%;height:100%">
+                    <video class="scalecommerce-vo-video__player" style="width:100%;height:100%;object-fit:cover" playsinline
+                           {% if embed.poster %}poster="{{ embed.poster }}"{% endif %}></video>
+                </div>
+            {% endif %}
+        {% else %}
+            <button type="button" class="scalecommerce-vo-surface__facade"
+                    data-vo-action="{{ presentation == 'lightbox' ? 'lightbox' : 'facade' }}"
+                    aria-label="{{ label|default('Video abspielen') }}"
+                    style="position:absolute;inset:0;width:100%;height:100%;border:0;padding:0;cursor:pointer">
+                {% if embed.poster %}<img src="{{ embed.poster }}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover">{% endif %}
+                <span class="scalecommerce-vo-surface__play" aria-hidden="true">▶</span>
+            </button>
+        {% endif %}
+    </div>
+{% endmacro %}
