@@ -7,7 +7,7 @@ Shopware.Module.register('scalecommerce-vo', {
     name: 'VideoOptimizer',
     title: 'scalecommerce-vo.general.mainMenuItemGeneral',
     color: '#ff3d58',
-    icon: 'regular-play-circle',
+    icon: 'regular-play',
     snippets: {
         'de-DE': deDE,
         'en-GB': enGB,
@@ -28,7 +28,7 @@ Shopware.Module.register('scalecommerce-vo', {
         // A top-level entry without a parent is not rendered by the admin menu in Shopware 6.7.
         parent: 'sw-content',
         path: 'scalecommerce.vo.list',
-        icon: 'regular-play-circle',
+        icon: 'regular-play',
         position: 100,
         privilege: 'scalecommerce_vo.viewer',
     }],

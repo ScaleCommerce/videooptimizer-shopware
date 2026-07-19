@@ -3,7 +3,7 @@
     <template v-if="video">
         <div class="scalecommerce-vo-background-hero-component__poster">
             <img v-if="posterUrl" :src="posterUrl" :alt="headline" />
-            <mt-icon v-else name="regular-play-circle" size="40" />
+            <mt-icon v-else name="regular-play" size="40" />
             <div class="scalecommerce-vo-background-hero-component__headline">{{ headline }}</div>
         </div>
         <div class="scalecommerce-vo-background-hero-component__meta">
@@ -13,7 +13,7 @@
         <span v-if="metaLine()" class="scalecommerce-vo-background-hero-component__meta-info">{{ metaLine() }}</span>
     </template>
     <div v-else class="scalecommerce-vo-background-hero-component__empty">
-        <mt-icon name="regular-play-circle" size="32" />
+        <mt-icon name="regular-play" size="32" />
         <span>{{ $tc('scalecommerce-vo.cms.selectVideo') }}</span>
     </div>
 </div>

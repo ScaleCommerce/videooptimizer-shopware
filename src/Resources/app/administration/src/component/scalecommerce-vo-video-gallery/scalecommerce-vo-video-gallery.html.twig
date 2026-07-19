@@ -16,7 +16,7 @@
             @keydown.space.prevent="onSelect(video)">
             <div class="scalecommerce-vo-gallery__poster">
                 <img v-if="posterFor(video)" :src="posterFor(video)" :alt="video.title" />
-                <mt-icon v-else name="regular-play-circle" size="32" />
+                <mt-icon v-else name="regular-play" size="32" />
             </div>
             <div class="scalecommerce-vo-gallery__meta">
                 <span class="scalecommerce-vo-gallery__title">{{ video.title || video.uuid }}</span>
