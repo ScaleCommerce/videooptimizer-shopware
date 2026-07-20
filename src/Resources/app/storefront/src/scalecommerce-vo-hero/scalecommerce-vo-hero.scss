@@ -6,6 +6,9 @@
     isolation: isolate;
     padding: 3rem 0;
     color: var(--scvo-hero-text, #fff);
+    // Neutral fallback shown behind the content when no background video renders
+    // (e.g. the upstream embed fetch failed); the video, when present, covers it.
+    background-color: #0f172a;
 
     &--full { min-height: 100vh; }
     &--large { min-height: 72vh; }

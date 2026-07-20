@@ -1,15 +1,22 @@
 {% import "@ScaleVideoOptimizer/storefront/element/_scalecommerce-vo-surface.html.twig" as vo %}
 {% block element_scalecommerce_vo_video_grid %}
     {% set data = element.data %}
+    {% set config = element.config %}
+    {% set surfaceOptions = {
+        controls: config.showControls.value ?? true,
+        autoplay: config.autoplay.value ?? false,
+        muted: config.muted.value ?? false,
+        loop: config.loop.value ?? false
+    } %}
     {% if data and data.items|length > 0 %}
         <div class="scalecommerce-vo-video-grid">
             {% if data.headline %}<h2 class="scalecommerce-vo-video-grid__headline">{{ data.headline }}</h2>{% endif %}
             {% if data.intro %}<p class="scalecommerce-vo-video-grid__intro">{{ data.intro|nl2br }}</p>{% endif %}
-            <div class="scalecommerce-vo-video-grid__items" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:2rem">
+            <div class="scalecommerce-vo-video-grid__items">
                 {% for item in data.items %}
                     {% if item.videoUuid and (item.playerMode == 'embed' or (item.embed and not item.error)) %}
-                        <figure class="scalecommerce-vo-video-grid__item" style="margin:0">
-                            {{ vo.surface(item.embed, data.presentation, item.playerMode, item.embedUrl, item.label|default('Video')) }}
+                        <figure class="scalecommerce-vo-video-grid__item">
+                            {{ vo.surface(item.embed, data.presentation, item.playerMode, item.embedUrl, item.label, surfaceOptions) }}
                             {% if item.label %}<figcaption class="scalecommerce-vo-video-grid__caption">{{ item.label }}</figcaption>{% endif %}
                         </figure>
                     {% endif %}

@@ -4,10 +4,12 @@
         {% set embed = data.embed %}
         <section class="scalecommerce-vo-hero scalecommerce-vo-hero--{{ data.height }} scalecommerce-vo-hero--overlay-{{ data.overlay }}"
                  style="{% if data.headlineColor %}--scvo-hero-heading:{{ data.headlineColor }};{% endif %}{% if data.textColor %}--scvo-hero-text:{{ data.textColor }};{% endif %}">
-            <video class="scalecommerce-vo-hero__video" muted autoplay loop playsinline
-                   preload="{{ data.priority ? 'auto' : 'metadata' }}"
-                   {% if embed and embed.poster %}poster="{{ embed.poster }}"{% endif %}
-                   {% if embed and embed.hls %}data-scalecommerce-vo-hero-hls="{{ embed.hls }}"{% elseif embed and embed.mp4 %}src="{{ embed.mp4 }}"{% endif %}></video>
+            {% if embed and (embed.hls or embed.mp4 or embed.poster) %}
+                <video class="scalecommerce-vo-hero__video" muted autoplay loop playsinline
+                       preload="{{ data.priority ? 'auto' : 'metadata' }}"
+                       {% if embed.poster %}poster="{{ embed.poster }}"{% endif %}
+                       {% if embed.hls %}data-scalecommerce-vo-hero-hls="{{ embed.hls }}"{% elseif embed.mp4 %}src="{{ embed.mp4 }}"{% endif %}></video>
+            {% endif %}
             <div class="scalecommerce-vo-hero__overlay"></div>
             <div class="scalecommerce-vo-hero__content">
                 {% if data.eyebrow %}<span class="scalecommerce-vo-hero__eyebrow">{{ data.eyebrow }}</span>{% endif %}
