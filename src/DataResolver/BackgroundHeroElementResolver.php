@@ -63,6 +63,8 @@ class BackgroundHeroElementResolver extends AbstractCmsElementResolver
 
     private function hexColor(?string $value): ?string
     {
-        return is_string($value) && preg_match('/^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/', $value) ? $value : null;
+        // Accept 3-, 4-, 6- or 8-digit hex (the 4/8 forms carry an alpha channel,
+        // which the mt-colorpicker can emit); anything else is dropped.
+        return is_string($value) && preg_match('/^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/', $value) ? $value : null;
     }
 }
