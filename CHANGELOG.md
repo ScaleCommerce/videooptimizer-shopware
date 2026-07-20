@@ -3,6 +3,11 @@
 All notable changes to `scalecommerce/videooptimizer-shopware` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.6] - 2026-07-20
+
+### Changed
+- The video CMS blocks now show a **distinct schematic preview** in the block picker (single video, media split, background hero, spotlight, video grid) instead of the identical VideoOptimizer logo, so editors can tell the layouts apart at a glance.
+
 ## [0.4.5] - 2026-07-20
 
 ### Fixed
