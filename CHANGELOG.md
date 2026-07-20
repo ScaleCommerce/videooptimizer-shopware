@@ -3,6 +3,14 @@
 All notable changes to `scalecommerce/videooptimizer-shopware` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.4] - 2026-07-20
+
+### Added
+- New CMS content element and block **"VideoOptimizer Video grid"** for Shopping Experiences: a responsive grid of multiple click-to-play videos, each with an optional caption, under a grid headline and intro. Videos are added, reordered and removed in a per-element list editor (each row picks a video from the gallery). Click-to-play defaults to a lightbox and supports the same presentation modes (poster/facade, lightbox, embedded) and native/embed player options as the other video layouts. Renders nothing when no videos are added. This completes the set of video content layouts (media split, background hero, spotlight, video grid).
+
+### Fixed
+- Placeholder and empty-state icons in the administration (the video, media split, spotlight and background hero elements and the video gallery) rendered blank and logged a console error, because they referenced Meteor icon names that do not exist in the icon kit. Corrected to valid icon names.
+
 ## [0.4.3] - 2026-07-19
 
 ### Added
