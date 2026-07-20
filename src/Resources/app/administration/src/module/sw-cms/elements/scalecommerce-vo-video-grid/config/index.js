@@ -60,7 +60,9 @@ Shopware.Component.register('scalecommerce-vo-video-grid-config', {
             }
         },
         async loadPosters() {
-            const uuids = this.items.map((item) => item.video).filter((uuid) => uuid && !this.posters[uuid]);
+            // Use key presence, not truthiness, so a video whose poster resolved to null
+            // (posterless) is not re-fetched on every subsequent call.
+            const uuids = this.items.map((item) => item.video).filter((uuid) => uuid && !(uuid in this.posters));
             await Promise.all(uuids.map(async (uuid) => {
                 try {
                     const response = await this.scalecommerceVoApiService.getVideo(uuid);
