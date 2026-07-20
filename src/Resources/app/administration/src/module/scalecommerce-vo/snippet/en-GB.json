@@ -92,6 +92,24 @@
             "playerNative": "Native player",
             "playerEmbed": "VideoOptimizer embed"
         },
+        "videoGrid": {
+            "label": "VideoOptimizer Video grid",
+            "blockLabel": "VideoOptimizer Video grid",
+            "headline": "Headline",
+            "intro": "Intro",
+            "items": "Videos",
+            "itemLabel": "Caption",
+            "addVideo": "Add video",
+            "selectVideo": "Select video",
+            "videoCount": "{count} video|{count} videos",
+            "presentation": "Presentation",
+            "presentationFacade": "Poster with play button",
+            "presentationLightbox": "Lightbox",
+            "presentationDirect": "Embedded directly",
+            "player": "Player",
+            "playerNative": "Native player",
+            "playerEmbed": "VideoOptimizer embed"
+        },
         "gallery": {
             "upload": "Upload",
             "uploadTitle": "Title (optional)",

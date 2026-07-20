@@ -1,0 +1,19 @@
+.scalecommerce-vo-video-grid {
+    &__intro {
+        max-width: 42rem;
+        margin-bottom: 2rem;
+        opacity: 0.85;
+    }
+    &__items {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 2rem;
+    }
+    &__item {
+        margin: 0;
+    }
+    &__caption {
+        margin-top: 0.75rem;
+        font-weight: 600;
+    }
+}

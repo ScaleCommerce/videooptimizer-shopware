@@ -11,6 +11,8 @@ import './module/sw-cms/elements/scalecommerce-vo-background-hero';
 import './module/sw-cms/blocks/video/scalecommerce-vo-background-hero';
 import './module/sw-cms/elements/scalecommerce-vo-spotlight';
 import './module/sw-cms/blocks/video/scalecommerce-vo-spotlight';
+import './module/sw-cms/elements/scalecommerce-vo-video-grid';
+import './module/sw-cms/blocks/video/scalecommerce-vo-video-grid';
 
 Shopware.Service().register('scalecommerceVoApiService', (container) => {
     const initContainer = Shopware.Application.getContainer('init');

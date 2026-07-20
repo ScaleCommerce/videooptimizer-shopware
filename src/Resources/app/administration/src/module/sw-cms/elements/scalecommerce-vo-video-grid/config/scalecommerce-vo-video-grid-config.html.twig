@@ -1,0 +1,80 @@
+{% block element_config_scalecommerce_vo_video_grid %}
+<div class="scalecommerce-vo-video-grid-config">
+    <mt-text-field
+        :label="$tc('scalecommerce-vo.videoGrid.headline')"
+        v-model="element.config.headline.value" />
+
+    <mt-textarea
+        :label="$tc('scalecommerce-vo.videoGrid.intro')"
+        v-model="element.config.intro.value" />
+
+    <div class="scalecommerce-vo-video-grid-config__items">
+        <span class="scalecommerce-vo-video-grid-config__items-label">{{ $tc('scalecommerce-vo.videoGrid.items') }}</span>
+
+        <div
+            v-for="(item, index) in items"
+            :key="index"
+            class="scalecommerce-vo-video-grid-config__row">
+            <div class="scalecommerce-vo-video-grid-config__thumb" @click="openPicker(index)">
+                <img v-if="poster(item.video)" :src="poster(item.video)" alt="" />
+                <mt-icon v-else name="regular-play" size="24" />
+            </div>
+            <mt-text-field
+                class="scalecommerce-vo-video-grid-config__label"
+                :label="$tc('scalecommerce-vo.videoGrid.itemLabel')"
+                :model-value="item.label"
+                @update:model-value="(value) => onLabelInput(index, value)" />
+            <div class="scalecommerce-vo-video-grid-config__row-actions">
+                <mt-button size="small" variant="secondary" :disabled="index === 0" @click="moveUp(index)">
+                    <mt-icon name="regular-chevron-up" size="16" />
+                </mt-button>
+                <mt-button size="small" variant="secondary" :disabled="index === items.length - 1" @click="moveDown(index)">
+                    <mt-icon name="regular-chevron-down" size="16" />
+                </mt-button>
+                <mt-button size="small" variant="critical" @click="removeItem(index)">
+                    <mt-icon name="regular-trash" size="16" />
+                </mt-button>
+            </div>
+        </div>
+
+        <mt-button variant="secondary" @click="openAdd()">
+            {{ $tc('scalecommerce-vo.videoGrid.addVideo') }}
+        </mt-button>
+    </div>
+
+    <mt-select
+        :label="$tc('scalecommerce-vo.videoGrid.presentation')"
+        :options="presentationOptions"
+        :model-value="element.config.presentation.value"
+        @update:model-value="onPresentationChange" />
+
+    <mt-select
+        :label="$tc('scalecommerce-vo.videoGrid.player')"
+        :options="playerModeOptions"
+        :model-value="element.config.playerMode.value"
+        @update:model-value="onPlayerModeChange" />
+
+    <mt-switch :label="$tc('scalecommerce-vo.cms.showControls')" v-model="element.config.showControls.value" />
+    <mt-switch :label="$tc('scalecommerce-vo.cms.autoplay')" v-model="element.config.autoplay.value" />
+    <p class="scalecommerce-vo-video-grid-config__hint">{{ $tc('scalecommerce-vo.cms.autoplayHint') }}</p>
+    <mt-switch :label="$tc('scalecommerce-vo.cms.muted')" v-model="element.config.muted.value" />
+    <mt-switch :label="$tc('scalecommerce-vo.cms.loop')" v-model="element.config.loop.value" />
+
+    <sw-modal
+        v-if="pickerIndex !== null"
+        :title="$tc('scalecommerce-vo.videoGrid.selectVideo')"
+        @modal-close="closePicker">
+        <mt-select
+            :label="$tc('scalecommerce-vo.cms.library')"
+            :options="libraryOptions"
+            :model-value="pickerLibraryId"
+            @update:model-value="onPickerLibraryChange" />
+        <scalecommerce-vo-video-gallery
+            :library-id="pickerLibraryId"
+            :selected-uuid="pickerSelectedUuid"
+            mode="select"
+            @select="onPickVideo"
+            @upload-complete="onPickVideo" />
+    </sw-modal>
+</div>
+{% endblock %}
