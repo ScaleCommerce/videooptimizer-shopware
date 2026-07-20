@@ -3,6 +3,15 @@
 All notable changes to `scalecommerce/videooptimizer-shopware` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.5] - 2026-07-20
+
+### Fixed
+- Native player: in the video content elements (media split, spotlight, video grid) the per-element **show controls**, **muted** and **loop** options are now applied to the native player as well — previously only the hosted embed player honoured them.
+- Element layouts (media split columns, spotlight centering, video grid columns) are now styled via CSS classes instead of inline styles, so a theme can override them.
+- Background hero: colour-picker values with an alpha channel (e.g. `#rrggbbaa`) are now accepted instead of being dropped, and the hero shows a neutral dark background instead of an empty black area when a background video cannot be loaded.
+- Accessibility: the click-to-play poster button falls back to a descriptive "play video" label when no headline or caption is set.
+- Administration: the video grid item list no longer re-requests videos that have no preview image.
+
 ## [0.4.4] - 2026-07-20
 
 ### Added

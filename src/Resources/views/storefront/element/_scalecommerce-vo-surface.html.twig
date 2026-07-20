@@ -1,18 +1,28 @@
-{% macro surface(embed, presentation, playerMode, embedUrl, label) %}
+{% macro surface(embed, presentation, playerMode, embedUrl, label, options) %}
     {% set aspect = (embed.aspectRatio ?? null)|default('16 / 9') %}
+    {% set opts = options|default({}) %}
+    {% set nativeOptions = {
+        hls: embed.hls ?? null,
+        mp4: embed.mp4 ?? null,
+        poster: embed.poster ?? null,
+        controls: opts.controls ?? true,
+        autoplay: opts.autoplay ?? false,
+        muted: opts.muted ?? false,
+        loop: opts.loop ?? false
+    } %}
     <div class="scalecommerce-vo-surface" style="position:relative;width:100%;aspect-ratio:{{ aspect }}"
          data-scalecommerce-vo-block="true"
          data-vo-presentation="{{ presentation }}"
          data-vo-player-mode="{{ playerMode }}"
          data-vo-embed-url="{{ embedUrl }}"
-         data-vo-native-options='{{ { hls: embed.hls ?? null, mp4: embed.mp4 ?? null, poster: embed.poster ?? null }|json_encode }}'>
+         data-vo-native-options='{{ nativeOptions|json_encode }}'>
         {% if presentation == 'direct' %}
             {% if playerMode == 'embed' %}
                 <iframe src="{{ embedUrl }}" allow="autoplay; fullscreen" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"
                         style="position:absolute;inset:0;width:100%;height:100%;border:0"></iframe>
             {% else %}
                 <div class="scalecommerce-vo-video" data-scalecommerce-vo-player="true"
-                     data-scalecommerce-vo-player-options='{{ { hls: embed.hls ?? null, mp4: embed.mp4 ?? null, poster: embed.poster ?? null, controls: true }|json_encode }}'
+                     data-scalecommerce-vo-player-options='{{ nativeOptions|json_encode }}'
                      style="position:absolute;inset:0;width:100%;height:100%">
                     <video class="scalecommerce-vo-video__player" style="width:100%;height:100%;object-fit:cover" playsinline
                            {% if embed.poster %}poster="{{ embed.poster }}"{% endif %}></video>

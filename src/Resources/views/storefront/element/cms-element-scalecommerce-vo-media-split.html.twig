@@ -1,15 +1,21 @@
 {% import "@ScaleVideoOptimizer/storefront/element/_scalecommerce-vo-surface.html.twig" as vo %}
 {% block element_scalecommerce_vo_media_split %}
     {% set data = element.data %}
+    {% set config = element.config %}
+    {% set surfaceOptions = {
+        controls: config.showControls.value ?? true,
+        autoplay: config.autoplay.value ?? false,
+        muted: config.muted.value ?? false,
+        loop: config.loop.value ?? false
+    } %}
     {% if data and data.videoUuid %}
-        <div class="scalecommerce-vo-media-split{{ data.side == 'right' ? ' is-reversed' : '' }}"
-             style="display:flex;gap:32px;flex-wrap:wrap;align-items:center">
-            <div class="scalecommerce-vo-media-split__media" style="flex:1 1 320px;min-width:280px">
+        <div class="scalecommerce-vo-media-split{{ data.side == 'right' ? ' is-reversed' : '' }}">
+            <div class="scalecommerce-vo-media-split__media">
                 {% if data.videoUuid and (data.playerMode == 'embed' or (data.embed and not data.hasError)) %}
-                    {{ vo.surface(data.embed, data.presentation, data.playerMode, data.embedUrl, data.headline|default('Video')) }}
+                    {{ vo.surface(data.embed, data.presentation, data.playerMode, data.embedUrl, data.headline, surfaceOptions) }}
                 {% endif %}
             </div>
-            <div class="scalecommerce-vo-media-split__text" style="flex:1 1 320px;min-width:280px">
+            <div class="scalecommerce-vo-media-split__text">
                 {% if data.eyebrow %}<p class="scalecommerce-vo-media-split__eyebrow">{{ data.eyebrow }}</p>{% endif %}
                 {% if data.headline %}<h2 class="scalecommerce-vo-media-split__headline">{{ data.headline }}</h2>{% endif %}
                 {% if data.text %}<div class="scalecommerce-vo-media-split__body">{{ data.text|raw }}</div>{% endif %}

@@ -47,8 +47,12 @@ export default class ScalecommerceVoBlocks extends Plugin {
         video.className = 'scalecommerce-vo-video__player';
         video.style.cssText = 'width:100%;height:100%;object-fit:contain;background:#000';
         video.setAttribute('playsinline', '');
-        video.controls = true;
-        if (autoplay) { video.muted = true; video.autoplay = true; }
+        video.controls = nativeOptions.controls !== false;
+        video.loop = !!nativeOptions.loop;
+        video.muted = !!nativeOptions.muted;
+        // The facade/lightbox click is a user gesture, so playback is allowed with the
+        // configured muted setting; _attachNative kicks it off once the source is ready.
+        if (autoplay) { video.autoplay = true; }
         wrap.appendChild(video);
         this._attachNative(video, nativeOptions, autoplay);
         return wrap;

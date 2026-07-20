@@ -1,8 +1,19 @@
-.scalecommerce-vo-media-split.is-reversed {
+.scalecommerce-vo-media-split {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    align-items: center;
+
     // side = "right": show the media column on the right, text on the left.
-    // The element template sets the base flex layout inline (without a direction),
-    // so this class is what actually reverses the column order.
-    flex-direction: row-reverse;
+    &.is-reversed {
+        flex-direction: row-reverse;
+    }
+
+    &__media,
+    &__text {
+        flex: 1 1 320px;
+        min-width: 280px;
+    }
 }
 
 .scalecommerce-vo-surface__play {

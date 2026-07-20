@@ -73,6 +73,22 @@ class BackgroundHeroElementResolverTest extends TestCase
         static::assertFalse($data->getPriority());
     }
 
+    public function testAlphaHexColorsAreAccepted(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willReturn(['sources' => [], 'poster' => null, 'resolution' => null]);
+
+        $slot = $this->slot([
+            'video' => 'uuid-a', 'headlineColor' => '#ff000080', 'textColor' => '#abcd',
+        ]);
+        $resolver = new BackgroundHeroElementResolver($client);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+
+        $data = $slot->getData();
+        static::assertSame('#ff000080', $data->getHeadlineColor());
+        static::assertSame('#abcd', $data->getTextColor());
+    }
+
     public function testEnrichWithoutVideoRendersNothingHarmlessly(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
