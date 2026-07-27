@@ -1,7 +1,32 @@
 {% block element_scalecommerce_vo_video_grid %}
 <div class="scalecommerce-vo-video-grid-component">
-    <mt-icon name="regular-view-grid" size="24" />
-    <span class="scalecommerce-vo-video-grid-component__title">{{ headline }}</span>
-    <span class="scalecommerce-vo-video-grid-component__count">{{ $tc('scalecommerce-vo.videoGrid.videoCount', count, { count }) }}</span>
+    <p class="scalecommerce-vo-video-grid-component__headline"
+       :class="{ 'scvo-preview-placeholder': !headline }">
+        {{ headline || $tc('scalecommerce-vo.cms.placeholder.headline') }}
+    </p>
+    <p class="scalecommerce-vo-video-grid-component__intro"
+       :class="{ 'scvo-preview-placeholder': !intro }">
+        {{ intro || $tc('scalecommerce-vo.cms.placeholder.intro') }}
+    </p>
+    <div class="scalecommerce-vo-video-grid-component__items">
+        <figure v-for="(tile, index) in tiles"
+                :key="tile.uuid || index"
+                class="scalecommerce-vo-video-grid-component__item">
+            <scalecommerce-vo-preview-surface
+                :poster-url="tile.posterUrl"
+                :presentation="presentation"
+                :player-mode="playerMode"
+                :controls="showControls"
+                :status="tile.status"
+                :meta="tile.meta"
+                :has-video="!!tile.uuid"
+                :tooltip="tile.title"
+            />
+            <figcaption class="scalecommerce-vo-video-grid-component__caption"
+                        :class="{ 'scvo-preview-placeholder': !tile.label }">
+                {{ tile.label || $tc('scalecommerce-vo.cms.placeholder.label') }}
+            </figcaption>
+        </figure>
+    </div>
 </div>
 {% endblock %}
