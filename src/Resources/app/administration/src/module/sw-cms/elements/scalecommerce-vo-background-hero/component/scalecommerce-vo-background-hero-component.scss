@@ -1,36 +1,69 @@
+// Mirrors the storefront .scalecommerce-vo-hero: video poster as background, overlay per
+// config, copy centred in a 40rem column. Heights come from the component (capped for the editor).
 .scalecommerce-vo-background-hero-component {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    width: 100%;
 
-    &__poster {
-        position: relative;
-        aspect-ratio: 21 / 9;
+    &__overlay {
+        position: absolute;
+        inset: 0;
+
+        &.is-gradient {
+            background: linear-gradient(180deg, rgba(2, 6, 23, 0.15) 0%, rgba(2, 6, 23, 0.65) 100%);
+        }
+
+        &.is-dark {
+            background: rgba(2, 6, 23, 0.55);
+        }
+    }
+
+    &__content {
+        position: absolute;
+        inset: 0;
         display: flex;
-        align-items: center;
+        flex-direction: column;
+        align-items: flex-start;
         justify-content: center;
-        background: #f0f2f5;
-        border-radius: 4px;
-        overflow: hidden;
+        gap: 8px;
+        width: 100%;
+        max-width: 40rem;
+        margin: 0 auto;
+        padding: 24px;
+        color: var(--scvo-hero-text, #fff);
+        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+    }
 
-        img { width: 100%; height: 100%; object-fit: cover; }
+    &__eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 11px;
+        opacity: 0.85;
     }
 
     &__headline {
-        position: absolute;
-        left: 16px;
-        bottom: 16px;
-        color: #fff;
+        margin: 0;
+        font-size: 24px;
         font-weight: 600;
-        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+        line-height: 1.2;
+        color: var(--scvo-hero-heading, #fff);
     }
 
-    &__meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    &__title { font-weight: 600; }
-    &__meta-info { font-size: 12px; color: #758ca3; }
+    &__subline {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.5;
+        opacity: 0.92;
+        // The admin base stylesheet colours <p>, which would win over the inherited hero
+        // text colour and render dark grey copy on the video still.
+        color: var(--scvo-hero-text, #fff);
+    }
 
-    &__empty {
-        display: flex; align-items: center; justify-content: center; gap: 8px;
-        min-height: 120px; background: #f0f2f5; border-radius: 4px; color: #758ca3;
+    // Placeholders sit on a dark video still, so the shared grey would be unreadable here.
+    .scvo-preview-placeholder {
+        color: rgba(255, 255, 255, 0.65);
+    }
+
+    .scvo-preview-cta.scvo-preview-placeholder {
+        background: rgba(255, 255, 255, 0.25);
+        color: rgba(255, 255, 255, 0.8);
     }
 }

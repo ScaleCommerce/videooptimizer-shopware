@@ -3,6 +3,17 @@
 All notable changes to `scalecommerce/videooptimizer-shopware` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.7] - 2026-07-27
+
+### Changed
+- The CMS element previews in the Shopping Experiences editor now **mirror their storefront layout** instead of showing one large poster per element: media split renders two reversible columns with its text column, background hero renders the poster with its overlay and centred copy (heights capped for the editor), spotlight renders a centred column, and video grid renders a real tile grid with one tile per video. Editors can tell the layouts apart and judge a page without opening the storefront.
+- Video status and metadata (resolution, duration, orientation) moved from a row underneath the element into unobtrusive overlay badges on the poster — subdued while a video is `ready`, clearly highlighted while it is still processing or failed.
+- The play affordance in the previews now reflects the configured **presentation mode** (poster/facade, lightbox, embedded directly) and **player mode** (native, embed) instead of a generic icon.
+- Empty text fields render labelled placeholders (eyebrow, headline, subline, caption, intro, button, label), so a freshly placed element shows which fields it offers.
+
+### Internal
+- Extracted the video lookup and metadata formatting duplicated across four element previews into a shared mixin and a shared `scalecommerce-vo-preview-surface` component — the editor counterpart to the storefront surface macro.
+
 ## [0.4.6] - 2026-07-20
 
 ### Changed

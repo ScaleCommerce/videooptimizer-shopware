@@ -1,0 +1,33 @@
+{% block scalecommerce_vo_preview_surface %}
+<div class="scalecommerce-vo-preview-surface"
+     :class="'scalecommerce-vo-preview-surface--' + presentation"
+     :style="surfaceStyle"
+     :title="tooltip">
+    <img v-if="posterUrl" class="scalecommerce-vo-preview-surface__poster" :src="posterUrl" alt="" />
+    <div v-else-if="!hasVideo" class="scalecommerce-vo-preview-surface__empty">
+        <mt-icon name="regular-play" size="20" />
+        <span>{{ emptyText }}</span>
+    </div>
+
+    <div class="scalecommerce-vo-preview-surface__content">
+        <slot></slot>
+    </div>
+
+    <span v-if="showPlay" class="scalecommerce-vo-preview-surface__play" aria-hidden="true">
+        <mt-icon name="regular-play" size="14" />
+    </span>
+    <span v-if="showControlsBar" class="scalecommerce-vo-preview-surface__controls" aria-hidden="true"></span>
+
+    <div class="scalecommerce-vo-preview-surface__badges">
+        <span v-if="showExpand" class="scalecommerce-vo-preview-surface__badge" aria-hidden="true">
+            <mt-icon name="regular-expand" size="10" />
+        </span>
+        <span v-if="showEmbed" class="scalecommerce-vo-preview-surface__badge">Embed</span>
+        <span v-if="hasVideo && status"
+              class="scalecommerce-vo-preview-surface__badge"
+              :class="'is-' + statusVariant">{{ status }}</span>
+    </div>
+
+    <span v-if="meta" class="scalecommerce-vo-preview-surface__meta">{{ meta }}</span>
+</div>
+{% endblock %}

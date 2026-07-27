@@ -1,19 +1,14 @@
 {% block element_scalecommerce_vo_video %}
 <div class="scalecommerce-vo-cms-element">
-    <template v-if="video">
-        <div class="scalecommerce-vo-cms-element__poster">
-            <img v-if="posterUrl" :src="posterUrl" :alt="video.title" />
-            <mt-icon v-else name="regular-play" size="40" />
-        </div>
-        <div class="scalecommerce-vo-cms-element__meta">
-            <span class="scalecommerce-vo-cms-element__title">{{ video.title || video.uuid }}</span>
-            <sw-label :variant="statusVariant(video.status)" size="small" :ghost="true">{{ video.status }}</sw-label>
-        </div>
-        <span v-if="metaLine()" class="scalecommerce-vo-cms-element__meta-info">{{ metaLine() }}</span>
-    </template>
-    <div v-else class="scalecommerce-vo-cms-element__empty">
-        <mt-icon name="regular-play" size="32" />
-        <span>{{ $tc('scalecommerce-vo.cms.selectVideo') }}</span>
-    </div>
+    <scalecommerce-vo-preview-surface
+        :poster-url="posterUrl"
+        presentation="direct"
+        :player-mode="playerMode"
+        :controls="showControls"
+        :status="video ? video.status : null"
+        :meta="metaLine()"
+        :has-video="!!video"
+        :tooltip="video ? (video.title || video.uuid) : null"
+    />
 </div>
 {% endblock %}

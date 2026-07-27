@@ -1,20 +1,33 @@
 {% block element_scalecommerce_vo_background_hero %}
 <div class="scalecommerce-vo-background-hero-component">
-    <template v-if="video">
-        <div class="scalecommerce-vo-background-hero-component__poster">
-            <img v-if="posterUrl" :src="posterUrl" :alt="headline" />
-            <mt-icon v-else name="regular-play" size="40" />
-            <div class="scalecommerce-vo-background-hero-component__headline">{{ headline }}</div>
+    <scalecommerce-vo-preview-surface
+        :poster-url="posterUrl"
+        presentation="background"
+        :min-height="editorHeight"
+        :status="video ? video.status : null"
+        :meta="metaLine()"
+        :has-video="!!video"
+        :tooltip="video ? (video.title || video.uuid) : null"
+    >
+        <div class="scalecommerce-vo-background-hero-component__overlay" :class="'is-' + overlay"></div>
+        <div class="scalecommerce-vo-background-hero-component__content" :style="contentStyle">
+            <span class="scalecommerce-vo-background-hero-component__eyebrow"
+                  :class="{ 'scvo-preview-placeholder': !eyebrow }">
+                {{ eyebrow || $tc('scalecommerce-vo.cms.placeholder.eyebrow') }}
+            </span>
+            <p class="scalecommerce-vo-background-hero-component__headline"
+               :class="{ 'scvo-preview-placeholder': !headline }">
+                {{ headline || $tc('scalecommerce-vo.cms.placeholder.headline') }}
+            </p>
+            <p class="scalecommerce-vo-background-hero-component__subline"
+               :class="{ 'scvo-preview-placeholder': !subline }">
+                {{ subline || $tc('scalecommerce-vo.cms.placeholder.subline') }}
+            </p>
+            <span class="scvo-preview-cta"
+                  :class="{ 'scvo-preview-placeholder': !ctaLabel }">
+                {{ ctaLabel || $tc('scalecommerce-vo.cms.placeholder.cta') }}
+            </span>
         </div>
-        <div class="scalecommerce-vo-background-hero-component__meta">
-            <span class="scalecommerce-vo-background-hero-component__title">{{ headline }}</span>
-            <sw-label :variant="statusVariant(video.status)" size="small" :ghost="true">{{ video.status }}</sw-label>
-        </div>
-        <span v-if="metaLine()" class="scalecommerce-vo-background-hero-component__meta-info">{{ metaLine() }}</span>
-    </template>
-    <div v-else class="scalecommerce-vo-background-hero-component__empty">
-        <mt-icon name="regular-play" size="32" />
-        <span>{{ $tc('scalecommerce-vo.cms.selectVideo') }}</span>
-    </div>
+    </scalecommerce-vo-preview-surface>
 </div>
 {% endblock %}

@@ -1,83 +1,53 @@
 import template from './scalecommerce-vo-background-hero-component.html.twig';
 import './scalecommerce-vo-background-hero-component.scss';
-import { parseResolution, formatDuration, orientationKey } from '../../../../../helper/video-meta';
+import elementVideo from '../../../../../mixin/scalecommerce-vo-element-video';
+
+// The storefront hero is 100vh/72vh/52vh tall; capped here so the editor stays usable
+// while the three steps remain proportionally distinguishable.
+const EDITOR_HEIGHTS = {
+    full: 420,
+    large: 340,
+    medium: 260,
+};
 
 Shopware.Component.register('scalecommerce-vo-background-hero-component', {
     template,
-    mixins: ['cms-element'],
-
-    inject: ['scalecommerceVoApiService'],
-
-    data() {
-        return {
-            video: null,
-        };
-    },
+    mixins: ['cms-element', elementVideo],
 
     computed: {
         videoUuid() {
             return this.element.config?.video?.value ?? null;
         },
-        posterUrl() {
-            if (!this.video) return null;
-            return this.video.poster_url || this.video.thumbnail_url || null;
+        overlay() {
+            return this.element.config?.overlay?.value || 'gradient';
+        },
+        height() {
+            return this.element.config?.height?.value || 'large';
+        },
+        editorHeight() {
+            return EDITOR_HEIGHTS[this.height] ?? EDITOR_HEIGHTS.large;
+        },
+        eyebrow() {
+            return this.element.config?.eyebrow?.value || '';
         },
         headline() {
-            return this.element.config?.headline?.value || this.video?.title || this.video?.uuid || '';
+            return this.element.config?.headline?.value || '';
         },
-    },
-
-    watch: {
-        videoUuid: {
-            immediate: true,
-            handler() {
-                this.loadVideo();
-            },
+        subline() {
+            return this.element.config?.subline?.value || '';
+        },
+        ctaLabel() {
+            return this.element.config?.ctaLabel?.value || '';
+        },
+        contentStyle() {
+            return {
+                '--scvo-hero-heading': this.element.config?.headlineColor?.value || null,
+                '--scvo-hero-text': this.element.config?.textColor?.value || null,
+            };
         },
     },
 
     created() {
         this.initElementConfig('scalecommerce-vo-background-hero');
-    },
-
-    methods: {
-        async loadVideo() {
-            if (!this.videoUuid) {
-                this.video = null;
-                return;
-            }
-            try {
-                const response = await this.scalecommerceVoApiService.getVideo(this.videoUuid);
-                this.video = response.data ?? response;
-            } catch (error) {
-                console.warn('[VideoOptimizer] failed to load video for preview', error);
-                this.video = null;
-            }
-        },
-        statusVariant(status) {
-            if (status === 'ready') return 'success';
-            if (status === 'failed') return 'danger';
-            return 'warning';
-        },
-
-        metaLine() {
-            if (!this.video) {
-                return '';
-            }
-            const parsed = parseResolution(this.video.resolution);
-            const dimensions = parsed ? `${parsed.width}×${parsed.height}` : null;
-            const duration = this.video.duration === null || this.video.duration === undefined
-                ? null
-                : formatDuration(this.video.duration);
-            const key = orientationKey(this.video.resolution);
-            const labels = {
-                portrait: 'scalecommerce-vo.gallery.orientationPortrait',
-                landscape: 'scalecommerce-vo.gallery.orientationLandscape',
-                square: 'scalecommerce-vo.gallery.orientationSquare',
-            };
-            const orientation = key ? this.$tc(labels[key]) : null;
-
-            return [dimensions, duration, orientation].filter((part) => part !== null).join(' · ');
-        },
     },
 });
