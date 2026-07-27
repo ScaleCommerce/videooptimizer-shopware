@@ -3,7 +3,7 @@
 All notable changes to `scalecommerce/videooptimizer-shopware` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.4.7] - 2026-07-27
 
 ### Changed
 - The CMS element previews in the Shopping Experiences editor now **mirror their storefront layout** instead of showing one large poster per element: media split renders two reversible columns with its text column, background hero renders the poster with its overlay and centred copy (heights capped for the editor), spotlight renders a centred column, and video grid renders a real tile grid with one tile per video. Editors can tell the layouts apart and judge a page without opening the storefront.
