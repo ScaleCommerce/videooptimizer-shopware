@@ -1,19 +1,35 @@
 {% block element_scalecommerce_vo_media_split %}
-<div class="scalecommerce-vo-media-split-component">
-    <template v-if="video">
-        <div class="scalecommerce-vo-media-split-component__poster">
-            <img v-if="posterUrl" :src="posterUrl" :alt="headline" />
-            <mt-icon v-else name="regular-play" size="40" />
+<div class="scalecommerce-vo-media-split-component" :class="{ 'is-reversed': side === 'right' }">
+    <div class="scalecommerce-vo-media-split-component__media">
+        <scalecommerce-vo-preview-surface
+            :poster-url="posterUrl"
+            :presentation="presentation"
+            :player-mode="playerMode"
+            :controls="showControls"
+            :status="video ? video.status : null"
+            :meta="metaLine()"
+            :has-video="!!video"
+            :tooltip="video ? (video.title || video.uuid) : null"
+        />
+    </div>
+    <div class="scalecommerce-vo-media-split-component__text">
+        <p class="scalecommerce-vo-media-split-component__eyebrow"
+           :class="{ 'scvo-preview-placeholder': !eyebrow }">
+            {{ eyebrow || $tc('scalecommerce-vo.cms.placeholder.eyebrow') }}
+        </p>
+        <p class="scalecommerce-vo-media-split-component__headline"
+           :class="{ 'scvo-preview-placeholder': !headline }">
+            {{ headline || $tc('scalecommerce-vo.cms.placeholder.headline') }}
+        </p>
+        <div v-if="text" class="scalecommerce-vo-media-split-component__body" v-html="text"></div>
+        <div v-else class="scvo-preview-bars" aria-hidden="true">
+            <span></span>
+            <span></span>
         </div>
-        <div class="scalecommerce-vo-media-split-component__meta">
-            <span class="scalecommerce-vo-media-split-component__title">{{ headline }}</span>
-            <sw-label :variant="statusVariant(video.status)" size="small" :ghost="true">{{ video.status }}</sw-label>
-        </div>
-        <span v-if="metaLine()" class="scalecommerce-vo-media-split-component__meta-info">{{ metaLine() }}</span>
-    </template>
-    <div v-else class="scalecommerce-vo-media-split-component__empty">
-        <mt-icon name="regular-play" size="32" />
-        <span>{{ $tc('scalecommerce-vo.cms.selectVideo') }}</span>
+        <span class="scvo-preview-cta"
+              :class="{ 'scvo-preview-placeholder': !ctaLabel }">
+            {{ ctaLabel || $tc('scalecommerce-vo.cms.placeholder.cta') }}
+        </span>
     </div>
 </div>
 {% endblock %}
