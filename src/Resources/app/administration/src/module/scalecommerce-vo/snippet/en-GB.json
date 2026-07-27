@@ -35,7 +35,16 @@
             "playerMode": "Player",
             "playerModeNative": "Native player",
             "playerModeEmbed": "VideoOptimizer embed",
-            "autoplayHint": "Autoplay only works together with \"Muted\" (browser policy)."
+            "autoplayHint": "Autoplay only works together with \"Muted\" (browser policy).",
+            "placeholder": {
+                "eyebrow": "Eyebrow",
+                "headline": "Headline",
+                "subline": "Subline",
+                "caption": "Caption",
+                "intro": "Intro",
+                "cta": "Button",
+                "label": "Label"
+            }
         },
         "mediaSplit": {
             "label": "VideoOptimizer media split",

@@ -35,7 +35,16 @@
             "playerMode": "Player",
             "playerModeNative": "Nativer Player",
             "playerModeEmbed": "VideoOptimizer-Embed",
-            "autoplayHint": "Autoplay wirkt nur zusammen mit „Stummschalten“ (Browser-Vorgabe)."
+            "autoplayHint": "Autoplay wirkt nur zusammen mit „Stummschalten“ (Browser-Vorgabe).",
+            "placeholder": {
+                "eyebrow": "Kicker",
+                "headline": "Überschrift",
+                "subline": "Unterzeile",
+                "caption": "Bildunterschrift",
+                "intro": "Einleitung",
+                "cta": "Button",
+                "label": "Beschriftung"
+            }
         },
         "mediaSplit": {
             "label": "VideoOptimizer Media Split",

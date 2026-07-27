@@ -3,6 +3,7 @@ import './acl';
 import './module/scalecommerce-vo';
 import './component/scalecommerce-vo-video-gallery';
 import './component/scalecommerce-vo-video-detail';
+import './component/scalecommerce-vo-preview-surface';
 import './module/sw-cms/elements/scalecommerce-vo-video';
 import './module/sw-cms/blocks/video/scalecommerce-vo-video';
 import './module/sw-cms/elements/scalecommerce-vo-media-split';
