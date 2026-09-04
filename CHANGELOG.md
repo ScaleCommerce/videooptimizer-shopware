@@ -3,6 +3,40 @@
 All notable changes to `scalecommerce/videooptimizer-shopware` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+## [0.5.0] - 2026-09-04
+
+### Security
+- Sanitized the media-split element's rich text server-side (mirroring Core's `TextCmsElementResolver`) and in the admin editor preview, closing a stored-XSS hole where the editor-authored text was rendered with `|raw` on the storefront.
+- Allowlisted the URL scheme of the media-split and background-hero call-to-action URLs (`http`/`https`/`mailto`/`tel`/relative only), closing a stored-XSS hole via `javascript:`/`data:`/`vbscript:` URLs entered in the CTA URL field.
+- The configured API base URL and the new embed base URL are now required to be `https://`; a non-https value is rejected instead of silently sending the API token or storefront traffic in plaintext.
+- Hardened the admin thumbnail image proxy: only allowlisted image content types (jpeg/png/webp/gif) are passed through, anything else becomes `application/octet-stream`, and responses carry `X-Content-Type-Options: nosniff`.
+- Every admin controller endpoint that forwards a JSON request body upstream now allowlists its keys before forwarding, dropping unexpected fields instead of passing them through unvalidated.
+- Path segments (video UUID, library ID, thumbnail index) are now URL-encoded before being interpolated into admin API service request URLs.
+- Sandboxed the hosted-embed `<iframe>`s (direct surface, single-video element, blocks facade/lightbox) with `sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"`.
+
+### Added
+- Library "reprocess": requeue all of a self-hosted/media-managed library's videos for re-encoding with its current encoding ladder, from a confirm-first button in the library editor.
+- Import a video from a public `https://` URL directly in the video gallery, alongside file upload.
+- New `embedBaseUrl` plugin configuration field (default `https://videooptimizer.eu`) so self-hosted VideoOptimizer instances can point the hosted embed player at their own host.
+- Shopware 6.6 administration bundle (webpack) shipped alongside the existing 6.7 (Vite) bundle, plus a `.shopware-extension.yml` declaring the 6.6 build constraint.
+- Storefront snippets (`de-DE`/`en-GB`) for the facade play button and lightbox close button labels, replacing hardcoded German text.
+- Confirmation dialogs before deleting a video or a library.
+
+### Changed
+- `getEmbed()` responses are now cached per video for **1 hour**, and no longer block storefront rendering with a `sleep()` retry on HTTP 429 — a rate limit during rendering now fails fast instead of stalling the response.
+- Embed-mode elements (and the single video/media-split/spotlight/video-grid elements) now verify the video still exists upstream and render nothing if it doesn't, instead of only checking in native player mode; the video grid drops just the unresolvable tile instead of rendering the whole block in an error state.
+- Admin-facing API requests now default to a 30 second timeout when the caller didn't set one (the storefront `getEmbed()` call keeps its existing 3 second cap).
+- Switched the storefront bundle to hls.js's light build and pinned it to `~1.6.16`, shrinking the compiled storefront JS by roughly a third.
+- hls.js instances are now torn down (`destroy()`) on plugin destroy and on every lightbox dismiss path, instead of leaking across navigations and open/close cycles; only one lightbox may be open at a time, and it gets `role="dialog"`, focus management and a body scroll lock.
+- The library editor's encoding ladder now only allows selecting a codec/resolution that is on the active library's allowlist (falling back to the org-wide `available` flag), shows an "ADD-ON" hint driven by the option's `access` field, and surfaces a hint to reprocess once the selection differs from the stored ladder.
+
+### Fixed
+- Upload/poster polling now stops on a `failed` status (with a notification) and on component unmount, and rejects instead of silently resolving when the attempt cap is hit, instead of proceeding as if the upload had finished.
+- The upload file input is reset after a successful upload so the same file can be re-selected.
+- `selectThumbnail()` and `completePosterUpload()` now return the intended 400 response for malformed JSON instead of an uncaught 500.
+
 ## [0.4.7] - 2026-07-27
 
 ### Changed
