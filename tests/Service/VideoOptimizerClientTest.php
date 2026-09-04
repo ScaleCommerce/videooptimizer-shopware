@@ -301,6 +301,22 @@ class VideoOptimizerClientTest extends TestCase
         static::assertSame('image/jpeg', $image['contentType']);
     }
 
+    public function testGetThumbnailImageSendsListStyleHeaders(): void
+    {
+        $capturedOptions = null;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$capturedOptions): MockResponse {
+            $capturedOptions = $options;
+            return new MockResponse('IMG', ['response_headers' => ['content-type' => 'image/jpeg']]);
+        });
+
+        $client = new VideoOptimizerClient($http, $this->config());
+        $client->getThumbnailImage('vid-1', 2);
+
+        // Same list-of-"Name: Value"-strings shape as request() uses, not a mix of list and
+        // assoc keys.
+        static::assertSame(['Authorization: Bearer vp_test', 'Accept: image/*'], $capturedOptions['headers']);
+    }
+
     public function testNonHttpsApiBaseUrlThrows(): void
     {
         $client = new VideoOptimizerClient(new MockHttpClient(), $this->config(baseUrl: 'http://api.videooptimizer.eu/api/v1'));

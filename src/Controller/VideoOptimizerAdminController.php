@@ -16,6 +16,13 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Package('content')]
 class VideoOptimizerAdminController
 {
+    /**
+     * Content types the thumbnail proxy will pass through as-is; anything else is rewritten to
+     * application/octet-stream so the admin SPA never renders an upstream-controlled response as
+     * e.g. text/html.
+     */
+    private const ALLOWED_THUMBNAIL_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
     public function __construct(private readonly VideoOptimizerClient $client)
     {
     }
@@ -110,7 +117,11 @@ class VideoOptimizerAdminController
     {
         try {
             $image = $this->client->getThumbnailImage($uuid, (int) $index);
-            return new Response($image['content'], Response::HTTP_OK, ['Content-Type' => $image['contentType']]);
+            return new Response($image['content'], Response::HTTP_OK, [
+                'Content-Type' => $this->safeThumbnailContentType($image['contentType']),
+                'X-Content-Type-Options' => 'nosniff',
+                'Content-Disposition' => 'inline',
+            ]);
         } catch (MissingApiTokenException|InvalidApiBaseUrlException $e) {
             return new JsonResponse(['errors' => [['status' => '400', 'detail' => $e->getMessage()]]], 400);
         } catch (VideoOptimizerApiException $e) {
@@ -151,6 +162,16 @@ class VideoOptimizerAdminController
             $this->client->deletePoster($uuid);
             return [];
         }, Response::HTTP_NO_CONTENT);
+    }
+
+    /**
+     * Compares the media type before any ";" parameter, case-insensitively, against the allowlist.
+     */
+    private function safeThumbnailContentType(string $contentType): string
+    {
+        $mediaType = strtolower(trim(explode(';', $contentType, 2)[0]));
+
+        return in_array($mediaType, self::ALLOWED_THUMBNAIL_CONTENT_TYPES, true) ? $contentType : 'application/octet-stream';
     }
 
     private function payload(Request $request): array

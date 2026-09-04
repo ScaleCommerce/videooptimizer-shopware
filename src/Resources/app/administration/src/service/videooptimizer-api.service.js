@@ -61,8 +61,9 @@ export default class VideoOptimizerApiService extends ApiService {
             .then((response) => ApiService.handleResponse(response));
     }
 
-    // Fetches a frame image as an authenticated blob (the frame URLs are Bearer-protected and
-    // proxied by our controller); callers create an object URL for the <img>.
+    // Fetches a frame image as a blob via our proxy (the frame URLs are public per the current
+    // OpenAPI spec, but the admin SPA should not fetch cross-origin images with unknown CORS);
+    // callers create an object URL for the <img>.
     getThumbnailImage(uuid, index) {
         return this.httpClient
             .get(`${this.getApiBasePath()}/videos/${uuid}/thumbnails/${index}`, {

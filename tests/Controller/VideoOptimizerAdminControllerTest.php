@@ -148,6 +148,47 @@ class VideoOptimizerAdminControllerTest extends TestCase
         static::assertSame(200, $response->getStatusCode());
         static::assertSame('IMG', $response->getContent());
         static::assertSame('image/jpeg', $response->headers->get('Content-Type'));
+        static::assertSame('nosniff', $response->headers->get('X-Content-Type-Options'));
+        static::assertSame('inline', $response->headers->get('Content-Disposition'));
+    }
+
+    public function testGetThumbnailImageAllowsWebpAndGif(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('getThumbnailImage')->willReturnMap([
+            ['v1', 2, ['content' => 'WEBP', 'contentType' => 'image/webp']],
+            ['v1', 3, ['content' => 'GIF', 'contentType' => 'image/gif; charset=binary']],
+        ]);
+        $controller = new VideoOptimizerAdminController($client);
+
+        $webp = $controller->getThumbnailImage('v1', '2');
+        static::assertSame('image/webp', $webp->headers->get('Content-Type'));
+
+        // The parameter after ";" is not stripped when the media type itself is allowlisted.
+        $gif = $controller->getThumbnailImage('v1', '3');
+        static::assertSame('image/gif; charset=binary', $gif->headers->get('Content-Type'));
+    }
+
+    public function testGetThumbnailImageRewritesDisallowedContentTypeToOctetStream(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('getThumbnailImage')->with('v1', 2)->willReturn(['content' => '<script>evil()</script>', 'contentType' => 'text/html']);
+        $controller = new VideoOptimizerAdminController($client);
+        $response = $controller->getThumbnailImage('v1', '2');
+
+        static::assertSame('application/octet-stream', $response->headers->get('Content-Type'));
+        static::assertSame('nosniff', $response->headers->get('X-Content-Type-Options'));
+        static::assertSame('inline', $response->headers->get('Content-Disposition'));
+    }
+
+    public function testGetThumbnailImageContentTypeComparisonIsCaseInsensitive(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('getThumbnailImage')->with('v1', 2)->willReturn(['content' => 'IMG', 'contentType' => 'IMAGE/JPEG']);
+        $controller = new VideoOptimizerAdminController($client);
+        $response = $controller->getThumbnailImage('v1', '2');
+
+        static::assertSame('IMAGE/JPEG', $response->headers->get('Content-Type'));
     }
 
     public function testSelectThumbnailPassesIndex(): void

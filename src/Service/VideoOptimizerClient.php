@@ -119,8 +119,9 @@ class VideoOptimizerClient
     }
 
     /**
-     * Fetches a single thumbnail frame's raw image bytes (the frame URLs are API-hosted and
-     * Bearer-protected, so the admin cannot load them directly — the controller proxies them).
+     * Fetches a single thumbnail frame's raw image bytes. Per the current OpenAPI spec the frame
+     * URLs are public (no token required), but the admin SPA still proxies through here because
+     * it should not fetch cross-origin images with unknown CORS.
      *
      * @return array{content: string, contentType: string}
      */
@@ -128,7 +129,7 @@ class VideoOptimizerClient
     {
         $url = $this->baseUrl() . '/videos/' . rawurlencode($uuid) . '/thumbnails/' . $index;
         $response = $this->httpClient->request('GET', $url, [
-            'headers' => ['Authorization: Bearer ' . $this->token(), 'Accept' => 'image/*'],
+            'headers' => $this->buildHeaders(true, 'image/*'),
         ]);
         if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 300) {
             throw VideoOptimizerApiException::fromResponse($response->getStatusCode(), $response->getContent(false));
@@ -225,12 +226,7 @@ class VideoOptimizerClient
 
     private function request(string $method, string $path, array $options = [], bool $withToken = true): array
     {
-        $headers = $options['headers'] ?? [];
-        if ($withToken) {
-            $headers[] = 'Authorization: Bearer ' . $this->token();
-        }
-        $headers[] = 'Accept: application/json';
-        $options['headers'] = $headers;
+        $options['headers'] = array_merge($options['headers'] ?? [], $this->buildHeaders($withToken, 'application/json'));
 
         $url = $this->baseUrl() . $path;
 
@@ -257,6 +253,21 @@ class VideoOptimizerClient
         $decoded = json_decode($content, true);
 
         return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * @return list<string> "Name: Value" header lines, the shape Symfony's HttpClient and our
+     *                       own request()/getThumbnailImage() calls agree on.
+     */
+    private function buildHeaders(bool $withToken, string $accept): array
+    {
+        $headers = [];
+        if ($withToken) {
+            $headers[] = 'Authorization: Bearer ' . $this->token();
+        }
+        $headers[] = 'Accept: ' . $accept;
+
+        return $headers;
     }
 
     private function retryAfterSeconds(ResponseInterface $response): int
