@@ -45,6 +45,7 @@ export default class ScalecommerceVoBlocks extends Plugin {
             url.searchParams.set('muted', '1');
             iframe.src = url.toString();
             iframe.setAttribute('allow', 'autoplay; fullscreen');
+            iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-presentation');
             iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
             iframe.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0';
             return iframe;
