@@ -26,6 +26,9 @@ Component.register('scalecommerce-vo-video-gallery', {
             uploadTitle: '',
             uploadFile: null,
             isUploading: false,
+            ingestUrl: '',
+            ingestTitle: '',
+            isIngesting: false,
             detailUuid: null,
             confirmDeleteVideo: null,
         };
@@ -44,6 +47,10 @@ Component.register('scalecommerce-vo-video-gallery', {
 
         confirmDeleteVideoTitle() {
             return this.confirmDeleteVideo ? (this.confirmDeleteVideo.title || this.confirmDeleteVideo.uuid) : '';
+        },
+
+        canIngest() {
+            return this.ingestUrl.startsWith('https://') && !!this.libraryId && !this.isUploading && !this.isIngesting;
         },
     },
 
@@ -161,6 +168,33 @@ Component.register('scalecommerce-vo-video-gallery', {
                 }
             } finally {
                 this.isUploading = false;
+            }
+        },
+
+        async onIngest() {
+            if (!this.canIngest) {
+                return;
+            }
+            this.isIngesting = true;
+            try {
+                const payload = { library_id: this.libraryId, source_url: this.ingestUrl };
+                if (this.ingestTitle) {
+                    payload.title = this.ingestTitle;
+                }
+                const response = await this.scalecommerceVoApiService.ingestVideoUrl(payload);
+                const video = response.data ?? response;
+                this.createNotificationSuccess({ message: this.$tc('scalecommerce-vo.gallery.ingestStarted') });
+                this.ingestUrl = '';
+                this.ingestTitle = '';
+                await this._pollUntilReady(video.uuid);
+                this.$emit('upload-complete', video.uuid);
+            } catch (error) {
+                // _pollUntilReady already shows its own notification for polling failures.
+                if (!error?.handled) {
+                    this.createNotificationError({ message: this._errorText(error) });
+                }
+            } finally {
+                this.isIngesting = false;
             }
         },
 

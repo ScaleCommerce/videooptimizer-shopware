@@ -42,6 +42,13 @@
             <mt-button size="small" variant="primary" :disabled="!uploadFile || isUploading || !libraryId" @click="onUpload">
                 {{ $tc('scalecommerce-vo.gallery.upload') }}
             </mt-button>
+
+            <span class="scalecommerce-vo-gallery__upload-heading">{{ $tc('scalecommerce-vo.gallery.ingestHeading') }}</span>
+            <mt-text-field v-model="ingestUrl" :label="$tc('scalecommerce-vo.gallery.ingestUrl')" placeholder="https://…" size="small" />
+            <mt-text-field v-model="ingestTitle" :label="$tc('scalecommerce-vo.gallery.uploadTitle')" size="small" />
+            <mt-button size="small" variant="primary" :disabled="!canIngest" @click="onIngest">
+                {{ $tc('scalecommerce-vo.gallery.ingest') }}
+            </mt-button>
         </div>
     </div>
 

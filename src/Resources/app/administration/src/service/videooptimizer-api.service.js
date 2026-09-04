@@ -130,6 +130,12 @@ export default class VideoOptimizerApiService extends ApiService {
             .then((response) => ApiService.handleResponse(response));
     }
 
+    ingestVideoUrl(payload) {
+        return this.httpClient
+            .post(`${this.getApiBasePath()}/videos/ingest`, payload, { headers: this.getBasicHeaders() })
+            .then((response) => ApiService.handleResponse(response));
+    }
+
     // PUTs each file part directly to its presigned storage URL and collects the ETags the
     // complete step needs. Cross-origin, so no auth header; the bucket must expose ETag via CORS.
     uploadParts(file, parts, partSize) {
