@@ -23,7 +23,7 @@
             "saved": "Bibliothek gespeichert.",
             "created": "Bibliothek erstellt.",
             "confirmDeleteTitle": "Bibliothek löschen?",
-            "confirmDeleteText": "Die Bibliothek „{name}\" und alle enthaltenen Videos werden dauerhaft gelöscht."
+            "confirmDeleteText": "Die Bibliothek „{name}“ und alle enthaltenen Videos werden dauerhaft gelöscht."
         },
         "cms": {
             "label": "VideoOptimizer-Video",
@@ -138,7 +138,7 @@
             "processingTimeout": "Die Verarbeitung dauert länger als erwartet. Die Liste wird später aktualisiert.",
             "cancel": "Abbrechen",
             "confirmDeleteTitle": "Video löschen?",
-            "confirmDeleteText": "„{title}\" wird dauerhaft bei VideoOptimizer gelöscht. Dies kann nicht rückgängig gemacht werden."
+            "confirmDeleteText": "„{title}“ wird dauerhaft bei VideoOptimizer gelöscht. Dies kann nicht rückgängig gemacht werden."
         },
         "detail": {
             "previewImage": "Vorschaubild",

@@ -69,7 +69,7 @@
                 <sw-modal
                     v-if="confirmDeleteLibrary"
                     variant="small"
-                    :title="$tc('scalecommerce-vo.library.confirmDeleteTitle')"
+                    :title="$t('scalecommerce-vo.library.confirmDeleteTitle')"
                     @modal-close="confirmDeleteLibrary = false">
                     <p>{{ $t('scalecommerce-vo.library.confirmDeleteText', { name: activeLibrary ? activeLibrary.name : '' }) }}</p>
                     <template #modal-footer>

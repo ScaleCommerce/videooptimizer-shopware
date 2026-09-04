@@ -66,7 +66,7 @@
     <sw-modal
         v-if="confirmDeleteVideo"
         variant="small"
-        :title="$tc('scalecommerce-vo.gallery.confirmDeleteTitle')"
+        :title="$t('scalecommerce-vo.gallery.confirmDeleteTitle')"
         @modal-close="confirmDeleteVideo = null">
         <p>{{ $t('scalecommerce-vo.gallery.confirmDeleteText', { title: confirmDeleteVideoTitle }) }}</p>
         <template #modal-footer>
