@@ -19,6 +19,7 @@ class VideoOptimizerClient
     private const MAX_PAGES = 100;
     private const MAX_RETRY_AFTER = 5;
     private const EMBED_CACHE_TTL = 3600;
+    private const EMBED_FAILURE_CACHE_TTL = 60;
     private const ADMIN_MAX_DURATION = 30.0;
 
     public function __construct(
@@ -102,12 +103,16 @@ class VideoOptimizerClient
 
     public function updateVideo(string $uuid, array $payload): array
     {
-        return $this->requestData('PATCH', '/videos/' . rawurlencode($uuid), ['json' => $payload]);
+        $result = $this->requestData('PATCH', '/videos/' . rawurlencode($uuid), ['json' => $payload]);
+        $this->forgetEmbed($uuid);
+
+        return $result;
     }
 
     public function deleteVideo(string $uuid): void
     {
         $this->request('DELETE', '/videos/' . rawurlencode($uuid));
+        $this->forgetEmbed($uuid);
     }
 
     /**
@@ -134,21 +139,65 @@ class VideoOptimizerClient
     /**
      * Public embed payload (theme, sources, poster). No token required. Capped so a slow upstream
      * falls back fast during storefront rendering instead of blocking the response, and never
-     * retries on 429 (no sleep() while rendering the storefront). Cached per UUID; a failed lookup
-     * is never cached, since the callback exception propagates before the cache stores anything.
+     * retries on 429 (no sleep() while rendering the storefront). Cached per UUID for 1 hour; a
+     * failed lookup is negatively cached for 60s (see below) so an unreachable upstream cannot
+     * hammer itself or block storefront rendering on every request.
      */
     public function getEmbed(string $uuid): array
     {
-        // The UUID comes from CMS slot config; rawurlencode() it so it can never smuggle a PSR-6
-        // reserved character ("{}()/\@:") into the cache key.
-        return $this->cache->get(
-            'scalecommerce_vo_embed_' . rawurlencode($uuid),
-            function (ItemInterface $item) use ($uuid): array {
+        // Set only when the callback below actually ran (i.e. this call missed the cache), so we
+        // can tell "fresh failure" (propagate the real upstream exception) apart from "served from
+        // the negative cache" (synthesize a 503 below) even though both paths return the same
+        // sentinel shape from cache->get().
+        $freshFailure = null;
+
+        $result = $this->cache->get(
+            $this->embedCacheKey($uuid),
+            function (ItemInterface $item) use ($uuid, &$freshFailure): array {
+                try {
+                    $data = $this->requestData('GET', '/embed/' . rawurlencode($uuid), ['max_duration' => 3.0], false, false);
+                } catch (\Throwable $e) {
+                    // Store the sentinel instead of throwing here - Symfony's CacheInterface::get()
+                    // never persists a value when the callback throws, which is exactly what we
+                    // don't want for a failure we intend to cache.
+                    $freshFailure = $e;
+                    $item->expiresAfter(self::EMBED_FAILURE_CACHE_TTL);
+
+                    return ['__scvo_failed' => true, 'message' => $e->getMessage()];
+                }
+
                 $item->expiresAfter(self::EMBED_CACHE_TTL);
 
-                return $this->requestData('GET', '/embed/' . rawurlencode($uuid), ['max_duration' => 3.0], false, false);
+                return $data;
             }
         );
+
+        if ($freshFailure !== null) {
+            throw $freshFailure;
+        }
+
+        if (is_array($result) && ($result['__scvo_failed'] ?? false) === true) {
+            throw new VideoOptimizerApiException(503, 'VideoOptimizer embed temporarily unavailable (cached failure).');
+        }
+
+        return $result;
+    }
+
+    /**
+     * Invalidates the cached getEmbed() result for a video, so a title/poster/thumbnail change or
+     * deletion made through the admin is reflected on the storefront without waiting out the TTL.
+     * A no-op if nothing is cached for this UUID (e.g. it was never rendered, or already expired).
+     */
+    public function forgetEmbed(string $uuid): void
+    {
+        $this->cache->delete($this->embedCacheKey($uuid));
+    }
+
+    private function embedCacheKey(string $uuid): string
+    {
+        // The UUID comes from CMS slot config; rawurlencode() it so it can never smuggle a PSR-6
+        // reserved character ("{}()/\@:") into the cache key.
+        return 'scalecommerce_vo_embed_' . rawurlencode($uuid);
     }
 
     public function listThumbnails(string $uuid): array
@@ -182,7 +231,10 @@ class VideoOptimizerClient
 
     public function selectThumbnail(string $uuid, int $index): array
     {
-        return $this->requestData('POST', '/videos/' . rawurlencode($uuid) . '/thumbnail', ['json' => ['thumbnailIndex' => $index]]);
+        $result = $this->requestData('POST', '/videos/' . rawurlencode($uuid) . '/thumbnail', ['json' => ['thumbnailIndex' => $index]]);
+        $this->forgetEmbed($uuid);
+
+        return $result;
     }
 
     /**
@@ -197,7 +249,10 @@ class VideoOptimizerClient
 
     public function completePosterUpload(string $uuid, string $key): array
     {
-        return $this->requestData('POST', '/videos/' . rawurlencode($uuid) . '/poster/complete', ['json' => ['key' => $key]]);
+        $result = $this->requestData('POST', '/videos/' . rawurlencode($uuid) . '/poster/complete', ['json' => ['key' => $key]]);
+        $this->forgetEmbed($uuid);
+
+        return $result;
     }
 
     /**
@@ -205,12 +260,16 @@ class VideoOptimizerClient
      */
     public function selectPoster(string $uuid, array $payload): array
     {
-        return $this->requestData('POST', '/videos/' . rawurlencode($uuid) . '/poster/select', ['json' => $payload]);
+        $result = $this->requestData('POST', '/videos/' . rawurlencode($uuid) . '/poster/select', ['json' => $payload]);
+        $this->forgetEmbed($uuid);
+
+        return $result;
     }
 
     public function deletePoster(string $uuid): void
     {
         $this->request('DELETE', '/videos/' . rawurlencode($uuid) . '/poster');
+        $this->forgetEmbed($uuid);
     }
 
     /**

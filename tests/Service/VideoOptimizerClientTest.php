@@ -2,6 +2,7 @@
 
 namespace ScaleCommerce\VideoOptimizer\Tests\Service;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
@@ -386,25 +387,123 @@ class VideoOptimizerClientTest extends TestCase
         static::assertSame($first, $second);
     }
 
-    public function testGetEmbedDoesNotCacheFailures(): void
+    public function testGetEmbedCachesFailedLookupsForSixtySeconds(): void
     {
         $count = 0;
         $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$count): MockResponse {
             ++$count;
-            return new MockResponse('', ['http_code' => 500]);
+            return new MockResponse(json_encode(['statusMessage' => 'Upstream exploded']), ['http_code' => 500]);
         });
         $client = $this->client($http, $this->config());
 
-        foreach (range(1, 2) as $attempt) {
-            try {
-                $client->getEmbed('v1');
-                static::fail('Expected VideoOptimizerApiException');
-            } catch (VideoOptimizerApiException) {
-                // A failed lookup must not poison the cache - the next call hits the API again.
-            }
+        try {
+            $client->getEmbed('v1');
+            static::fail('Expected VideoOptimizerApiException');
+        } catch (VideoOptimizerApiException $e) {
+            // First failure propagates the real upstream status/message.
+            static::assertSame(500, $e->getStatusCode());
+            static::assertStringContainsString('Upstream exploded', $e->getMessage());
         }
 
+        try {
+            $client->getEmbed('v1');
+            static::fail('Expected VideoOptimizerApiException');
+        } catch (VideoOptimizerApiException $e) {
+            // Second call within the 60s negative-cache TTL is served from cache, not upstream.
+            static::assertSame(503, $e->getStatusCode());
+            static::assertStringContainsString('cached failure', $e->getMessage());
+        }
+
+        static::assertSame(1, $count);
+    }
+
+    public function testForgetEmbedClearsNegativeCacheEntry(): void
+    {
+        $count = 0;
+        $responses = [
+            new MockResponse('', ['http_code' => 500]),
+            new MockResponse(json_encode(['data' => ['uuid' => 'v1']])),
+        ];
+        $http = new MockHttpClient(function () use (&$count, &$responses): MockResponse {
+            ++$count;
+            return array_shift($responses);
+        });
+        $client = $this->client($http, $this->config());
+
+        try {
+            $client->getEmbed('v1');
+            static::fail('Expected VideoOptimizerApiException');
+        } catch (VideoOptimizerApiException) {
+        }
+
+        // Admin fixes the poster (or the outage clears) and forgets the cached embed - including
+        // the negative cache entry, not just a successful one.
+        $client->forgetEmbed('v1');
+        $result = $client->getEmbed('v1');
+
+        static::assertSame('v1', $result['uuid']);
         static::assertSame(2, $count);
+    }
+
+    public function testForgetEmbedOnNeverCachedUuidIsNoop(): void
+    {
+        $client = $this->client(new MockHttpClient(), $this->config());
+
+        $client->forgetEmbed('never-cached');
+
+        // No exception, and nothing to assert on the wire - deleting a missing cache entry is a no-op.
+        $this->addToAssertionCount(1);
+    }
+
+    #[DataProvider('embedInvalidatingMutations')]
+    public function testMutatingClientMethodInvalidatesTheEmbedCache(callable $mutate, array $responses): void
+    {
+        $embedResponses = [
+            new MockResponse(json_encode(['data' => ['uuid' => 'v1', 'call' => 1]])),
+            new MockResponse(json_encode(['data' => ['uuid' => 'v1', 'call' => 2]])),
+        ];
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$embedResponses, &$responses): MockResponse {
+            if (str_contains($url, '/embed/')) {
+                return array_shift($embedResponses);
+            }
+            return array_shift($responses);
+        });
+        $client = $this->client($http, $this->config());
+
+        $first = $client->getEmbed('v1');
+        $mutate($client);
+        $second = $client->getEmbed('v1');
+
+        static::assertSame(1, $first['call']);
+        static::assertSame(2, $second['call']);
+    }
+
+    public static function embedInvalidatingMutations(): iterable
+    {
+        yield 'updateVideo' => [
+            fn (VideoOptimizerClient $client) => $client->updateVideo('v1', ['title' => 'New title']),
+            [new MockResponse(json_encode(['data' => ['uuid' => 'v1']]))],
+        ];
+        yield 'deleteVideo' => [
+            fn (VideoOptimizerClient $client) => $client->deleteVideo('v1'),
+            [new MockResponse('')],
+        ];
+        yield 'selectThumbnail' => [
+            fn (VideoOptimizerClient $client) => $client->selectThumbnail('v1', 2),
+            [new MockResponse(json_encode(['data' => ['poster' => ['source' => 'thumbnail']]]))],
+        ];
+        yield 'completePosterUpload' => [
+            fn (VideoOptimizerClient $client) => $client->completePosterUpload('v1', 'k'),
+            [new MockResponse(json_encode(['data' => ['poster' => ['source' => 'custom']]]))],
+        ];
+        yield 'selectPoster' => [
+            fn (VideoOptimizerClient $client) => $client->selectPoster('v1', ['source' => 'custom']),
+            [new MockResponse(json_encode(['data' => ['poster' => ['source' => 'custom']]]))],
+        ];
+        yield 'deletePoster' => [
+            fn (VideoOptimizerClient $client) => $client->deletePoster('v1'),
+            [new MockResponse('')],
+        ];
     }
 
     public function testGetEmbedDoesNotRetryOn429(): void
