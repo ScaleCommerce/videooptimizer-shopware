@@ -1,5 +1,5 @@
 import Plugin from 'src/plugin-system/plugin.class';
-import Hls from 'hls.js';
+import Hls from 'hls.js/dist/hls.light.mjs';
 
 // Only one lightbox may be open at a time across the whole page (there can be several
 // ScalecommerceVoBlocks instances, e.g. inside a video grid), so this guard lives at

@@ -1,5 +1,5 @@
 import Plugin from 'src/plugin-system/plugin.class';
-import Hls from 'hls.js';
+import Hls from 'hls.js/dist/hls.light.mjs';
 
 export default class ScalecommerceVoPlayer extends Plugin {
     static options = {

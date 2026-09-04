@@ -1,5 +1,5 @@
 import Plugin from 'src/plugin-system/plugin.class';
-import Hls from 'hls.js';
+import Hls from 'hls.js/dist/hls.light.mjs';
 
 // Attaches an adaptive HLS source to the decorative background <video> of a
 // background-hero element. The video already carries muted/autoplay/loop/
