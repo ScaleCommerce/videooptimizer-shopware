@@ -99,6 +99,7 @@ export default class ScalecommerceVoBlocks extends Plugin {
         }
         lightboxOpen = true;
 
+        const closeLabel = this.el.getAttribute('data-vo-label-close') || 'Close';
         const overlay = document.createElement('div');
         overlay.className = 'scalecommerce-vo-lightbox';
         overlay.setAttribute('role', 'dialog');
@@ -108,7 +109,7 @@ export default class ScalecommerceVoBlocks extends Plugin {
         const close = document.createElement('button');
         close.type = 'button';
         close.className = 'scalecommerce-vo-lightbox__close';
-        close.setAttribute('aria-label', 'Schließen');
+        close.setAttribute('aria-label', closeLabel);
         close.innerHTML = '&times;';
         const player = this._buildPlayer(playerMode, embedUrl, nativeOptions, true);
         stage.appendChild(player);
