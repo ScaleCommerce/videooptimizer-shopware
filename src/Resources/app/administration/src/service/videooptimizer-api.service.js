@@ -26,25 +26,25 @@ export default class VideoOptimizerApiService extends ApiService {
 
     updateLibrary(id, payload) {
         return this.httpClient
-            .patch(`${this.getApiBasePath()}/libraries/${id}`, payload, { headers: this.getBasicHeaders() })
+            .patch(`${this.getApiBasePath()}/libraries/${encodeURIComponent(id)}`, payload, { headers: this.getBasicHeaders() })
             .then((response) => ApiService.handleResponse(response));
     }
 
     deleteLibrary(id) {
         return this.httpClient
-            .delete(`${this.getApiBasePath()}/libraries/${id}`, { headers: this.getBasicHeaders() })
+            .delete(`${this.getApiBasePath()}/libraries/${encodeURIComponent(id)}`, { headers: this.getBasicHeaders() })
             .then((response) => ApiService.handleResponse(response));
     }
 
     getVideos(libraryId) {
         return this.httpClient
-            .get(`${this.getApiBasePath()}/libraries/${libraryId}/videos`, { headers: this.getBasicHeaders() })
+            .get(`${this.getApiBasePath()}/libraries/${encodeURIComponent(libraryId)}/videos`, { headers: this.getBasicHeaders() })
             .then((response) => ApiService.handleResponse(response));
     }
 
     getVideo(uuid) {
         return this.httpClient
-            .get(`${this.getApiBasePath()}/videos/${uuid}`, { headers: this.getBasicHeaders() })
+            .get(`${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}`, { headers: this.getBasicHeaders() })
             .then((response) => ApiService.handleResponse(response));
     }
 
@@ -57,7 +57,7 @@ export default class VideoOptimizerApiService extends ApiService {
 
     getThumbnails(uuid) {
         return this.httpClient
-            .get(`${this.getApiBasePath()}/videos/${uuid}/thumbnails`, { headers: this.getBasicHeaders() })
+            .get(`${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/thumbnails`, { headers: this.getBasicHeaders() })
             .then((response) => ApiService.handleResponse(response));
     }
 
@@ -66,7 +66,7 @@ export default class VideoOptimizerApiService extends ApiService {
     // callers create an object URL for the <img>.
     getThumbnailImage(uuid, index) {
         return this.httpClient
-            .get(`${this.getApiBasePath()}/videos/${uuid}/thumbnails/${index}`, {
+            .get(`${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/thumbnails/${encodeURIComponent(index)}`, {
                 headers: this.getBasicHeaders(),
                 responseType: 'blob',
             })
@@ -75,13 +75,13 @@ export default class VideoOptimizerApiService extends ApiService {
 
     selectThumbnail(uuid, index) {
         return this.httpClient
-            .post(`${this.getApiBasePath()}/videos/${uuid}/thumbnail`, { thumbnailIndex: index }, { headers: this.getBasicHeaders() })
+            .post(`${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/thumbnail`, { thumbnailIndex: index }, { headers: this.getBasicHeaders() })
             .then((response) => ApiService.handleResponse(response));
     }
 
     initiatePosterUpload(uuid, payload) {
         return this.httpClient
-            .post(`${this.getApiBasePath()}/videos/${uuid}/poster/initiate`, payload, { headers: this.getBasicHeaders() })
+            .post(`${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/poster/initiate`, payload, { headers: this.getBasicHeaders() })
             .then((response) => ApiService.handleResponse(response));
     }
 
@@ -96,19 +96,19 @@ export default class VideoOptimizerApiService extends ApiService {
 
     completePosterUpload(uuid, key) {
         return this.httpClient
-            .post(`${this.getApiBasePath()}/videos/${uuid}/poster/complete`, { key }, { headers: this.getBasicHeaders() })
+            .post(`${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/poster/complete`, { key }, { headers: this.getBasicHeaders() })
             .then((response) => ApiService.handleResponse(response));
     }
 
     selectPoster(uuid, payload) {
         return this.httpClient
-            .post(`${this.getApiBasePath()}/videos/${uuid}/poster/select`, payload, { headers: this.getBasicHeaders() })
+            .post(`${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/poster/select`, payload, { headers: this.getBasicHeaders() })
             .then((response) => ApiService.handleResponse(response));
     }
 
     deletePoster(uuid) {
         return this.httpClient
-            .delete(`${this.getApiBasePath()}/videos/${uuid}/poster`, { headers: this.getBasicHeaders() })
+            .delete(`${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/poster`, { headers: this.getBasicHeaders() })
             .then((response) => ApiService.handleResponse(response));
     }
 
@@ -149,13 +149,13 @@ export default class VideoOptimizerApiService extends ApiService {
 
     updateVideo(uuid, payload) {
         return this.httpClient
-            .patch(`${this.getApiBasePath()}/videos/${uuid}`, payload, { headers: this.getBasicHeaders() })
+            .patch(`${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}`, payload, { headers: this.getBasicHeaders() })
             .then((response) => ApiService.handleResponse(response));
     }
 
     deleteVideo(uuid) {
         return this.httpClient
-            .delete(`${this.getApiBasePath()}/videos/${uuid}`, { headers: this.getBasicHeaders() })
+            .delete(`${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}`, { headers: this.getBasicHeaders() })
             .then((response) => ApiService.handleResponse(response));
     }
 }
