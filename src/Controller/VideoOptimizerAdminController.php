@@ -23,6 +23,8 @@ class VideoOptimizerAdminController
      */
     private const ALLOWED_THUMBNAIL_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
+    private const LIBRARY_PAYLOAD_KEYS = ['name', 'description', 'codec', 'resolutions'];
+
     public function __construct(private readonly VideoOptimizerClient $client)
     {
     }
@@ -36,13 +38,13 @@ class VideoOptimizerAdminController
     #[Route(path: '/api/_action/scalecommerce-vo/libraries', name: 'api.action.scalecommerce-vo.libraries.create', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:create']])]
     public function createLibrary(Request $request): JsonResponse
     {
-        return $this->wrap(fn () => $this->client->createLibrary($this->payload($request)));
+        return $this->wrap(fn () => $this->client->createLibrary($this->only($this->payload($request), self::LIBRARY_PAYLOAD_KEYS)));
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/libraries/{id}', name: 'api.action.scalecommerce-vo.libraries.update', methods: ['PATCH'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
     public function updateLibrary(string $id, Request $request): JsonResponse
     {
-        return $this->wrap(fn () => $this->client->updateLibrary($id, $this->payload($request)));
+        return $this->wrap(fn () => $this->client->updateLibrary($id, $this->only($this->payload($request), self::LIBRARY_PAYLOAD_KEYS)));
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/libraries/{id}', name: 'api.action.scalecommerce-vo.libraries.delete', methods: ['DELETE'], defaults: ['_acl' => ['scalecommerce_vo:delete']])]
@@ -76,13 +78,13 @@ class VideoOptimizerAdminController
     #[Route(path: '/api/_action/scalecommerce-vo/videos/upload/initiate', name: 'api.action.scalecommerce-vo.videos.upload-initiate', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:create']])]
     public function initiateUpload(Request $request): JsonResponse
     {
-        return $this->wrap(fn () => $this->client->initiateUpload($this->payload($request)));
+        return $this->wrap(fn () => $this->client->initiateUpload($this->only($this->payload($request), ['libraryId', 'filename', 'contentType', 'fileSize'])));
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/videos/upload/complete', name: 'api.action.scalecommerce-vo.videos.upload-complete', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:create']])]
     public function completeUpload(Request $request): JsonResponse
     {
-        return $this->wrap(fn () => $this->client->completeUpload($this->payload($request)));
+        return $this->wrap(fn () => $this->client->completeUpload($this->only($this->payload($request), ['libraryId', 'uuid', 'key', 'uploadId', 'title', 'parts'])));
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}', name: 'api.action.scalecommerce-vo.videos.get', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
@@ -94,7 +96,7 @@ class VideoOptimizerAdminController
     #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}', name: 'api.action.scalecommerce-vo.videos.update', methods: ['PATCH'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
     public function updateVideo(string $uuid, Request $request): JsonResponse
     {
-        return $this->wrap(fn () => $this->client->updateVideo($uuid, $this->payload($request)));
+        return $this->wrap(fn () => $this->client->updateVideo($uuid, $this->only($this->payload($request), ['title'])));
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}', name: 'api.action.scalecommerce-vo.videos.delete', methods: ['DELETE'], defaults: ['_acl' => ['scalecommerce_vo:delete']])]
@@ -132,27 +134,34 @@ class VideoOptimizerAdminController
     #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/thumbnail', name: 'api.action.scalecommerce-vo.thumbnail.select', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
     public function selectThumbnail(string $uuid, Request $request): JsonResponse
     {
-        $index = (int) ($this->payload($request)['thumbnailIndex'] ?? 0);
-        return $this->wrap(fn () => $this->client->selectThumbnail($uuid, $index));
+        // payload() must run inside the wrap() closure so malformed JSON is caught there instead
+        // of throwing an uncaught JsonException before wrap() is even called.
+        return $this->wrap(function () use ($uuid, $request): array {
+            $index = (int) ($this->payload($request)['thumbnailIndex'] ?? 0);
+            return $this->client->selectThumbnail($uuid, $index);
+        });
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/poster/initiate', name: 'api.action.scalecommerce-vo.poster.initiate', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
     public function initiatePosterUpload(string $uuid, Request $request): JsonResponse
     {
-        return $this->wrap(fn () => $this->client->initiatePosterUpload($uuid, $this->payload($request)));
+        return $this->wrap(fn () => $this->client->initiatePosterUpload($uuid, $this->only($this->payload($request), ['contentType', 'fileSize'])));
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/poster/complete', name: 'api.action.scalecommerce-vo.poster.complete', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
     public function completePosterUpload(string $uuid, Request $request): JsonResponse
     {
-        $key = (string) ($this->payload($request)['key'] ?? '');
-        return $this->wrap(fn () => $this->client->completePosterUpload($uuid, $key));
+        // payload() must run inside the wrap() closure - see selectThumbnail() above.
+        return $this->wrap(function () use ($uuid, $request): array {
+            $key = (string) ($this->payload($request)['key'] ?? '');
+            return $this->client->completePosterUpload($uuid, $key);
+        });
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/poster/select', name: 'api.action.scalecommerce-vo.poster.select', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
     public function selectPoster(string $uuid, Request $request): JsonResponse
     {
-        return $this->wrap(fn () => $this->client->selectPoster($uuid, $this->payload($request)));
+        return $this->wrap(fn () => $this->client->selectPoster($uuid, $this->only($this->payload($request), ['source', 'thumbnailIndex'])));
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/poster', name: 'api.action.scalecommerce-vo.poster.delete', methods: ['DELETE'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
@@ -172,6 +181,20 @@ class VideoOptimizerAdminController
         $mediaType = strtolower(trim(explode(';', $contentType, 2)[0]));
 
         return in_array($mediaType, self::ALLOWED_THUMBNAIL_CONTENT_TYPES, true) ? $contentType : 'application/octet-stream';
+    }
+
+    /**
+     * Drops any request-body keys the client didn't ask for before forwarding the payload upstream,
+     * so an unexpected field can't reach an endpoint that never validated it.
+     *
+     * @param array<string, mixed> $payload
+     * @param list<string> $keys
+     *
+     * @return array<string, mixed>
+     */
+    private function only(array $payload, array $keys): array
+    {
+        return array_intersect_key($payload, array_flip($keys));
     }
 
     private function payload(Request $request): array

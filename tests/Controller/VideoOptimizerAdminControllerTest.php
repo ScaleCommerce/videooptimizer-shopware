@@ -209,4 +209,160 @@ class VideoOptimizerAdminControllerTest extends TestCase
         $response = $controller->deletePoster('v1');
         static::assertSame(204, $response->getStatusCode());
     }
+
+    public function testCreateLibraryDropsUnknownKeys(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('createLibrary')
+            ->with(['name' => 'Demo', 'description' => 'A library'])
+            ->willReturn(['id' => 'lib-1']);
+
+        $controller = new VideoOptimizerAdminController($client);
+        $request = new Request([], [], [], [], [], [], json_encode([
+            'name' => 'Demo',
+            'description' => 'A library',
+            'isCompany' => true,
+        ]));
+        $response = $controller->createLibrary($request);
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testUpdateLibraryDropsUnknownKeys(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('updateLibrary')
+            ->with('lib-1', ['name' => 'Demo', 'codec' => 'h264', 'resolutions' => '1080p'])
+            ->willReturn(['id' => 'lib-1']);
+
+        $controller = new VideoOptimizerAdminController($client);
+        $request = new Request([], [], [], [], [], [], json_encode([
+            'name' => 'Demo',
+            'codec' => 'h264',
+            'resolutions' => '1080p',
+            'organizationId' => 'org-1',
+        ]));
+        $response = $controller->updateLibrary('lib-1', $request);
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testUpdateVideoOnlyPassesTitle(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('updateVideo')
+            ->with('v1', ['title' => 'New title'])
+            ->willReturn(['uuid' => 'v1']);
+
+        $controller = new VideoOptimizerAdminController($client);
+        $request = new Request([], [], [], [], [], [], json_encode([
+            'title' => 'New title',
+            'status' => 'ready',
+        ]));
+        $response = $controller->updateVideo('v1', $request);
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testInitiateUploadDropsUnknownKeys(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('initiateUpload')
+            ->with(['libraryId' => 'lib-1', 'filename' => 'a.mp4', 'contentType' => 'video/mp4', 'fileSize' => 10])
+            ->willReturn(['uuid' => 'v1']);
+
+        $controller = new VideoOptimizerAdminController($client);
+        $request = new Request([], [], [], [], [], [], json_encode([
+            'libraryId' => 'lib-1',
+            'filename' => 'a.mp4',
+            'contentType' => 'video/mp4',
+            'fileSize' => 10,
+            'title' => 'ignored here',
+        ]));
+        $response = $controller->initiateUpload($request);
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testCompleteUploadDropsUnknownKeys(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('completeUpload')
+            ->with(['libraryId' => 'lib-1', 'uuid' => 'v1', 'key' => 'k', 'uploadId' => 'u1', 'title' => 't', 'parts' => []])
+            ->willReturn(['uuid' => 'v1']);
+
+        $controller = new VideoOptimizerAdminController($client);
+        $request = new Request([], [], [], [], [], [], json_encode([
+            'libraryId' => 'lib-1',
+            'uuid' => 'v1',
+            'key' => 'k',
+            'uploadId' => 'u1',
+            'title' => 't',
+            'parts' => [],
+            'status' => 'processing',
+        ]));
+        $response = $controller->completeUpload($request);
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testInitiatePosterUploadDropsUnknownKeys(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('initiatePosterUpload')
+            ->with('v1', ['contentType' => 'image/png', 'fileSize' => 10])
+            ->willReturn(['key' => 'k']);
+
+        $controller = new VideoOptimizerAdminController($client);
+        $request = new Request([], [], [], [], [], [], json_encode([
+            'contentType' => 'image/png',
+            'fileSize' => 10,
+            'uuid' => 'ignored',
+        ]));
+        $response = $controller->initiatePosterUpload('v1', $request);
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testSelectPosterDropsUnknownKeys(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('selectPoster')
+            ->with('v1', ['source' => 'thumbnail', 'thumbnailIndex' => 2])
+            ->willReturn(['poster' => ['source' => 'thumbnail']]);
+
+        $controller = new VideoOptimizerAdminController($client);
+        $request = new Request([], [], [], [], [], [], json_encode([
+            'source' => 'thumbnail',
+            'thumbnailIndex' => 2,
+            'uuid' => 'ignored',
+        ]));
+        $response = $controller->selectPoster('v1', $request);
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testSelectThumbnailMalformedJsonReturns400(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('selectThumbnail');
+
+        $controller = new VideoOptimizerAdminController($client);
+        $request = new Request([], [], [], [], [], [], '{ not valid json');
+        $response = $controller->selectThumbnail('v1', $request);
+
+        static::assertSame(400, $response->getStatusCode());
+    }
+
+    public function testCompletePosterUploadMalformedJsonReturns400(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('completePosterUpload');
+
+        $controller = new VideoOptimizerAdminController($client);
+        $request = new Request([], [], [], [], [], [], '{ not valid json');
+        $response = $controller->completePosterUpload('v1', $request);
+
+        static::assertSame(400, $response->getStatusCode());
+    }
 }
