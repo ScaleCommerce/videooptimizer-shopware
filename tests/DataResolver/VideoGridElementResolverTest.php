@@ -55,8 +55,41 @@ class VideoGridElementResolverTest extends TestCase
         static::assertSame('https://cdn/uuid-a.m3u8', $items[0]['embed']['hls']);
         static::assertSame('native', $items[0]['playerMode']);
         static::assertStringStartsWith('https://videooptimizer.eu/embed/uuid-a?', $items[0]['embedUrl']);
-        static::assertFalse($items[0]['error']);
         static::assertSame('uuid-b', $items[1]['videoUuid']);
+    }
+
+    public function testItemsThatFailToResolveAreDropped(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willReturnCallback(function (string $uuid) {
+            if ($uuid === 'uuid-gone') {
+                throw new \RuntimeException('video gone');
+            }
+
+            return [
+                'sources' => [['src' => "https://cdn/$uuid.m3u8", 'type' => 'application/vnd.apple.mpegurl', 'codec' => 'hls']],
+                'poster' => "https://cdn/$uuid.jpg",
+                'resolution' => '1920x1080',
+            ];
+        });
+        $client->method('embedBaseUrl')->willReturn('https://videooptimizer.eu');
+
+        $slot = $this->slot([
+            'presentation' => 'facade',
+            'playerMode' => 'native',
+            'items' => [
+                ['video' => 'uuid-ok', 'label' => 'Kept'],
+                ['video' => 'uuid-gone', 'label' => 'Dropped'],
+            ],
+        ]);
+        $resolver = new VideoGridElementResolver($client);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+
+        $items = $slot->getData()->getItems();
+        // The grid must not keep a slot with headline/intro but zero renderable tiles - an item
+        // whose upstream video no longer resolves is dropped instead of appended with an error flag.
+        static::assertCount(1, $items);
+        static::assertSame('uuid-ok', $items[0]['videoUuid']);
     }
 
     public function testPresentationDefaultsToLightboxAndSkipsEmptyItems(): void
