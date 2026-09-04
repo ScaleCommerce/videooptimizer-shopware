@@ -5,6 +5,11 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-09-04
+
+### Fixed
+- Background-hero headline lines no longer overlap when the headline wraps: the element now sets its own `line-height` instead of inheriting Shopware's fixed `h2` line-height (2.125rem), which is far too small for the hero's scaled font-size.
+
 ## [0.5.1] - 2026-09-04
 
 ### Changed
