@@ -12,15 +12,22 @@ export default class ScalecommerceVoHero extends Plugin {
             return;
         }
         if (Hls.isSupported()) {
-            const player = new Hls();
-            player.loadSource(hlsUrl);
-            player.attachMedia(this.el);
-            player.on(Hls.Events.MANIFEST_PARSED, () => this.el.play().catch(() => {}));
+            this.hls = new Hls();
+            this.hls.loadSource(hlsUrl);
+            this.hls.attachMedia(this.el);
+            this.hls.on(Hls.Events.MANIFEST_PARSED, () => this.el.play().catch(() => {}));
             return;
         }
         if (this.el.canPlayType('application/vnd.apple.mpegurl')) {
             this.el.src = hlsUrl;
             this.el.play().catch(() => {});
+        }
+    }
+
+    destroy() {
+        if (this.hls) {
+            this.hls.destroy();
+            this.hls = null;
         }
     }
 }

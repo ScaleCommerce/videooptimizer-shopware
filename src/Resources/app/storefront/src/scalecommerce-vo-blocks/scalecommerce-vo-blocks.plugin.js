@@ -1,12 +1,21 @@
 import Plugin from 'src/plugin-system/plugin.class';
 import Hls from 'hls.js';
 
+// Only one lightbox may be open at a time across the whole page (there can be several
+// ScalecommerceVoBlocks instances, e.g. inside a video grid), so this guard lives at
+// module scope rather than on the plugin instance.
+let lightboxOpen = false;
+
 export default class ScalecommerceVoBlocks extends Plugin {
     init() {
         this.facade = this.el.querySelector('[data-vo-action]');
         if (this.facade) {
             this.facade.addEventListener('click', () => this._onFacadeClick());
         }
+    }
+
+    destroy() {
+        this.el.querySelectorAll('video').forEach((video) => this._destroyVideo(video));
     }
 
     _onFacadeClick() {
@@ -64,6 +73,9 @@ export default class ScalecommerceVoBlocks extends Plugin {
             const player = new Hls();
             player.loadSource(hls);
             player.attachMedia(video);
+            // Keep the instance reachable from the element itself so it can be destroyed
+            // later without the plugin having to track every dynamically built player.
+            video.__scvoHls = player;
             if (autoplay) { player.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {})); }
             return;
         }
@@ -71,9 +83,26 @@ export default class ScalecommerceVoBlocks extends Plugin {
         if (mp4) { video.src = mp4; }
     }
 
+    _destroyVideo(video) {
+        if (video.__scvoHls) {
+            video.__scvoHls.destroy();
+            video.__scvoHls = null;
+        }
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+    }
+
     _openLightbox(playerMode, embedUrl, nativeOptions) {
+        if (lightboxOpen) {
+            return;
+        }
+        lightboxOpen = true;
+
         const overlay = document.createElement('div');
         overlay.className = 'scalecommerce-vo-lightbox';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
         const stage = document.createElement('div');
         stage.className = 'scalecommerce-vo-lightbox__stage';
         const close = document.createElement('button');
@@ -85,16 +114,23 @@ export default class ScalecommerceVoBlocks extends Plugin {
         stage.appendChild(player);
         overlay.appendChild(close);
         overlay.appendChild(stage);
+
         const dismiss = (event) => {
             if (event.target === overlay || event.currentTarget === close) {
+                stage.querySelectorAll('video').forEach((video) => this._destroyVideo(video));
                 overlay.remove();
                 document.removeEventListener('keydown', onKey);
+                document.body.classList.remove('scalecommerce-vo-lightbox-open');
+                lightboxOpen = false;
+                this.facade.focus();
             }
         };
-        const onKey = (event) => { if (event.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', onKey); } };
+        const onKey = (event) => { if (event.key === 'Escape') { dismiss({ currentTarget: close }); } };
         overlay.addEventListener('click', dismiss);
         close.addEventListener('click', dismiss);
         document.addEventListener('keydown', onKey);
+        document.body.classList.add('scalecommerce-vo-lightbox-open');
         document.body.appendChild(overlay);
+        close.focus();
     }
 }
