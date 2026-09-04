@@ -5,6 +5,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-09-04
+
 ### Changed
 - The library management page follows Shopware's native layout: smart-bar actions (save / new library), separate cards for library selection, master data and the encoding ladder, context menus for reprocess/delete and per-video actions, banners for hints, and a dedicated "Add video" card (file upload + URL import). Encoding options render as labelled checkbox groups with an "Add-on" badge.
 
