@@ -68,6 +68,18 @@ Component.register('scalecommerce-vo-list', {
             const date = new Date(library.created_at);
             return Number.isNaN(date.getTime()) ? library.created_at : date.toLocaleDateString();
         },
+        // Rendered as the "Bibliothek" card's mt-card subtitle; null hides the subtitle (create mode).
+        libraryMeta() {
+            const library = this.activeLibrary;
+            if (!library) {
+                return null;
+            }
+            const parts = [`${library.video_count} ${this.$tc('scalecommerce-vo.library.videoCount')}`, this.storageLabel];
+            if (this.createdLabel) {
+                parts.push(`${this.$tc('scalecommerce-vo.library.since')} ${this.createdLabel}`);
+            }
+            return parts.join(' · ');
+        },
         galleryLibraryId() {
             return this.mode === 'create' ? null : this.selectedLibraryId;
         },
@@ -200,10 +212,9 @@ Component.register('scalecommerce-vo-list', {
             return !this._optionSelectable(option, group);
         },
 
+        // The "(Add-on)" marker is rendered as a separate sw-label badge in the template.
         optionLabel(option) {
-            return option.access === 'addon'
-                ? `${option.label} (${this.$tc('scalecommerce-vo.library.addon')})`
-                : option.label;
+            return option.label;
         },
 
         // Joins selected keys in the canonical /encodings order; unknown stored keys are appended.

@@ -2,12 +2,15 @@
     "scalecommerce-vo": {
         "general": { "mainMenuItemGeneral": "VideoOptimizer" },
         "list": {
+            "pageTitle": "VideoOptimizer",
             "selectLibrary": "Library",
             "videosTitle": "Videos",
             "genericError": "VideoOptimizer request failed"
         },
         "library": {
-            "title": "Libraries",
+            "title": "Library",
+            "basicDataTitle": "Basic information",
+            "encodingTitle": "Encoding ladder",
             "new": "New library",
             "name": "Name",
             "description": "Description",
@@ -131,6 +134,9 @@
             "uploadTitle": "Title (optional)",
             "uploadStarted": "Upload started – the video is being processed.",
             "uploadHeading": "Upload a new video",
+            "addHeading": "Add video",
+            "chooseFile": "Choose file",
+            "noFile": "No file chosen",
             "ingestHeading": "Import video from URL",
             "ingestUrl": "Video URL",
             "ingest": "Import from URL",

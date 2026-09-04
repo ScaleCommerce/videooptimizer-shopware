@@ -47,6 +47,14 @@
         }
     }
 
+    &__tile-actions {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        background: rgba(255, 255, 255, 0.85);
+        border-radius: 4px;
+    }
+
     &__meta {
         display: flex;
         align-items: center;
@@ -66,9 +74,29 @@
         color: #758ca3;
     }
 
-    &__actions {
+    &__upload-form,
+    &__ingest-form {
         display: flex;
-        gap: 8px;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    &__file-input {
+        display: none;
+    }
+
+    &__file-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    &__file-name {
+        font-size: 13px;
+        color: #758ca3;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     &__upload {

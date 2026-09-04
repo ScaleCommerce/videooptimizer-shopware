@@ -1,38 +1,29 @@
 .scalecommerce-vo-list {
-    &__library-head {
-        display: flex;
-        align-items: flex-end;
-        gap: 16px;
-        margin-bottom: 24px;
-    }
-
-    &__form {
+    &__ladder-group {
         display: flex;
         flex-direction: column;
-        gap: 16px;
     }
 
-    &__ladder {
+    // Mirrors .sw-field__label (small, semibold, muted) without pulling in the whole field component.
+    &__ladder-label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #52667a;
+    }
+
+    &__ladder-options {
         display: flex;
         flex-direction: column;
         gap: 8px;
+
+        .mt-field--checkbox {
+            margin-bottom: 0;
+        }
     }
 
-    &__options {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px 24px;
-    }
-
-    &__form-actions {
-        display: flex;
-        gap: 8px;
-        margin-top: 8px;
-    }
-
-    &__info,
-    &__hint {
-        color: #758ca3;
-        font-size: 13px;
+    &__banner {
+        margin-top: 16px;
     }
 }
