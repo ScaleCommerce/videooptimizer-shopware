@@ -27,6 +27,7 @@ Component.register('scalecommerce-vo-video-gallery', {
             uploadFile: null,
             isUploading: false,
             detailUuid: null,
+            confirmDeleteVideo: null,
         };
     },
 
@@ -39,6 +40,10 @@ Component.register('scalecommerce-vo-video-gallery', {
     computed: {
         selectedVideo() {
             return this.videos.find((video) => video.uuid === this.selectedUuid) ?? null;
+        },
+
+        confirmDeleteVideoTitle() {
+            return this.confirmDeleteVideo ? (this.confirmDeleteVideo.title || this.confirmDeleteVideo.uuid) : '';
         },
     },
 
@@ -248,7 +253,16 @@ Component.register('scalecommerce-vo-video-gallery', {
             }
         },
 
-        async onDelete(video) {
+        onDeleteClick(video) {
+            this.confirmDeleteVideo = video;
+        },
+
+        async onConfirmDelete() {
+            const video = this.confirmDeleteVideo;
+            this.confirmDeleteVideo = null;
+            if (!video) {
+                return;
+            }
             try {
                 await this.scalecommerceVoApiService.deleteVideo(video.uuid);
                 await this.loadVideos();

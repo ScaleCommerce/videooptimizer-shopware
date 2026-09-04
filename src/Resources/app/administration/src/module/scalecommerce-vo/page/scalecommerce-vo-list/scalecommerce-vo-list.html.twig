@@ -56,7 +56,7 @@
                         <mt-button v-if="mode === 'create'" variant="secondary" @click="onCancelCreate">
                             {{ $tc('scalecommerce-vo.library.cancel') }}
                         </mt-button>
-                        <mt-button v-else-if="selectedLibraryId" variant="critical" @click="onDeleteLibrary">
+                        <mt-button v-else-if="selectedLibraryId" variant="critical" @click="onDeleteLibraryClick">
                             {{ $tc('scalecommerce-vo.library.delete') }}
                         </mt-button>
                     </div>
@@ -65,6 +65,22 @@
                         {{ activeLibrary.video_count }} {{ $tc('scalecommerce-vo.library.videoCount') }} · {{ storageLabel }}<template v-if="createdLabel"> · {{ $tc('scalecommerce-vo.library.since') }} {{ createdLabel }}</template>
                     </p>
                 </div>
+
+                <sw-modal
+                    v-if="confirmDeleteLibrary"
+                    variant="small"
+                    :title="$tc('scalecommerce-vo.library.confirmDeleteTitle')"
+                    @modal-close="confirmDeleteLibrary = false">
+                    <p>{{ $t('scalecommerce-vo.library.confirmDeleteText', { name: activeLibrary ? activeLibrary.name : '' }) }}</p>
+                    <template #modal-footer>
+                        <mt-button size="small" variant="secondary" @click="confirmDeleteLibrary = false">
+                            {{ $tc('scalecommerce-vo.library.cancel') }}
+                        </mt-button>
+                        <mt-button size="small" variant="critical" @click="onConfirmDeleteLibrary">
+                            {{ $tc('scalecommerce-vo.library.delete') }}
+                        </mt-button>
+                    </template>
+                </sw-modal>
             </mt-card>
 
             <mt-card :title="$tc('scalecommerce-vo.list.videosTitle')" position-identifier="scalecommerce-vo-videos">

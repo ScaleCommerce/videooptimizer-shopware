@@ -34,6 +34,7 @@ Component.register('scalecommerce-vo-list', {
             selectedCodecs: [],
             selectedResolutions: [],
             isSaving: false,
+            confirmDeleteLibrary: false,
         };
     },
 
@@ -223,7 +224,12 @@ Component.register('scalecommerce-vo-list', {
             }
         },
 
-        async onDeleteLibrary() {
+        onDeleteLibraryClick() {
+            this.confirmDeleteLibrary = true;
+        },
+
+        async onConfirmDeleteLibrary() {
+            this.confirmDeleteLibrary = false;
             if (!this.selectedLibraryId) {
                 return;
             }

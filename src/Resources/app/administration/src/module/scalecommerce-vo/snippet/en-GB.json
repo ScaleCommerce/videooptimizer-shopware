@@ -21,7 +21,9 @@
             "videoCount": "videos",
             "since": "since",
             "saved": "Library saved.",
-            "created": "Library created."
+            "created": "Library created.",
+            "confirmDeleteTitle": "Delete library?",
+            "confirmDeleteText": "The library “{name}” and all its videos will be permanently deleted."
         },
         "cms": {
             "label": "VideoOptimizer video",
@@ -133,7 +135,10 @@
             "orientationLandscape": "landscape",
             "orientationSquare": "square",
             "processingFailed": "Video processing failed.",
-            "processingTimeout": "Processing is taking longer than expected; the list will refresh later."
+            "processingTimeout": "Processing is taking longer than expected; the list will refresh later.",
+            "cancel": "Cancel",
+            "confirmDeleteTitle": "Delete video?",
+            "confirmDeleteText": "“{title}” will be permanently deleted at VideoOptimizer. This cannot be undone."
         },
         "detail": {
             "previewImage": "Preview image",

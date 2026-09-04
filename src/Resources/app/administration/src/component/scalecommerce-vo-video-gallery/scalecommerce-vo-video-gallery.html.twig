@@ -29,7 +29,7 @@
                 <mt-button size="x-small" variant="secondary" @click.stop="onRename(video)">
                     {{ $tc('scalecommerce-vo.gallery.rename') }}
                 </mt-button>
-                <mt-button size="x-small" variant="critical" @click.stop="onDelete(video)">
+                <mt-button size="x-small" variant="critical" @click.stop="onDeleteClick(video)">
                     {{ $tc('scalecommerce-vo.gallery.delete') }}
                 </mt-button>
             </div>
@@ -62,5 +62,21 @@
         :uuid="detailUuid"
         @close="onDetailClose"
         @updated="onDetailUpdated" />
+
+    <sw-modal
+        v-if="confirmDeleteVideo"
+        variant="small"
+        :title="$tc('scalecommerce-vo.gallery.confirmDeleteTitle')"
+        @modal-close="confirmDeleteVideo = null">
+        <p>{{ $t('scalecommerce-vo.gallery.confirmDeleteText', { title: confirmDeleteVideoTitle }) }}</p>
+        <template #modal-footer>
+            <mt-button size="small" variant="secondary" @click="confirmDeleteVideo = null">
+                {{ $tc('scalecommerce-vo.gallery.cancel') }}
+            </mt-button>
+            <mt-button size="small" variant="critical" @click="onConfirmDelete">
+                {{ $tc('scalecommerce-vo.gallery.delete') }}
+            </mt-button>
+        </template>
+    </sw-modal>
 </div>
 {% endblock %}
