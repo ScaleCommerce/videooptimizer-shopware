@@ -2,6 +2,7 @@
 
 namespace ScaleCommerce\VideoOptimizer\DataResolver;
 
+use Psr\Log\LoggerInterface;
 use ScaleCommerce\VideoOptimizer\DataResolver\Struct\VideoOptimizerVideoStruct;
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
@@ -15,8 +16,10 @@ class VideoOptimizerElementResolver extends AbstractCmsElementResolver
 {
     use VideoSurfaceTrait;
 
-    public function __construct(private readonly VideoOptimizerClient $client)
-    {
+    public function __construct(
+        private readonly VideoOptimizerClient $client,
+        private readonly LoggerInterface $logger,
+    ) {
     }
 
     public function getType(): string
@@ -47,9 +50,14 @@ class VideoOptimizerElementResolver extends AbstractCmsElementResolver
 
         try {
             $struct->setEmbedUrl($this->buildEmbedUrl($uuid, $fieldConfig, $this->client));
-        } catch (InvalidApiBaseUrlException) {
+        } catch (InvalidApiBaseUrlException $e) {
             // A misconfigured embed base URL must not take down the whole CMS page - surface it
             // as this element's error state instead, and skip the (equally misconfigured) upstream call.
+            $this->logger->warning('VideoOptimizer embed base URL is misconfigured; hiding video element.', [
+                'uuid' => $uuid,
+                'element' => $this->getType(),
+                'error' => $e->getMessage(),
+            ]);
             $struct->setEmbedUrl('');
             $struct->setError(true);
 
@@ -60,7 +68,12 @@ class VideoOptimizerElementResolver extends AbstractCmsElementResolver
         // would otherwise render a bare 404 for a deleted video.
         try {
             $struct->setEmbed($this->normalizeEmbed($this->client->getEmbed($uuid)));
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logger->warning('VideoOptimizer embed lookup failed; hiding video element.', [
+                'uuid' => $uuid,
+                'element' => $this->getType(),
+                'error' => $e->getMessage(),
+            ]);
             $struct->setError(true);
         }
     }

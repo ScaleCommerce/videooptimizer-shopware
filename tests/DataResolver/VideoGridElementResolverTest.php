@@ -3,8 +3,11 @@
 namespace ScaleCommerce\VideoOptimizer\Tests\DataResolver;
 
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use ScaleCommerce\VideoOptimizer\DataResolver\VideoGridElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\Struct\VideoGridStruct;
+use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\Content\Cms\Aggregate\CmsSlot\CmsSlotEntity;
 use Shopware\Core\Content\Cms\DataResolver\Element\ElementDataCollection;
@@ -16,7 +19,7 @@ class VideoGridElementResolverTest extends TestCase
 {
     public function testTypeIsVideoGrid(): void
     {
-        $resolver = new VideoGridElementResolver($this->createMock(VideoOptimizerClient::class));
+        $resolver = $this->resolver($this->createMock(VideoOptimizerClient::class));
         static::assertSame('scalecommerce-vo-video-grid', $resolver->getType());
     }
 
@@ -40,7 +43,7 @@ class VideoGridElementResolverTest extends TestCase
                 ['video' => 'uuid-b', 'libraryId' => 'lib-1', 'label' => 'Second'],
             ],
         ]);
-        $resolver = new VideoGridElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
@@ -82,7 +85,7 @@ class VideoGridElementResolverTest extends TestCase
                 ['video' => 'uuid-gone', 'label' => 'Dropped'],
             ],
         ]);
-        $resolver = new VideoGridElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
 
         $items = $slot->getData()->getItems();
@@ -105,7 +108,7 @@ class VideoGridElementResolverTest extends TestCase
                 ['label' => 'no-video-key'],                     // missing video -> skipped
             ],
         ]);
-        $resolver = new VideoGridElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
@@ -121,9 +124,46 @@ class VideoGridElementResolverTest extends TestCase
         $client = $this->createMock(VideoOptimizerClient::class);
         $client->expects(static::never())->method('getEmbed');
         $slot = $this->slot(['headline' => 'x']); // items missing entirely
-        $resolver = new VideoGridElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
         static::assertSame([], $slot->getData()->getItems());
+    }
+
+    public function testItemThatFailsToResolveLogsAWarning(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willThrowException(new \RuntimeException('video gone'));
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(static::once())->method('warning')->with(
+            static::isType('string'),
+            ['uuid' => 'uuid-gone', 'element' => 'scalecommerce-vo-video-grid', 'error' => 'video gone']
+        );
+
+        $slot = $this->slot(['items' => [['video' => 'uuid-gone', 'label' => 'Dropped']]]);
+        $resolver = $this->resolver($client, $logger);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+    }
+
+    public function testInvalidEmbedBaseUrlLogsAWarning(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('embedBaseUrl')->willThrowException(new InvalidApiBaseUrlException('bad url'));
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(static::once())->method('warning')->with(
+            static::isType('string'),
+            ['uuid' => 'uuid-x', 'element' => 'scalecommerce-vo-video-grid', 'error' => 'bad url']
+        );
+
+        $slot = $this->slot(['items' => [['video' => 'uuid-x', 'label' => 'x']]]);
+        $resolver = $this->resolver($client, $logger);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+    }
+
+    private function resolver(VideoOptimizerClient $client, ?LoggerInterface $logger = null): VideoGridElementResolver
+    {
+        return new VideoGridElementResolver($client, $logger ?? new NullLogger());
     }
 
     private function slot(array $config): CmsSlotEntity

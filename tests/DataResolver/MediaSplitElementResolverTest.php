@@ -4,6 +4,8 @@ namespace ScaleCommerce\VideoOptimizer\Tests\DataResolver;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use ScaleCommerce\VideoOptimizer\DataResolver\MediaSplitElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\Struct\MediaSplitStruct;
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
@@ -183,9 +185,41 @@ class MediaSplitElementResolverTest extends TestCase
         yield 'mailto passes' => ['mailto:a@b.de', 'mailto:a@b.de'];
     }
 
-    private function resolver(VideoOptimizerClient $client): MediaSplitElementResolver
+    public function testInvalidEmbedBaseUrlLogsAWarning(): void
     {
-        return new MediaSplitElementResolver($client, new HtmlSanitizer());
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('embedBaseUrl')->willThrowException(new InvalidApiBaseUrlException('bad url'));
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(static::once())->method('warning')->with(
+            static::isType('string'),
+            ['uuid' => 'uuid-5', 'element' => 'scalecommerce-vo-media-split', 'error' => 'bad url']
+        );
+
+        $slot = $this->slot(['video' => 'uuid-5']);
+        $resolver = $this->resolver($client, $logger);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+    }
+
+    public function testEmbedLookupFailureLogsAWarning(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willThrowException(new \RuntimeException('video gone'));
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(static::once())->method('warning')->with(
+            static::isType('string'),
+            ['uuid' => 'uuid-3', 'element' => 'scalecommerce-vo-media-split', 'error' => 'video gone']
+        );
+
+        $slot = $this->slot(['video' => 'uuid-3', 'playerMode' => 'embed', 'presentation' => 'direct']);
+        $resolver = $this->resolver($client, $logger);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+    }
+
+    private function resolver(VideoOptimizerClient $client, ?LoggerInterface $logger = null): MediaSplitElementResolver
+    {
+        return new MediaSplitElementResolver($client, new HtmlSanitizer(), $logger ?? new NullLogger());
     }
 
     private function slot(array $config): CmsSlotEntity

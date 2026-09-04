@@ -2,6 +2,7 @@
 
 namespace ScaleCommerce\VideoOptimizer\DataResolver;
 
+use Psr\Log\LoggerInterface;
 use ScaleCommerce\VideoOptimizer\DataResolver\Struct\MediaSplitStruct;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\Content\Cms\Aggregate\CmsSlot\CmsSlotEntity;
@@ -18,6 +19,7 @@ class MediaSplitElementResolver extends AbstractCmsElementResolver
     public function __construct(
         private readonly VideoOptimizerClient $client,
         private readonly HtmlSanitizer $sanitizer,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -54,7 +56,7 @@ class MediaSplitElementResolver extends AbstractCmsElementResolver
         }
         $struct->setVideoUuid($uuid);
 
-        $surface = $this->buildVideoSurface($config, $uuid, $this->client, $struct->getPresentation());
+        $surface = $this->buildVideoSurface($config, $uuid, $this->client, $this->logger, $struct->getPresentation());
         $struct->setPlayerMode($surface['playerMode']);
         $struct->setEmbedUrl($surface['embedUrl']);
         $struct->setEmbed($surface['embed']);

@@ -2,6 +2,7 @@
 
 namespace ScaleCommerce\VideoOptimizer\DataResolver;
 
+use Psr\Log\LoggerInterface;
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\Content\Cms\DataResolver\FieldConfigCollection;
@@ -15,15 +16,21 @@ trait VideoSurfaceTrait
     /**
      * @return array{playerMode: string, embedUrl: string, embed: array<string, mixed>|null, error: bool}
      */
-    protected function buildVideoSurface(FieldConfigCollection $config, string $uuid, VideoOptimizerClient $client, string $presentation = 'direct'): array
+    protected function buildVideoSurface(FieldConfigCollection $config, string $uuid, VideoOptimizerClient $client, LoggerInterface $logger, string $presentation = 'direct'): array
     {
         $playerMode = $config->get('playerMode')?->getValue() === 'embed' ? 'embed' : 'native';
 
         try {
             $embedUrl = $this->buildEmbedUrl($uuid, $config, $client);
-        } catch (InvalidApiBaseUrlException) {
+        } catch (InvalidApiBaseUrlException $e) {
             // A misconfigured embed base URL must not take down the whole CMS page - surface it
             // as this element's error state instead, and skip the (equally misconfigured) upstream call.
+            $logger->warning('VideoOptimizer embed base URL is misconfigured; hiding video element.', [
+                'uuid' => $uuid,
+                'element' => $this->getType(),
+                'error' => $e->getMessage(),
+            ]);
+
             return ['playerMode' => $playerMode, 'embedUrl' => '', 'embed' => null, 'error' => true];
         }
 
@@ -31,7 +38,13 @@ trait VideoSurfaceTrait
         // presentation - a hosted iframe for a deleted video would otherwise render a bare 404.
         try {
             $embed = $this->normalizeEmbed($client->getEmbed($uuid));
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $logger->warning('VideoOptimizer embed lookup failed; hiding video element.', [
+                'uuid' => $uuid,
+                'element' => $this->getType(),
+                'error' => $e->getMessage(),
+            ]);
+
             return ['playerMode' => $playerMode, 'embedUrl' => $embedUrl, 'embed' => null, 'error' => true];
         }
 

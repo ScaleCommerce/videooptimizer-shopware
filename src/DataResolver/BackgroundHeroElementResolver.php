@@ -2,6 +2,7 @@
 
 namespace ScaleCommerce\VideoOptimizer\DataResolver;
 
+use Psr\Log\LoggerInterface;
 use ScaleCommerce\VideoOptimizer\DataResolver\Struct\BackgroundHeroStruct;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\Content\Cms\Aggregate\CmsSlot\CmsSlotEntity;
@@ -14,8 +15,10 @@ class BackgroundHeroElementResolver extends AbstractCmsElementResolver
 {
     use VideoSurfaceTrait;
 
-    public function __construct(private readonly VideoOptimizerClient $client)
-    {
+    public function __construct(
+        private readonly VideoOptimizerClient $client,
+        private readonly LoggerInterface $logger,
+    ) {
     }
 
     public function getType(): string
@@ -55,7 +58,12 @@ class BackgroundHeroElementResolver extends AbstractCmsElementResolver
 
         try {
             $struct->setEmbed($this->normalizeEmbed($this->client->getEmbed($uuid)));
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logger->warning('VideoOptimizer embed lookup failed; hiding background video.', [
+                'uuid' => $uuid,
+                'element' => $this->getType(),
+                'error' => $e->getMessage(),
+            ]);
             $struct->setError(true);
         }
     }
