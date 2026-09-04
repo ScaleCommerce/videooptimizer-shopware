@@ -19,6 +19,7 @@
 
         <service id="ScaleCommerce\VideoOptimizer\DataResolver\MediaSplitElementResolver">
             <argument type="service" id="ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient"/>
+            <argument type="service" id="Shopware\Core\Framework\Util\HtmlSanitizer"/>
             <tag name="shopware.cms.data_resolver"/>
         </service>
 

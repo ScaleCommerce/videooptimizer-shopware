@@ -9,13 +9,16 @@ use Shopware\Core\Content\Cms\DataResolver\CriteriaCollection;
 use Shopware\Core\Content\Cms\DataResolver\Element\AbstractCmsElementResolver;
 use Shopware\Core\Content\Cms\DataResolver\Element\ElementDataCollection;
 use Shopware\Core\Content\Cms\DataResolver\ResolverContext\ResolverContext;
+use Shopware\Core\Framework\Util\HtmlSanitizer;
 
 class MediaSplitElementResolver extends AbstractCmsElementResolver
 {
     use VideoSurfaceTrait;
 
-    public function __construct(private readonly VideoOptimizerClient $client)
-    {
+    public function __construct(
+        private readonly VideoOptimizerClient $client,
+        private readonly HtmlSanitizer $sanitizer,
+    ) {
     }
 
     public function getType(): string
@@ -40,7 +43,8 @@ class MediaSplitElementResolver extends AbstractCmsElementResolver
         $struct->setSide($config->get('side')?->getValue() === 'right' ? 'right' : 'left');
         $struct->setEyebrow($string('eyebrow'));
         $struct->setHeadline($string('headline'));
-        $struct->setText($string('text'));
+        $text = $string('text');
+        $struct->setText($text !== null && $text !== '' ? $this->sanitizer->sanitize($text) : null);
         $struct->setCtaLabel($string('ctaLabel'));
         $struct->setCtaUrl($string('ctaUrl'));
 

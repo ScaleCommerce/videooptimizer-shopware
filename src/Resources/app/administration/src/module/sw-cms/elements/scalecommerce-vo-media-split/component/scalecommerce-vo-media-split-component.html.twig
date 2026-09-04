@@ -21,7 +21,7 @@
            :class="{ 'scvo-preview-placeholder': !headline }">
             {{ headline || $tc('scalecommerce-vo.cms.placeholder.headline') }}
         </p>
-        <div v-if="text" class="scalecommerce-vo-media-split-component__body" v-html="text"></div>
+        <div v-if="text" class="scalecommerce-vo-media-split-component__body" v-html="$sanitize(text)"></div>
         <div v-else class="scvo-preview-bars" aria-hidden="true">
             <span></span>
             <span></span>

@@ -11,12 +11,13 @@ use Shopware\Core\Content\Cms\DataResolver\Element\ElementDataCollection;
 use Shopware\Core\Content\Cms\DataResolver\FieldConfig;
 use Shopware\Core\Content\Cms\DataResolver\FieldConfigCollection;
 use Shopware\Core\Content\Cms\DataResolver\ResolverContext\ResolverContext;
+use Shopware\Core\Framework\Util\HtmlSanitizer;
 
 class MediaSplitElementResolverTest extends TestCase
 {
     public function testTypeIsMediaSplit(): void
     {
-        $resolver = new MediaSplitElementResolver($this->createMock(VideoOptimizerClient::class));
+        $resolver = $this->resolver($this->createMock(VideoOptimizerClient::class));
         static::assertSame('scalecommerce-vo-media-split', $resolver->getType());
     }
 
@@ -34,7 +35,7 @@ class MediaSplitElementResolverTest extends TestCase
             'side' => 'right', 'eyebrow' => 'Neu', 'headline' => 'Titel', 'text' => '<p>Hi</p>',
             'ctaLabel' => 'Mehr', 'ctaUrl' => '/x',
         ]);
-        $resolver = new MediaSplitElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
@@ -58,7 +59,7 @@ class MediaSplitElementResolverTest extends TestCase
         ]);
 
         $slot = $this->slot(['video' => 'uuid-2', 'playerMode' => 'embed', 'presentation' => 'facade']);
-        $resolver = new MediaSplitElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
@@ -74,7 +75,7 @@ class MediaSplitElementResolverTest extends TestCase
         $client->expects(static::never())->method('getEmbed');
 
         $slot = $this->slot(['video' => 'uuid-3', 'playerMode' => 'embed', 'presentation' => 'direct']);
-        $resolver = new MediaSplitElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
@@ -89,7 +90,7 @@ class MediaSplitElementResolverTest extends TestCase
         $client->method('getEmbed')->willThrowException(new \RuntimeException('upstream down'));
 
         $slot = $this->slot(['video' => 'uuid-4', 'playerMode' => 'embed', 'presentation' => 'lightbox']);
-        $resolver = new MediaSplitElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
@@ -104,9 +105,40 @@ class MediaSplitElementResolverTest extends TestCase
         $client = $this->createMock(VideoOptimizerClient::class);
         $client->expects(static::never())->method('getEmbed');
         $slot = $this->slot(['headline' => 'x']);
-        $resolver = new MediaSplitElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
         static::assertNull($slot->getData()->getVideoUuid());
+    }
+
+    public function testTextIsSanitizedAgainstScriptAndEventHandlerInjection(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $slot = $this->slot(['text' => '<p>ok</p><img src=x onerror=alert(1)><script>x</script>']);
+        $resolver = $this->resolver($client);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+
+        // The resolver test uses a real HtmlSanitizer constructed with no configured element sets,
+        // so it strips all tags (not just dangerous ones) - there is no field-set config in a unit
+        // test. That's fine here: the point is that onerror/<script> cannot survive either way.
+        $text = $slot->getData()->getText();
+        static::assertStringNotContainsString('onerror', $text);
+        static::assertStringNotContainsString('<script>', $text);
+        static::assertStringContainsString('ok', $text);
+    }
+
+    public function testNullTextStaysNull(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $slot = $this->slot(['headline' => 'x']);
+        $resolver = $this->resolver($client);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+
+        static::assertNull($slot->getData()->getText());
+    }
+
+    private function resolver(VideoOptimizerClient $client): MediaSplitElementResolver
+    {
+        return new MediaSplitElementResolver($client, new HtmlSanitizer());
     }
 
     private function slot(array $config): CmsSlotEntity
