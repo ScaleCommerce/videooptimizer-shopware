@@ -3,6 +3,7 @@
 namespace ScaleCommerce\VideoOptimizer\Controller;
 
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
+use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidRequestException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
@@ -24,6 +25,8 @@ class VideoOptimizerAdminController
     private const ALLOWED_THUMBNAIL_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
     private const LIBRARY_PAYLOAD_KEYS = ['name', 'description', 'codec', 'resolutions'];
+
+    private const INGEST_PAYLOAD_KEYS = ['library_id', 'source_url', 'title'];
 
     public function __construct(private readonly VideoOptimizerClient $client)
     {
@@ -91,6 +94,21 @@ class VideoOptimizerAdminController
     public function completeUpload(Request $request): JsonResponse
     {
         return $this->wrap(fn () => $this->client->completeUpload($this->only($this->payload($request), ['libraryId', 'uuid', 'key', 'uploadId', 'title', 'parts'])));
+    }
+
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/ingest', name: 'api.action.scalecommerce-vo.videos.ingest', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:create']])]
+    public function ingestVideoUrl(Request $request): JsonResponse
+    {
+        // payload() must run inside the wrap() closure - see selectThumbnail() above.
+        return $this->wrap(function () use ($request): array {
+            $payload = $this->only($this->payload($request), self::INGEST_PAYLOAD_KEYS);
+            $this->assertValidIngestPayload($payload);
+            if (($payload['title'] ?? '') === '') {
+                unset($payload['title']);
+            }
+
+            return $this->client->ingestVideoUrl($payload);
+        });
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}', name: 'api.action.scalecommerce-vo.videos.get', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
@@ -203,6 +221,27 @@ class VideoOptimizerAdminController
         return array_intersect_key($payload, array_flip($keys));
     }
 
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function assertValidIngestPayload(array $payload): void
+    {
+        $libraryId = $payload['library_id'] ?? null;
+        if (!is_string($libraryId) || $libraryId === '') {
+            throw new InvalidRequestException('library_id is required.');
+        }
+
+        $sourceUrl = $payload['source_url'] ?? null;
+        if (!is_string($sourceUrl) || !str_starts_with($sourceUrl, 'https://')) {
+            throw new InvalidRequestException('source_url must be an absolute https URL.');
+        }
+        $parts = parse_url($sourceUrl);
+        $host = $parts['host'] ?? null;
+        if (strtolower((string) ($parts['scheme'] ?? '')) !== 'https' || !is_string($host) || $host === '') {
+            throw new InvalidRequestException('source_url must be an absolute https URL.');
+        }
+    }
+
     private function payload(Request $request): array
     {
         $content = trim((string) $request->getContent());
@@ -227,7 +266,7 @@ class VideoOptimizerAdminController
                 return $response;
             }
             return new JsonResponse(['data' => $data], $successStatus);
-        } catch (MissingApiTokenException|InvalidApiBaseUrlException $e) {
+        } catch (MissingApiTokenException|InvalidApiBaseUrlException|InvalidRequestException $e) {
             return new JsonResponse(['errors' => [['status' => '400', 'detail' => $e->getMessage()]]], 400);
         } catch (VideoOptimizerApiException $e) {
             return new JsonResponse(['errors' => [['status' => (string) $e->getStatusCode(), 'detail' => $e->getMessage()]]], $e->getStatusCode());

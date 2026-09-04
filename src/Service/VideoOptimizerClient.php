@@ -84,6 +84,17 @@ class VideoOptimizerClient
         return $this->request('GET', '/encodings');
     }
 
+    /**
+     * Creates a video from a public https URL (selfhosted libraries only). Returns immediately with
+     * status "processing"; poll getVideo() until "ready"/"failed".
+     *
+     * @param array<string, mixed> $payload expects library_id, source_url and optional title
+     */
+    public function ingestVideoUrl(array $payload): array
+    {
+        return $this->requestData('POST', '/videos', ['json' => $payload]);
+    }
+
     public function getVideo(string $uuid): array
     {
         return $this->requestData('GET', '/videos/' . rawurlencode($uuid));

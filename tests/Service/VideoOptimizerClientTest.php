@@ -525,4 +525,22 @@ class VideoOptimizerClientTest extends TestCase
         static::assertStringEndsWith('/libraries/lib-1/reprocess', $capturedUrl);
         static::assertSame(['queued' => 3], $result);
     }
+
+    public function testIngestVideoUrlPostsPayloadAndUnwrapsData(): void
+    {
+        $captured = null;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$captured): MockResponse {
+            $captured = ['method' => $method, 'url' => $url, 'body' => $options['body'] ?? null];
+            return new MockResponse(json_encode(['data' => ['uuid' => 'v1', 'status' => 'processing']]));
+        });
+
+        $client = $this->client($http, $this->config());
+        $payload = ['library_id' => 'lib-1', 'source_url' => 'https://example.com/video.mp4'];
+        $result = $client->ingestVideoUrl($payload);
+
+        static::assertSame('POST', $captured['method']);
+        static::assertStringEndsWith('/videos', $captured['url']);
+        static::assertSame($payload, json_decode((string) $captured['body'], true));
+        static::assertSame('processing', $result['status']);
+    }
 }

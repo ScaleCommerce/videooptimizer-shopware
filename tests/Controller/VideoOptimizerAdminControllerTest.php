@@ -7,7 +7,10 @@ use ScaleCommerce\VideoOptimizer\Controller\VideoOptimizerAdminController;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
+use Symfony\Bundle\FrameworkBundle\Routing\AttributeRouteControllerLoader;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Routing\Matcher\UrlMatcher;
+use Symfony\Component\Routing\RequestContext;
 
 class VideoOptimizerAdminControllerTest extends TestCase
 {
@@ -376,5 +379,97 @@ class VideoOptimizerAdminControllerTest extends TestCase
 
         static::assertSame(200, $response->getStatusCode());
         static::assertSame(['data' => ['queued' => 3]], json_decode((string) $response->getContent(), true));
+    }
+
+    public function testIngestVideoUrlForwardsValidPayload(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('ingestVideoUrl')
+            ->with(['library_id' => 'lib-1', 'source_url' => 'https://example.com/video.mp4', 'title' => 'Demo'])
+            ->willReturn(['uuid' => 'v1', 'status' => 'processing']);
+
+        $controller = new VideoOptimizerAdminController($client);
+        $request = new Request([], [], [], [], [], [], json_encode([
+            'library_id' => 'lib-1',
+            'source_url' => 'https://example.com/video.mp4',
+            'title' => 'Demo',
+        ]));
+        $response = $controller->ingestVideoUrl($request);
+
+        static::assertSame(200, $response->getStatusCode());
+        static::assertSame('processing', json_decode((string) $response->getContent(), true)['data']['status']);
+    }
+
+    public function testIngestVideoUrlDropsEmptyTitle(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('ingestVideoUrl')
+            ->with(['library_id' => 'lib-1', 'source_url' => 'https://example.com/video.mp4'])
+            ->willReturn(['uuid' => 'v1', 'status' => 'processing']);
+
+        $controller = new VideoOptimizerAdminController($client);
+        $request = new Request([], [], [], [], [], [], json_encode([
+            'library_id' => 'lib-1',
+            'source_url' => 'https://example.com/video.mp4',
+            'title' => '',
+        ]));
+        $response = $controller->ingestVideoUrl($request);
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testIngestVideoUrlRejectsNonHttpsSourceUrl(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('ingestVideoUrl');
+
+        $controller = new VideoOptimizerAdminController($client);
+        $request = new Request([], [], [], [], [], [], json_encode([
+            'library_id' => 'lib-1',
+            'source_url' => 'http://example.com/video.mp4',
+        ]));
+        $response = $controller->ingestVideoUrl($request);
+
+        static::assertSame(400, $response->getStatusCode());
+        $body = json_decode((string) $response->getContent(), true);
+        static::assertSame('400', $body['errors'][0]['status']);
+    }
+
+    public function testIngestVideoUrlRejectsMissingLibraryId(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('ingestVideoUrl');
+
+        $controller = new VideoOptimizerAdminController($client);
+        $request = new Request([], [], [], [], [], [], json_encode([
+            'source_url' => 'https://example.com/video.mp4',
+        ]));
+        $response = $controller->ingestVideoUrl($request);
+
+        static::assertSame(400, $response->getStatusCode());
+    }
+
+    /**
+     * `POST /videos/ingest` and `GET|PATCH|DELETE /videos/{uuid}` share the same path shape, so
+     * this loads the real route attributes and asserts Symfony's matcher resolves POST to the new
+     * ingest action while GET/PATCH/DELETE on the same literal path still resolve to the
+     * uuid-based actions (Symfony filters candidate routes by method, so no requirements pattern
+     * is needed on {uuid}).
+     */
+    public function testIngestRouteDoesNotCollideWithUuidRoutes(): void
+    {
+        $routes = (new AttributeRouteControllerLoader())->load(VideoOptimizerAdminController::class, 'attribute');
+        $path = '/api/_action/scalecommerce-vo/videos/ingest';
+
+        $postContext = new RequestContext();
+        $postContext->setMethod('POST');
+        $postMatch = (new UrlMatcher($routes, $postContext))->match($path);
+        static::assertSame('api.action.scalecommerce-vo.videos.ingest', $postMatch['_route']);
+
+        $getContext = new RequestContext();
+        $getContext->setMethod('GET');
+        $getMatch = (new UrlMatcher($routes, $getContext))->match($path);
+        static::assertSame('api.action.scalecommerce-vo.videos.get', $getMatch['_route']);
+        static::assertSame('ingest', $getMatch['uuid']);
     }
 }
