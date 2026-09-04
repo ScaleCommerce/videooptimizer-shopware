@@ -41,7 +41,7 @@ class BackgroundHeroElementResolver extends AbstractCmsElementResolver
         $struct->setHeadline($string('headline'));
         $struct->setSubline($string('subline'));
         $struct->setCtaLabel($string('ctaLabel'));
-        $struct->setCtaUrl($string('ctaUrl'));
+        $struct->setCtaUrl($this->safeUrl($string('ctaUrl')));
         $struct->setOverlay(in_array($config->get('overlay')?->getValue(), ['gradient', 'dark', 'none'], true) ? $config->get('overlay')->getValue() : 'gradient');
         $struct->setHeight(in_array($config->get('height')?->getValue(), ['full', 'large', 'medium'], true) ? $config->get('height')->getValue() : 'large');
         $struct->setHeadlineColor($this->hexColor($string('headlineColor')));

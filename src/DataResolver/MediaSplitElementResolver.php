@@ -46,7 +46,7 @@ class MediaSplitElementResolver extends AbstractCmsElementResolver
         $text = $string('text');
         $struct->setText($text !== null && $text !== '' ? $this->sanitizer->sanitize($text) : null);
         $struct->setCtaLabel($string('ctaLabel'));
-        $struct->setCtaUrl($string('ctaUrl'));
+        $struct->setCtaUrl($this->safeUrl($string('ctaUrl')));
 
         $uuid = $config->get('video')?->getValue();
         if (!is_string($uuid) || $uuid === '') {

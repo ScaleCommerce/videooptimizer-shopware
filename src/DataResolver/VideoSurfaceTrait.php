@@ -62,6 +62,34 @@ trait VideoSurfaceTrait
         return is_bool($value) ? $value : $default;
     }
 
+    /**
+     * Allowlists CTA URL schemes to prevent stored XSS via `javascript:`/`data:`/etc. URLs.
+     * Relative URLs (path, hash, query, or schemeless) always pass; absolute URLs pass only
+     * for http(s)/mailto/tel.
+     */
+    protected function safeUrl(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        // Strip control characters and whitespace before the scheme check so an obfuscated
+        // scheme like "java\nscript:" cannot slip past the allowlist below.
+        $withoutControlChars = preg_replace('/[\s\x00-\x1F\x7F]/', '', $trimmed);
+
+        if (!preg_match('/^([a-z][a-z0-9+.\-]*):/i', (string) $withoutControlChars, $matches)) {
+            // No scheme at all, or starts with /, #, ? - a relative URL.
+            return $trimmed;
+        }
+
+        return in_array(strtolower($matches[1]), ['http', 'https', 'mailto', 'tel'], true) ? $trimmed : null;
+    }
+
     protected function normalizeEmbed(array $embed): array
     {
         $sources = $embed['sources'] ?? [];

@@ -2,6 +2,7 @@
 
 namespace ScaleCommerce\VideoOptimizer\Tests\DataResolver;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ScaleCommerce\VideoOptimizer\DataResolver\BackgroundHeroElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\Struct\BackgroundHeroStruct;
@@ -111,6 +112,28 @@ class BackgroundHeroElementResolverTest extends TestCase
         static::assertSame('uuid-2', $data->getVideoUuid());
         static::assertNull($data->getEmbed());
         static::assertTrue($data->hasError());
+    }
+
+    #[DataProvider('ctaUrlProvider')]
+    public function testCtaUrlSchemeAllowlist(?string $input, ?string $expected): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $slot = $this->slot(['ctaUrl' => $input]);
+        $resolver = new BackgroundHeroElementResolver($client);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+
+        static::assertSame($expected, $slot->getData()->getCtaUrl());
+    }
+
+    public static function ctaUrlProvider(): iterable
+    {
+        yield 'javascript scheme is rejected' => ['javascript:alert(1)', null];
+        yield 'data scheme is rejected' => ['data:text/html,x', null];
+        yield 'uppercase javascript scheme is rejected' => ['JAVASCRIPT:alert(1)', null];
+        yield 'newline-obfuscated javascript scheme is rejected' => ["java\nscript:alert(1)", null];
+        yield 'https url passes' => ['https://example.com/x?y=1', 'https://example.com/x?y=1'];
+        yield 'relative path passes' => ['/checkout', '/checkout'];
+        yield 'mailto passes' => ['mailto:a@b.de', 'mailto:a@b.de'];
     }
 
     private function slot(array $config): CmsSlotEntity
