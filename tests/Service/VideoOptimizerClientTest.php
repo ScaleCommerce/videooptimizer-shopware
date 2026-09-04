@@ -507,4 +507,22 @@ class VideoOptimizerClientTest extends TestCase
 
         static::assertSame($uuid, $result['uuid']);
     }
+
+    public function testReprocessLibrarySendsPostAndUnwrapsData(): void
+    {
+        $capturedMethod = null;
+        $capturedUrl = null;
+        $http = new MockHttpClient(function (string $method, string $url) use (&$capturedMethod, &$capturedUrl): MockResponse {
+            $capturedMethod = $method;
+            $capturedUrl = $url;
+            return new MockResponse(json_encode(['data' => ['queued' => 3]]));
+        });
+
+        $client = $this->client($http, $this->config());
+        $result = $client->reprocessLibrary('lib-1');
+
+        static::assertSame('POST', $capturedMethod);
+        static::assertStringEndsWith('/libraries/lib-1/reprocess', $capturedUrl);
+        static::assertSame(['queued' => 3], $result);
+    }
 }

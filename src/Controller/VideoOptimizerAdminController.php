@@ -56,6 +56,12 @@ class VideoOptimizerAdminController
         }, Response::HTTP_NO_CONTENT);
     }
 
+    #[Route(path: '/api/_action/scalecommerce-vo/libraries/{id}/reprocess', name: 'api.action.scalecommerce-vo.libraries.reprocess', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
+    public function reprocessLibrary(string $id): JsonResponse
+    {
+        return $this->wrap(fn () => $this->client->reprocessLibrary($id));
+    }
+
     #[Route(path: '/api/_action/scalecommerce-vo/libraries/{id}/videos', name: 'api.action.scalecommerce-vo.videos.list', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
     public function listVideos(string $id): JsonResponse
     {

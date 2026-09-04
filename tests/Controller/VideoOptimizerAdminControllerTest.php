@@ -365,4 +365,16 @@ class VideoOptimizerAdminControllerTest extends TestCase
 
         static::assertSame(400, $response->getStatusCode());
     }
+
+    public function testReprocessLibraryReturnsClientData(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('reprocessLibrary')->with('lib-1')->willReturn(['queued' => 3]);
+
+        $controller = new VideoOptimizerAdminController($client);
+        $response = $controller->reprocessLibrary('lib-1');
+
+        static::assertSame(200, $response->getStatusCode());
+        static::assertSame(['data' => ['queued' => 3]], json_decode((string) $response->getContent(), true));
+    }
 }

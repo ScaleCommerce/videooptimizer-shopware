@@ -48,6 +48,17 @@ class VideoOptimizerClient
         $this->request('DELETE', '/libraries/' . rawurlencode($id));
     }
 
+    /**
+     * Requeues every video in a selfhosted/media-managed library for re-encoding with the
+     * library's current encoding ladder.
+     *
+     * @return array{queued: int}
+     */
+    public function reprocessLibrary(string $id): array
+    {
+        return $this->requestData('POST', '/libraries/' . rawurlencode($id) . '/reprocess');
+    }
+
     public function listVideos(string $libraryId): array
     {
         return $this->requestAllPages('/libraries/' . rawurlencode($libraryId) . '/videos');
