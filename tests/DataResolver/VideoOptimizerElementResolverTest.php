@@ -86,6 +86,7 @@ class VideoOptimizerElementResolverTest extends TestCase
     {
         $client = $this->createMock(VideoOptimizerClient::class);
         $client->expects(static::never())->method('getEmbed');
+        $client->method('embedBaseUrl')->willReturn('https://videooptimizer.eu');
 
         $slot = $this->slotWithUuid('uuid-embed', [
             'playerMode' => 'embed',
@@ -114,6 +115,7 @@ class VideoOptimizerElementResolverTest extends TestCase
             'sources' => [['src' => 'https://cdn/master.m3u8', 'type' => 'application/vnd.apple.mpegurl', 'codec' => 'hls']],
             'poster' => 'https://cdn/p.jpg',
         ]);
+        $client->method('embedBaseUrl')->willReturn('https://videooptimizer.eu');
 
         $slot = $this->slotWithUuid('uuid-native', ['playerMode' => 'native']);
         $resolver = new VideoOptimizerElementResolver($client);

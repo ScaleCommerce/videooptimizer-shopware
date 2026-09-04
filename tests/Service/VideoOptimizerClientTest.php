@@ -3,6 +3,7 @@
 namespace ScaleCommerce\VideoOptimizer\Tests\Service;
 
 use PHPUnit\Framework\TestCase;
+use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
@@ -12,12 +13,16 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 class VideoOptimizerClientTest extends TestCase
 {
-    private function config(string $token = 'vp_test'): SystemConfigService
-    {
+    private function config(
+        string $token = 'vp_test',
+        string $baseUrl = 'https://api.videooptimizer.eu/api/v1',
+        string $embedBaseUrl = 'https://videooptimizer.eu',
+    ): SystemConfigService {
         $config = $this->createMock(SystemConfigService::class);
         $config->method('getString')->willReturnMap([
             ['ScaleVideoOptimizer.config.apiToken', null, $token],
-            ['ScaleVideoOptimizer.config.apiBaseUrl', null, 'https://api.videooptimizer.eu/api/v1'],
+            ['ScaleVideoOptimizer.config.apiBaseUrl', null, $baseUrl],
+            ['ScaleVideoOptimizer.config.embedBaseUrl', null, $embedBaseUrl],
         ]);
         return $config;
     }
@@ -294,5 +299,45 @@ class VideoOptimizerClientTest extends TestCase
         $image = $client->getThumbnailImage('vid-1', 2);
         static::assertSame('IMG-BYTES', $image['content']);
         static::assertSame('image/jpeg', $image['contentType']);
+    }
+
+    public function testNonHttpsApiBaseUrlThrows(): void
+    {
+        $client = new VideoOptimizerClient(new MockHttpClient(), $this->config(baseUrl: 'http://api.videooptimizer.eu/api/v1'));
+        $this->expectException(InvalidApiBaseUrlException::class);
+        $client->listLibraries();
+    }
+
+    public function testHttpsApiBaseUrlTrimsTrailingSlash(): void
+    {
+        $capturedUrl = null;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$capturedUrl): MockResponse {
+            $capturedUrl = $url;
+            return new MockResponse(json_encode(['data' => []]));
+        });
+
+        $client = new VideoOptimizerClient($http, $this->config(baseUrl: 'https://api.example/api/v1/'));
+        $client->listLibraries();
+
+        static::assertStringStartsWith('https://api.example/api/v1/libraries', $capturedUrl);
+    }
+
+    public function testEmbedBaseUrlReadsConfigAndTrimsTrailingSlash(): void
+    {
+        $client = new VideoOptimizerClient(new MockHttpClient(), $this->config(embedBaseUrl: 'https://embed.example/'));
+        static::assertSame('https://embed.example', $client->embedBaseUrl());
+    }
+
+    public function testEmbedBaseUrlFallsBackToDefault(): void
+    {
+        $client = new VideoOptimizerClient(new MockHttpClient(), $this->config(embedBaseUrl: ''));
+        static::assertSame('https://videooptimizer.eu', $client->embedBaseUrl());
+    }
+
+    public function testNonHttpsEmbedBaseUrlThrows(): void
+    {
+        $client = new VideoOptimizerClient(new MockHttpClient(), $this->config(embedBaseUrl: 'http://embed.example'));
+        $this->expectException(InvalidApiBaseUrlException::class);
+        $client->embedBaseUrl();
     }
 }

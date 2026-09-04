@@ -43,7 +43,7 @@ class VideoOptimizerElementResolver extends AbstractCmsElementResolver
 
         $playerMode = $fieldConfig->get('playerMode')?->getValue() === 'embed' ? 'embed' : 'native';
         $struct->setPlayerMode($playerMode);
-        $struct->setEmbedUrl($this->buildEmbedUrl($uuid, $fieldConfig));
+        $struct->setEmbedUrl($this->buildEmbedUrl($uuid, $fieldConfig, $this->client));
 
         // Embed mode: the hosted iframe loads poster + sources itself, no upstream call needed.
         if ($playerMode === 'embed') {

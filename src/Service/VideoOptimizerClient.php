@@ -2,6 +2,7 @@
 
 namespace ScaleCommerce\VideoOptimizer\Service;
 
+use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
@@ -11,6 +12,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 class VideoOptimizerClient
 {
     private const DEFAULT_BASE_URL = 'https://api.videooptimizer.eu/api/v1';
+    private const DEFAULT_EMBED_BASE_URL = 'https://videooptimizer.eu';
     private const PAGE_LIMIT = 100;
     private const MAX_PAGES = 100;
     private const MAX_RETRY_AFTER = 5;
@@ -280,7 +282,31 @@ class VideoOptimizerClient
     private function baseUrl(): string
     {
         $base = $this->systemConfig->getString('ScaleVideoOptimizer.config.apiBaseUrl');
+        $url = rtrim($base !== '' ? $base : self::DEFAULT_BASE_URL, '/');
+        $this->assertHttpsUrl($url, 'The VideoOptimizer API base URL must be an absolute https URL.');
 
-        return rtrim($base !== '' ? $base : self::DEFAULT_BASE_URL, '/');
+        return $url;
+    }
+
+    /**
+     * Public host that serves the hosted embed player, used to build storefront iframe/link URLs.
+     */
+    public function embedBaseUrl(): string
+    {
+        $base = $this->systemConfig->getString('ScaleVideoOptimizer.config.embedBaseUrl');
+        $url = rtrim($base !== '' ? $base : self::DEFAULT_EMBED_BASE_URL, '/');
+        $this->assertHttpsUrl($url, 'The VideoOptimizer embed base URL must be an absolute https URL.');
+
+        return $url;
+    }
+
+    private function assertHttpsUrl(string $url, string $message): void
+    {
+        $parts = parse_url($url);
+        $scheme = $parts['scheme'] ?? null;
+        $host = $parts['host'] ?? null;
+        if ($scheme !== 'https' || !is_string($host) || $host === '') {
+            throw new InvalidApiBaseUrlException($message);
+        }
     }
 }

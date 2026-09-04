@@ -11,15 +11,13 @@ use Shopware\Core\Content\Cms\DataResolver\FieldConfigCollection;
  */
 trait VideoSurfaceTrait
 {
-    private const EMBED_BASE_URL = 'https://videooptimizer.eu';
-
     /**
      * @return array{playerMode: string, embedUrl: string, embed: array<string, mixed>|null, error: bool}
      */
     protected function buildVideoSurface(FieldConfigCollection $config, string $uuid, VideoOptimizerClient $client, string $presentation = 'direct'): array
     {
         $playerMode = $config->get('playerMode')?->getValue() === 'embed' ? 'embed' : 'native';
-        $embedUrl = $this->buildEmbedUrl($uuid, $config);
+        $embedUrl = $this->buildEmbedUrl($uuid, $config, $client);
 
         if ($playerMode === 'embed') {
             // The hosted iframe is self-contained, but facade/lightbox show a poster before the
@@ -43,7 +41,7 @@ trait VideoSurfaceTrait
         }
     }
 
-    protected function buildEmbedUrl(string $uuid, FieldConfigCollection $config): string
+    protected function buildEmbedUrl(string $uuid, FieldConfigCollection $config, VideoOptimizerClient $client): string
     {
         $query = http_build_query([
             'autoplay' => $this->boolOption($config, 'autoplay', false) ? '1' : '0',
@@ -52,7 +50,7 @@ trait VideoSurfaceTrait
             'controls' => $this->boolOption($config, 'showControls', true) ? '1' : '0',
         ]);
 
-        return self::EMBED_BASE_URL . '/embed/' . rawurlencode($uuid) . '?' . $query;
+        return $client->embedBaseUrl() . '/embed/' . rawurlencode($uuid) . '?' . $query;
     }
 
     protected function boolOption(FieldConfigCollection $config, string $key, bool $default): bool

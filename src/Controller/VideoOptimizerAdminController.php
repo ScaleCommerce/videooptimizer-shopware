@@ -2,6 +2,7 @@
 
 namespace ScaleCommerce\VideoOptimizer\Controller;
 
+use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
@@ -110,7 +111,7 @@ class VideoOptimizerAdminController
         try {
             $image = $this->client->getThumbnailImage($uuid, (int) $index);
             return new Response($image['content'], Response::HTTP_OK, ['Content-Type' => $image['contentType']]);
-        } catch (MissingApiTokenException $e) {
+        } catch (MissingApiTokenException|InvalidApiBaseUrlException $e) {
             return new JsonResponse(['errors' => [['status' => '400', 'detail' => $e->getMessage()]]], 400);
         } catch (VideoOptimizerApiException $e) {
             return new JsonResponse(['errors' => [['status' => (string) $e->getStatusCode(), 'detail' => $e->getMessage()]]], $e->getStatusCode());
@@ -176,7 +177,7 @@ class VideoOptimizerAdminController
                 return $response;
             }
             return new JsonResponse(['data' => $data], $successStatus);
-        } catch (MissingApiTokenException $e) {
+        } catch (MissingApiTokenException|InvalidApiBaseUrlException $e) {
             return new JsonResponse(['errors' => [['status' => '400', 'detail' => $e->getMessage()]]], 400);
         } catch (VideoOptimizerApiException $e) {
             return new JsonResponse(['errors' => [['status' => (string) $e->getStatusCode(), 'detail' => $e->getMessage()]]], $e->getStatusCode());
