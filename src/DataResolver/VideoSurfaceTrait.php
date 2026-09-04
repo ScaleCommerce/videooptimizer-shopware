@@ -2,6 +2,7 @@
 
 namespace ScaleCommerce\VideoOptimizer\DataResolver;
 
+use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\Content\Cms\DataResolver\FieldConfigCollection;
 
@@ -17,7 +18,14 @@ trait VideoSurfaceTrait
     protected function buildVideoSurface(FieldConfigCollection $config, string $uuid, VideoOptimizerClient $client, string $presentation = 'direct'): array
     {
         $playerMode = $config->get('playerMode')?->getValue() === 'embed' ? 'embed' : 'native';
-        $embedUrl = $this->buildEmbedUrl($uuid, $config, $client);
+
+        try {
+            $embedUrl = $this->buildEmbedUrl($uuid, $config, $client);
+        } catch (InvalidApiBaseUrlException) {
+            // A misconfigured embed base URL must not take down the whole CMS page - surface it
+            // as this element's error state instead, and skip the (equally misconfigured) upstream call.
+            return ['playerMode' => $playerMode, 'embedUrl' => '', 'embed' => null, 'error' => true];
+        }
 
         if ($playerMode === 'embed') {
             // The hosted iframe is self-contained, but facade/lightbox show a poster before the

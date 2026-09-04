@@ -6,6 +6,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ScaleCommerce\VideoOptimizer\DataResolver\MediaSplitElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\Struct\MediaSplitStruct;
+use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\Content\Cms\Aggregate\CmsSlot\CmsSlotEntity;
 use Shopware\Core\Content\Cms\DataResolver\Element\ElementDataCollection;
@@ -30,6 +31,7 @@ class MediaSplitElementResolverTest extends TestCase
             'poster' => 'https://cdn/p.jpg',
             'resolution' => '1920x1080',
         ]);
+        $client->method('embedBaseUrl')->willReturn('https://videooptimizer.eu');
 
         $slot = $this->slot([
             'video' => 'uuid-1', 'playerMode' => 'native', 'presentation' => 'facade',
@@ -47,7 +49,7 @@ class MediaSplitElementResolverTest extends TestCase
         static::assertSame('right', $data->getSide());
         static::assertSame('Titel', $data->getHeadline());
         static::assertSame('https://cdn/master.m3u8', $data->getEmbed()['hls']);
-        static::assertStringContainsString('/embed/uuid-1?', $data->getEmbedUrl());
+        static::assertStringStartsWith('https://videooptimizer.eu/embed/uuid-1?', $data->getEmbedUrl());
     }
 
     public function testEmbedModeWithFacadeStillResolvesPosterForPreview(): void
@@ -99,6 +101,24 @@ class MediaSplitElementResolverTest extends TestCase
         static::assertNull($data->getEmbed());
         // The hosted iframe still plays on click, so a missing poster is not a hard error.
         static::assertFalse($data->hasError());
+    }
+
+    public function testInvalidEmbedBaseUrlSetsErrorWithoutCrashingThePage(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('embedBaseUrl')->willThrowException(new InvalidApiBaseUrlException());
+        $client->expects(static::never())->method('getEmbed');
+
+        // Covers VideoSurfaceTrait::buildVideoSurface()'s catch around buildEmbedUrl() - a
+        // misconfigured embedBaseUrl must become a per-element error, not a 500 for the whole page.
+        $slot = $this->slot(['video' => 'uuid-5']);
+        $resolver = $this->resolver($client);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+
+        $data = $slot->getData();
+        static::assertTrue($data->hasError());
+        static::assertSame('', $data->getEmbedUrl());
+        static::assertNull($data->getEmbed());
     }
 
     public function testEnrichWithoutVideoRendersNothingHarmlessly(): void

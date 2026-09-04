@@ -28,6 +28,7 @@ class SpotlightElementResolverTest extends TestCase
             'poster' => 'https://cdn/p.jpg',
             'resolution' => '1920x1080',
         ]);
+        $client->method('embedBaseUrl')->willReturn('https://videooptimizer.eu');
 
         $slot = $this->slot([
             'video' => 'uuid-1', 'playerMode' => 'native', 'presentation' => 'facade',
@@ -44,7 +45,7 @@ class SpotlightElementResolverTest extends TestCase
         static::assertSame('Titel', $data->getHeadline());
         static::assertSame('Kurze Bildunterschrift', $data->getCaption());
         static::assertSame('https://cdn/master.m3u8', $data->getEmbed()['hls']);
-        static::assertStringContainsString('/embed/uuid-1?', $data->getEmbedUrl());
+        static::assertStringStartsWith('https://videooptimizer.eu/embed/uuid-1?', $data->getEmbedUrl());
     }
 
     public function testPresentationDefaultsToLightbox(): void

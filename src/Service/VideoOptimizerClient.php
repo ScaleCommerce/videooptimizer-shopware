@@ -117,8 +117,10 @@ class VideoOptimizerClient
      */
     public function getEmbed(string $uuid): array
     {
+        // The UUID comes from CMS slot config; rawurlencode() it so it can never smuggle a PSR-6
+        // reserved character ("{}()/\@:") into the cache key.
         return $this->cache->get(
-            'scalecommerce_vo_embed_' . $uuid,
+            'scalecommerce_vo_embed_' . rawurlencode($uuid),
             function (ItemInterface $item) use ($uuid): array {
                 $item->expiresAfter(self::EMBED_CACHE_TTL);
 
@@ -332,7 +334,8 @@ class VideoOptimizerClient
     private function assertHttpsUrl(string $url, string $message): void
     {
         $parts = parse_url($url);
-        $scheme = $parts['scheme'] ?? null;
+        // parse_url() does not normalize scheme case, so "HTTPS://..." must still be accepted.
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
         $host = $parts['host'] ?? null;
         if ($scheme !== 'https' || !is_string($host) || $host === '') {
             throw new InvalidApiBaseUrlException($message);

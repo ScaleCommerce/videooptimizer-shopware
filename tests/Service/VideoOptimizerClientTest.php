@@ -12,6 +12,7 @@ use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class VideoOptimizerClientTest extends TestCase
@@ -466,5 +467,44 @@ class VideoOptimizerClientTest extends TestCase
         $client->getThumbnailImage('vid-1', 2);
 
         static::assertSame(30.0, $capturedOptions['max_duration']);
+    }
+
+    public function testUppercaseHttpsSchemeIsAcceptedForApiBaseUrl(): void
+    {
+        $capturedUrl = null;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$capturedUrl): MockResponse {
+            $capturedUrl = $url;
+            return new MockResponse(json_encode(['data' => []]));
+        });
+
+        // parse_url() does not normalize scheme case; the https check must not be case-sensitive.
+        $client = $this->client($http, $this->config(baseUrl: 'HTTPS://api.videooptimizer.eu/api/v1'));
+        $client->listLibraries();
+
+        static::assertStringContainsString('/libraries', $capturedUrl);
+    }
+
+    public function testUppercaseHttpsSchemeIsAcceptedForEmbedBaseUrl(): void
+    {
+        $client = $this->client(new MockHttpClient(), $this->config(embedBaseUrl: 'HTTPS://embed.example'));
+        static::assertSame('HTTPS://embed.example', $client->embedBaseUrl());
+    }
+
+    public function testGetEmbedSanitizesCacheKeyForUuidWithReservedCharacters(): void
+    {
+        // PSR-6 forbids "{}()/\@:" in cache keys; a UUID containing "/" must not reach the cache
+        // key unescaped.
+        $uuid = 'a/b';
+        $cache = $this->createMock(CacheInterface::class);
+        $cache->expects(static::once())
+            ->method('get')
+            ->with('scalecommerce_vo_embed_' . rawurlencode($uuid), static::isType('callable'))
+            ->willReturnCallback(fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)));
+
+        $http = new MockHttpClient(new MockResponse(json_encode(['data' => ['uuid' => $uuid]])));
+        $client = $this->client($http, $this->config(), $cache);
+        $result = $client->getEmbed($uuid);
+
+        static::assertSame($uuid, $result['uuid']);
     }
 }

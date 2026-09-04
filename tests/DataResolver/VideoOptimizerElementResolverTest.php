@@ -5,6 +5,7 @@ namespace ScaleCommerce\VideoOptimizer\Tests\DataResolver;
 use PHPUnit\Framework\TestCase;
 use ScaleCommerce\VideoOptimizer\DataResolver\Struct\VideoOptimizerVideoStruct;
 use ScaleCommerce\VideoOptimizer\DataResolver\VideoOptimizerElementResolver;
+use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\Content\Cms\Aggregate\CmsSlot\CmsSlotEntity;
@@ -125,6 +126,24 @@ class VideoOptimizerElementResolverTest extends TestCase
         static::assertSame('native', $data->getPlayerMode());
         static::assertSame('https://cdn/master.m3u8', $data->getEmbed()['hls']);
         static::assertStringStartsWith('https://videooptimizer.eu/embed/uuid-native?', $data->getEmbedUrl());
+    }
+
+    public function testInvalidEmbedBaseUrlSetsErrorWithoutCrashingThePage(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('embedBaseUrl')->willThrowException(new InvalidApiBaseUrlException());
+        $client->expects(static::never())->method('getEmbed');
+
+        $slot = $this->slotWithUuid('uuid-bad-embed-base');
+        $resolver = new VideoOptimizerElementResolver($client);
+        // A misconfigured embedBaseUrl must become a per-element error, not an exception that
+        // takes down the whole CMS page render.
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+
+        $data = $slot->getData();
+        static::assertTrue($data->hasError());
+        static::assertSame('', $data->getEmbedUrl());
+        static::assertNull($data->getEmbed());
     }
 
     private function slotWithUuid(string $uuid, array $extraConfig = []): CmsSlotEntity

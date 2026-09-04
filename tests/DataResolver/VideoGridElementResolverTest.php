@@ -28,6 +28,7 @@ class VideoGridElementResolverTest extends TestCase
             'poster' => "https://cdn/$uuid.jpg",
             'resolution' => '1920x1080',
         ]);
+        $client->method('embedBaseUrl')->willReturn('https://videooptimizer.eu');
 
         $slot = $this->slot([
             'headline' => 'Unsere Videos',
@@ -53,6 +54,7 @@ class VideoGridElementResolverTest extends TestCase
         static::assertSame('First', $items[0]['label']);
         static::assertSame('https://cdn/uuid-a.m3u8', $items[0]['embed']['hls']);
         static::assertSame('native', $items[0]['playerMode']);
+        static::assertStringStartsWith('https://videooptimizer.eu/embed/uuid-a?', $items[0]['embedUrl']);
         static::assertFalse($items[0]['error']);
         static::assertSame('uuid-b', $items[1]['videoUuid']);
     }

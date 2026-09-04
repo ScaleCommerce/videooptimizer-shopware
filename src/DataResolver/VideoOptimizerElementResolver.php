@@ -3,6 +3,7 @@
 namespace ScaleCommerce\VideoOptimizer\DataResolver;
 
 use ScaleCommerce\VideoOptimizer\DataResolver\Struct\VideoOptimizerVideoStruct;
+use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\Content\Cms\Aggregate\CmsSlot\CmsSlotEntity;
 use Shopware\Core\Content\Cms\DataResolver\CriteriaCollection;
@@ -43,7 +44,17 @@ class VideoOptimizerElementResolver extends AbstractCmsElementResolver
 
         $playerMode = $fieldConfig->get('playerMode')?->getValue() === 'embed' ? 'embed' : 'native';
         $struct->setPlayerMode($playerMode);
-        $struct->setEmbedUrl($this->buildEmbedUrl($uuid, $fieldConfig, $this->client));
+
+        try {
+            $struct->setEmbedUrl($this->buildEmbedUrl($uuid, $fieldConfig, $this->client));
+        } catch (InvalidApiBaseUrlException) {
+            // A misconfigured embed base URL must not take down the whole CMS page - surface it
+            // as this element's error state instead, and skip the (equally misconfigured) upstream call.
+            $struct->setEmbedUrl('');
+            $struct->setError(true);
+
+            return;
+        }
 
         // Embed mode: the hosted iframe loads poster + sources itself, no upstream call needed.
         if ($playerMode === 'embed') {
