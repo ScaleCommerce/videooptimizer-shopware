@@ -72,7 +72,9 @@ Component.register('scalecommerce-vo-list', {
             return this.mode === 'create' ? null : this.selectedLibraryId;
         },
         // True once the selected codecs/resolutions differ from what is stored on the library,
-        // so the "reprocess videos" hint only appears when it is actually relevant.
+        // so the "reprocess videos" hint only appears when it is actually relevant. Both sides go
+        // through _ladderValue() so a stored value whose order merely differs from the /encodings
+        // catalog order doesn't look "changed".
         ladderChanged() {
             const library = this.activeLibrary;
             if (!library) {
@@ -80,7 +82,9 @@ Component.register('scalecommerce-vo-list', {
             }
             const codec = this._ladderValue('codecs', this.selectedCodecs);
             const resolutions = this._ladderValue('resolutions', this.selectedResolutions);
-            return codec !== (library.codec || '') || resolutions !== (library.resolutions || '');
+            const storedCodec = this._ladderValue('codecs', this._splitKeys(library.codec));
+            const storedResolutions = this._ladderValue('resolutions', this._splitKeys(library.resolutions));
+            return codec !== storedCodec || resolutions !== storedResolutions;
         },
     },
 
@@ -291,6 +295,7 @@ Component.register('scalecommerce-vo-list', {
             try {
                 const response = await this.scalecommerceVoApiService.reprocessLibrary(this.selectedLibraryId);
                 const data = response.data ?? response;
+                // Fallback to 0 so a malformed/omitted `queued` field can't render "undefined videos ...".
                 this.createNotificationSuccess({
                     message: this.$t('scalecommerce-vo.library.reprocessQueued', { count: data.queued ?? 0 }),
                 });
