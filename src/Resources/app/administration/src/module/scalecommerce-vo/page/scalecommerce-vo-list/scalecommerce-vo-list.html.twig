@@ -102,38 +102,32 @@
                     <div class="scalecommerce-vo-list__ladder-group">
                         <span class="scalecommerce-vo-list__ladder-label">{{ $tc('scalecommerce-vo.library.codecs') }}</span>
                         <div class="scalecommerce-vo-list__ladder-options">
-                            <mt-checkbox
-                                v-for="option in encodings.codecs"
-                                :key="option.key"
-                                :model-value="selectedCodecs.includes(option.key)"
-                                :disabled="optionDisabled(option, 'codecs')"
-                                @update:model-value="toggleCodec(option.key)">
-                                <template #label>
-                                    {{ optionLabel(option) }}
-                                    <sw-label v-if="option.access === 'addon'" variant="info" size="small">
-                                        {{ $tc('scalecommerce-vo.library.addon') }}
-                                    </sw-label>
-                                </template>
-                            </mt-checkbox>
+                            <div v-for="option in encodings.codecs" :key="option.key" class="scalecommerce-vo-list__option">
+                                <mt-checkbox
+                                    :label="optionLabel(option)"
+                                    :model-value="selectedCodecs.includes(option.key)"
+                                    :disabled="optionDisabled(option, 'codecs')"
+                                    @update:model-value="toggleCodec(option.key)" />
+                                <sw-label v-if="option.access === 'addon'" variant="info" size="small">
+                                    {{ $tc('scalecommerce-vo.library.addon') }}
+                                </sw-label>
+                            </div>
                         </div>
                     </div>
 
                     <div class="scalecommerce-vo-list__ladder-group">
                         <span class="scalecommerce-vo-list__ladder-label">{{ $tc('scalecommerce-vo.library.resolutions') }}</span>
                         <div class="scalecommerce-vo-list__ladder-options">
-                            <mt-checkbox
-                                v-for="option in encodings.resolutions"
-                                :key="option.key"
-                                :model-value="selectedResolutions.includes(option.key)"
-                                :disabled="optionDisabled(option, 'resolutions')"
-                                @update:model-value="toggleResolution(option.key)">
-                                <template #label>
-                                    {{ optionLabel(option) }}
-                                    <sw-label v-if="option.access === 'addon'" variant="info" size="small">
-                                        {{ $tc('scalecommerce-vo.library.addon') }}
-                                    </sw-label>
-                                </template>
-                            </mt-checkbox>
+                            <div v-for="option in encodings.resolutions" :key="option.key" class="scalecommerce-vo-list__option">
+                                <mt-checkbox
+                                    :label="optionLabel(option)"
+                                    :model-value="selectedResolutions.includes(option.key)"
+                                    :disabled="optionDisabled(option, 'resolutions')"
+                                    @update:model-value="toggleResolution(option.key)" />
+                                <sw-label v-if="option.access === 'addon'" variant="info" size="small">
+                                    {{ $tc('scalecommerce-vo.library.addon') }}
+                                </sw-label>
+                            </div>
                         </div>
                     </div>
                 </sw-container>

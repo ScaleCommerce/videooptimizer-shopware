@@ -47,12 +47,23 @@
         }
     }
 
+    // Wraps sw-context-button so its own sizing/positioning can't stretch the tile (it has no
+    // explicit height on its root button, only on an inner element).
     &__tile-actions {
         position: absolute;
         top: 4px;
         right: 4px;
-        background: rgba(255, 255, 255, 0.85);
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.9);
         border-radius: 4px;
+
+        .sw-context-button {
+            display: block;
+        }
     }
 
     &__meta {

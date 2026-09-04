@@ -70,14 +70,16 @@
                     <div class="scalecommerce-vo-gallery__poster">
                         <img v-if="posterFor(video)" :src="posterFor(video)" :alt="video.title" />
                         <mt-icon v-else name="regular-play" size="32" />
-                        <sw-context-button class="scalecommerce-vo-gallery__tile-actions" @click.stop>
-                            <sw-context-menu-item @click="onRename(video)">
-                                {{ $tc('scalecommerce-vo.gallery.rename') }}
-                            </sw-context-menu-item>
-                            <sw-context-menu-item variant="danger" @click="onDeleteClick(video)">
-                                {{ $tc('scalecommerce-vo.gallery.delete') }}
-                            </sw-context-menu-item>
-                        </sw-context-button>
+                        <div class="scalecommerce-vo-gallery__tile-actions">
+                            <sw-context-button @click.stop>
+                                <sw-context-menu-item @click="onRename(video)">
+                                    {{ $tc('scalecommerce-vo.gallery.rename') }}
+                                </sw-context-menu-item>
+                                <sw-context-menu-item variant="danger" @click="onDeleteClick(video)">
+                                    {{ $tc('scalecommerce-vo.gallery.delete') }}
+                                </sw-context-menu-item>
+                            </sw-context-button>
+                        </div>
                     </div>
                     <div class="scalecommerce-vo-gallery__meta">
                         <span class="scalecommerce-vo-gallery__title">{{ video.title || video.uuid }}</span>
