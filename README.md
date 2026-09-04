@@ -53,12 +53,12 @@ Five content elements/blocks for Shopping Experiences, all built on the same reu
 - **Spotlight** — a centered, stacked layout: eyebrow, headline, click-to-play video, caption.
 - **Video grid** — a responsive grid of multiple click-to-play videos with per-item captions.
 
-Each element (except the decorative hero background) offers a **presentation mode** (poster/facade, lightbox, or embedded directly) and a **player mode**: the native adaptive HLS player (hls.js, native HLS fallback on Safari) or the hosted VideoOptimizer embed (iframe, sandboxed), each with its own controls/autoplay/muted/loop options. A video that no longer exists upstream (e.g. deleted after the element was configured) renders nothing — no placeholder, no broken player — and the video grid drops just that tile rather than failing the whole block.
+Each element (except the decorative hero background) offers a **presentation mode** (poster/facade, lightbox, or embedded directly) and a **player mode**: the native adaptive HLS player (hls.js, native HLS fallback on Safari) or the hosted VideoOptimizer embed (iframe, sandboxed), each with its own controls/autoplay/muted/loop options. A video that no longer exists upstream (e.g. deleted after the element was configured) renders nothing — no placeholder, no broken player — and the video grid drops just that tile rather than failing the whole block. The background hero is the one exception: it keeps rendering its copy and overlay even when the video is unavailable, and only the background video itself is skipped.
 
 ### Under the hood
 
 - The API token stays server-side; all admin and storefront traffic to VideoOptimizer is proxied through Shopware, so the token is never exposed to the browser.
-- Embed data for a given video is cached for **1 hour**, keeping storefront rendering fast and reducing API calls.
+- Embed data for a given video is cached for **1 hour**, keeping storefront rendering fast and reducing API calls; a failed lookup is cached for **60 seconds** so an unreachable upstream can't be hit on every render, and the cache is invalidated immediately whenever the video's title, thumbnail or poster is changed (or the video deleted) in the administration.
 
 ## Requirements
 

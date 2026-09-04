@@ -15,6 +15,8 @@
             <label>API base URL</label>
             <label lang="de-DE">API-Basis-URL</label>
             <defaultValue>https://api.videooptimizer.eu/api/v1</defaultValue>
+            <helpText>Must be an absolute https URL; the default is https://api.videooptimizer.eu/api/v1</helpText>
+            <helpText lang="de-DE">Muss eine absolute https-URL sein; Standard ist https://api.videooptimizer.eu/api/v1</helpText>
         </input-field>
         <input-field>
             <name>embedBaseUrl</name>
