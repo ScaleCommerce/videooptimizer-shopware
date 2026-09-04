@@ -53,6 +53,9 @@
     }
     &__headline {
         font-size: clamp(2.2rem, 5vw, 4rem);
+        // Shopware's theme gives h2 a fixed line-height (2.125rem) that is far too
+        // small for this scaled font-size and makes wrapped lines overlap.
+        line-height: 1.1;
         margin-bottom: 1rem;
         color: var(--scvo-hero-heading, #fff);
     }
