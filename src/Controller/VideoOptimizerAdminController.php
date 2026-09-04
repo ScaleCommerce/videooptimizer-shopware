@@ -24,6 +24,12 @@ class VideoOptimizerAdminController
      */
     private const ALLOWED_THUMBNAIL_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
+    /**
+     * Content types the poster upload proxy accepts, mirroring the upstream API's own poster
+     * validation - narrower than ALLOWED_THUMBNAIL_CONTENT_TYPES since posters never accept gif.
+     */
+    private const ALLOWED_POSTER_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
     private const LIBRARY_PAYLOAD_KEYS = ['name', 'description', 'codec', 'resolutions'];
 
     private const INGEST_PAYLOAD_KEYS = ['library_id', 'source_url', 'title'];
@@ -169,7 +175,12 @@ class VideoOptimizerAdminController
     #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/poster/initiate', name: 'api.action.scalecommerce-vo.poster.initiate', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
     public function initiatePosterUpload(string $uuid, Request $request): JsonResponse
     {
-        return $this->wrap(fn () => $this->client->initiatePosterUpload($uuid, $this->only($this->payload($request), ['contentType', 'fileSize'])));
+        return $this->wrap(function () use ($uuid, $request): array {
+            $payload = $this->only($this->payload($request), ['contentType', 'fileSize']);
+            $this->assertValidPosterContentType($payload);
+
+            return $this->client->initiatePosterUpload($uuid, $payload);
+        });
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/poster/complete', name: 'api.action.scalecommerce-vo.poster.complete', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
@@ -239,6 +250,17 @@ class VideoOptimizerAdminController
         $host = $parts['host'] ?? null;
         if (strtolower((string) ($parts['scheme'] ?? '')) !== 'https' || !is_string($host) || $host === '') {
             throw new InvalidRequestException('source_url must be an absolute https URL.');
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function assertValidPosterContentType(array $payload): void
+    {
+        $contentType = $payload['contentType'] ?? null;
+        if (!is_string($contentType) || !in_array($contentType, self::ALLOWED_POSTER_CONTENT_TYPES, true)) {
+            throw new InvalidRequestException('contentType must be one of: ' . implode(', ', self::ALLOWED_POSTER_CONTENT_TYPES) . '.');
         }
     }
 

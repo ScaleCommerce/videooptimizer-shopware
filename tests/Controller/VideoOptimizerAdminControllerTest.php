@@ -2,6 +2,7 @@
 
 namespace ScaleCommerce\VideoOptimizer\Tests\Controller;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ScaleCommerce\VideoOptimizer\Controller\VideoOptimizerAdminController;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
@@ -325,6 +326,46 @@ class VideoOptimizerAdminControllerTest extends TestCase
         $response = $controller->initiatePosterUpload('v1', $request);
 
         static::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testInitiatePosterUploadRejectsUnsupportedContentType(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('initiatePosterUpload');
+
+        $controller = new VideoOptimizerAdminController($client);
+        $request = new Request([], [], [], [], [], [], json_encode([
+            'contentType' => 'image/gif',
+            'fileSize' => 10,
+        ]));
+        $response = $controller->initiatePosterUpload('v1', $request);
+
+        static::assertSame(400, $response->getStatusCode());
+    }
+
+    #[DataProvider('supportedPosterContentTypeProvider')]
+    public function testInitiatePosterUploadAcceptsSupportedContentTypes(string $contentType): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('initiatePosterUpload')
+            ->with('v1', ['contentType' => $contentType, 'fileSize' => 10])
+            ->willReturn(['key' => 'k']);
+
+        $controller = new VideoOptimizerAdminController($client);
+        $request = new Request([], [], [], [], [], [], json_encode([
+            'contentType' => $contentType,
+            'fileSize' => 10,
+        ]));
+        $response = $controller->initiatePosterUpload('v1', $request);
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    public static function supportedPosterContentTypeProvider(): iterable
+    {
+        yield 'jpeg' => ['image/jpeg'];
+        yield 'png' => ['image/png'];
+        yield 'webp' => ['image/webp'];
     }
 
     public function testSelectPosterDropsUnknownKeys(): void
