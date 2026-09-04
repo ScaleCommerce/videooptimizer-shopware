@@ -131,7 +131,9 @@
             "genericError": "Request failed.",
             "orientationPortrait": "portrait",
             "orientationLandscape": "landscape",
-            "orientationSquare": "square"
+            "orientationSquare": "square",
+            "processingFailed": "Video processing failed.",
+            "processingTimeout": "Processing is taking longer than expected; the list will refresh later."
         },
         "detail": {
             "previewImage": "Preview image",
@@ -143,6 +145,7 @@
             "processing": "Processing …",
             "posterUpdated": "Preview image updated.",
             "posterFailed": "The custom preview image could not be processed.",
+            "posterTimeout": "Processing the preview image is taking longer than expected.",
             "done": "Done",
             "frame": "Frame",
             "genericError": "Request failed.",

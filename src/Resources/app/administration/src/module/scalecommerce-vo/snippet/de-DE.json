@@ -131,7 +131,9 @@
             "genericError": "Anfrage fehlgeschlagen.",
             "orientationPortrait": "hochkant",
             "orientationLandscape": "quer",
-            "orientationSquare": "quadratisch"
+            "orientationSquare": "quadratisch",
+            "processingFailed": "Die Verarbeitung des Videos ist fehlgeschlagen.",
+            "processingTimeout": "Die Verarbeitung dauert länger als erwartet. Die Liste wird später aktualisiert."
         },
         "detail": {
             "previewImage": "Vorschaubild",
@@ -143,6 +145,7 @@
             "processing": "Wird verarbeitet …",
             "posterUpdated": "Vorschaubild aktualisiert.",
             "posterFailed": "Das eigene Vorschaubild konnte nicht verarbeitet werden.",
+            "posterTimeout": "Das Verarbeiten des Vorschaubilds dauert länger als erwartet.",
             "done": "Fertig",
             "frame": "Bild",
             "genericError": "Anfrage fehlgeschlagen.",

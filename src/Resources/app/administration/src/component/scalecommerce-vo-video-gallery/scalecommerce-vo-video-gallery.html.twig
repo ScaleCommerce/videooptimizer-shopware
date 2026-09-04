@@ -38,7 +38,7 @@
         <div class="scalecommerce-vo-gallery__card scalecommerce-vo-gallery__upload">
             <span class="scalecommerce-vo-gallery__upload-heading">{{ $tc('scalecommerce-vo.gallery.uploadHeading') }}</span>
             <mt-text-field v-model="uploadTitle" :label="$tc('scalecommerce-vo.gallery.uploadTitle')" size="small" />
-            <input type="file" accept="video/*" @change="onFileSelected" />
+            <input type="file" accept="video/*" ref="fileInput" @change="onFileSelected" />
             <mt-button size="small" variant="primary" :disabled="!uploadFile || isUploading || !libraryId" @click="onUpload">
                 {{ $tc('scalecommerce-vo.gallery.upload') }}
             </mt-button>
