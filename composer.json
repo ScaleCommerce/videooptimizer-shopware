@@ -22,7 +22,7 @@
             "en-GB": "VideoOptimizer"
         },
         "description": {
-            "de-DE": "Schnelle, adaptive Videos per CDN in Shopware ausspielen - mit VideoOptimizer statt YouTube, Vimeo oder Self-Hosting. Weniger Server-Traffic, bessere Ladezeiten, volle Kontrolle, DSGVO-freundlich.",
+            "de-DE": "Schnelle, adaptive Videos per CDN in Shopware ausspielen - statt YouTube, Vimeo oder Self-Hosting. Weniger Server-Traffic, bessere Ladezeiten, volle Kontrolle, DSGVO-freundlich.",
             "en-GB": "Deliver fast, adaptive CDN-hosted videos in Shopware with VideoOptimizer instead of YouTube, Vimeo or self-hosting. Less server traffic, faster load times, full control, GDPR-friendly."
         },
         "manufacturerLink": {
