@@ -23,7 +23,12 @@
             "saved": "Library saved.",
             "created": "Library created.",
             "confirmDeleteTitle": "Delete library?",
-            "confirmDeleteText": "The library “{name}” and all its videos will be permanently deleted."
+            "confirmDeleteText": "The library “{name}” and all its videos will be permanently deleted.",
+            "ladderChangedHint": "The encoding ladder applies to new uploads. Use “Reprocess videos” to update existing videos.",
+            "reprocess": "Reprocess videos",
+            "reprocessConfirmTitle": "Reprocess videos?",
+            "reprocessConfirmText": "All videos in “{name}” will be re-encoded with the current encoding ladder. This may take a while.",
+            "reprocessQueued": "{count} videos queued for reprocessing."
         },
         "cms": {
             "label": "VideoOptimizer video",

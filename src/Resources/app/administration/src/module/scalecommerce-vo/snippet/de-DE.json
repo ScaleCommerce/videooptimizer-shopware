@@ -23,7 +23,12 @@
             "saved": "Bibliothek gespeichert.",
             "created": "Bibliothek erstellt.",
             "confirmDeleteTitle": "Bibliothek löschen?",
-            "confirmDeleteText": "Die Bibliothek „{name}“ und alle enthaltenen Videos werden dauerhaft gelöscht."
+            "confirmDeleteText": "Die Bibliothek „{name}“ und alle enthaltenen Videos werden dauerhaft gelöscht.",
+            "ladderChangedHint": "Die Encoding-Leiter gilt für neue Uploads. Bestehende Videos über „Videos neu verarbeiten“ aktualisieren.",
+            "reprocess": "Videos neu verarbeiten",
+            "reprocessConfirmTitle": "Videos neu verarbeiten?",
+            "reprocessConfirmText": "Alle Videos der Bibliothek „{name}“ werden mit der aktuellen Encoding-Leiter neu verarbeitet. Das kann einige Zeit dauern.",
+            "reprocessQueued": "{count} Videos zur Neuverarbeitung eingereiht."
         },
         "cms": {
             "label": "VideoOptimizer-Video",

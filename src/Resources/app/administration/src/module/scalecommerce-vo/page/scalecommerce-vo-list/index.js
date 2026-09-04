@@ -35,6 +35,8 @@ Component.register('scalecommerce-vo-list', {
             selectedResolutions: [],
             isSaving: false,
             confirmDeleteLibrary: false,
+            isReprocessing: false,
+            confirmReprocessLibrary: false,
         };
     },
 
@@ -68,6 +70,17 @@ Component.register('scalecommerce-vo-list', {
         },
         galleryLibraryId() {
             return this.mode === 'create' ? null : this.selectedLibraryId;
+        },
+        // True once the selected codecs/resolutions differ from what is stored on the library,
+        // so the "reprocess videos" hint only appears when it is actually relevant.
+        ladderChanged() {
+            const library = this.activeLibrary;
+            if (!library) {
+                return false;
+            }
+            const codec = this._ladderValue('codecs', this.selectedCodecs);
+            const resolutions = this._ladderValue('resolutions', this.selectedResolutions);
+            return codec !== (library.codec || '') || resolutions !== (library.resolutions || '');
         },
     },
 
@@ -158,12 +171,33 @@ Component.register('scalecommerce-vo-list', {
                 : [...this.selectedResolutions, key];
         },
 
-        optionDisabled(option) {
-            return !this.mediaManaged || option.available === false;
+        // The active library's allowlist (available_codecs/available_resolutions) restricts which
+        // options are selectable; an empty/missing allowlist (or create mode, no library yet)
+        // falls back to the org-wide `available` flag from /encodings.
+        _optionSelectable(option, group) {
+            const library = this.activeLibrary;
+            const allowlist = library ? library[group === 'codecs' ? 'available_codecs' : 'available_resolutions'] : null;
+            if (Array.isArray(allowlist) && allowlist.length > 0) {
+                return allowlist.includes(option.key);
+            }
+            return option.available !== false;
+        },
+
+        optionDisabled(option, group) {
+            if (!this.mediaManaged) {
+                return true;
+            }
+            const selected = group === 'codecs' ? this.selectedCodecs : this.selectedResolutions;
+            // Already-selected keys stay enabled even if they fell out of the allowlist, so the
+            // user can still deselect them.
+            if (selected.includes(option.key)) {
+                return false;
+            }
+            return !this._optionSelectable(option, group);
         },
 
         optionLabel(option) {
-            return option.available === false
+            return option.access === 'addon'
                 ? `${option.label} (${this.$tc('scalecommerce-vo.library.addon')})`
                 : option.label;
         },
@@ -241,6 +275,29 @@ Component.register('scalecommerce-vo-list', {
                 this._loadForm();
             } catch (error) {
                 this.createNotificationError({ message: this._errorText(error) });
+            }
+        },
+
+        onReprocessLibraryClick() {
+            this.confirmReprocessLibrary = true;
+        },
+
+        async onConfirmReprocessLibrary() {
+            this.confirmReprocessLibrary = false;
+            if (!this.selectedLibraryId) {
+                return;
+            }
+            this.isReprocessing = true;
+            try {
+                const response = await this.scalecommerceVoApiService.reprocessLibrary(this.selectedLibraryId);
+                const data = response.data ?? response;
+                this.createNotificationSuccess({
+                    message: this.$t('scalecommerce-vo.library.reprocessQueued', { count: data.queued ?? 0 }),
+                });
+            } catch (error) {
+                this.createNotificationError({ message: this._errorText(error) });
+            } finally {
+                this.isReprocessing = false;
             }
         },
 
