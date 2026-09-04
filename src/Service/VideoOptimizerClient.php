@@ -6,6 +6,8 @@ use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -16,10 +18,13 @@ class VideoOptimizerClient
     private const PAGE_LIMIT = 100;
     private const MAX_PAGES = 100;
     private const MAX_RETRY_AFTER = 5;
+    private const EMBED_CACHE_TTL = 3600;
+    private const ADMIN_MAX_DURATION = 30.0;
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly SystemConfigService $systemConfig,
+        private readonly CacheInterface $cache,
     ) {
     }
 
@@ -106,11 +111,20 @@ class VideoOptimizerClient
 
     /**
      * Public embed payload (theme, sources, poster). No token required. Capped so a slow upstream
-     * falls back fast during storefront rendering instead of blocking the response.
+     * falls back fast during storefront rendering instead of blocking the response, and never
+     * retries on 429 (no sleep() while rendering the storefront). Cached per UUID; a failed lookup
+     * is never cached, since the callback exception propagates before the cache stores anything.
      */
     public function getEmbed(string $uuid): array
     {
-        return $this->requestData('GET', '/embed/' . rawurlencode($uuid), ['max_duration' => 3.0], false);
+        return $this->cache->get(
+            'scalecommerce_vo_embed_' . $uuid,
+            function (ItemInterface $item) use ($uuid): array {
+                $item->expiresAfter(self::EMBED_CACHE_TTL);
+
+                return $this->requestData('GET', '/embed/' . rawurlencode($uuid), ['max_duration' => 3.0], false, false);
+            }
+        );
     }
 
     public function listThumbnails(string $uuid): array
@@ -130,6 +144,7 @@ class VideoOptimizerClient
         $url = $this->baseUrl() . '/videos/' . rawurlencode($uuid) . '/thumbnails/' . $index;
         $response = $this->httpClient->request('GET', $url, [
             'headers' => $this->buildHeaders(true, 'image/*'),
+            'max_duration' => self::ADMIN_MAX_DURATION,
         ]);
         if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 300) {
             throw VideoOptimizerApiException::fromResponse($response->getStatusCode(), $response->getContent(false));
@@ -216,17 +231,18 @@ class VideoOptimizerClient
         return $items;
     }
 
-    private function requestData(string $method, string $path, array $options = [], bool $withToken = true): array
+    private function requestData(string $method, string $path, array $options = [], bool $withToken = true, bool $retryOnRateLimit = true): array
     {
-        $response = $this->request($method, $path, $options, $withToken);
+        $response = $this->request($method, $path, $options, $withToken, $retryOnRateLimit);
         $payload = $response['data'] ?? null;
 
         return is_array($payload) ? $payload : [];
     }
 
-    private function request(string $method, string $path, array $options = [], bool $withToken = true): array
+    private function request(string $method, string $path, array $options = [], bool $withToken = true, bool $retryOnRateLimit = true): array
     {
         $options['headers'] = array_merge($options['headers'] ?? [], $this->buildHeaders($withToken, 'application/json'));
+        $options['max_duration'] ??= self::ADMIN_MAX_DURATION;
 
         $url = $this->baseUrl() . $path;
 
@@ -234,8 +250,10 @@ class VideoOptimizerClient
             $response = $this->httpClient->request($method, $url, $options);
             $status = $response->getStatusCode();
 
-            // Respect Retry-After once; paginated loops can trip the rate limit.
-            if ($status === 429 && $attempt === 0) {
+            // Respect Retry-After once; paginated loops can trip the rate limit. Skipped entirely
+            // for calls that opt out (e.g. getEmbed() during storefront rendering), where a
+            // blocking sleep() would hold the response open.
+            if ($status === 429 && $attempt === 0 && $retryOnRateLimit) {
                 sleep($this->retryAfterSeconds($response));
                 continue;
             }
