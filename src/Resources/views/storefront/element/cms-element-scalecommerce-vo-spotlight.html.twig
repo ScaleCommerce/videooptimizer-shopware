@@ -13,7 +13,7 @@
             {% if data.eyebrow %}<p class="scalecommerce-vo-spotlight__eyebrow">{{ data.eyebrow }}</p>{% endif %}
             {% if data.headline %}<h2 class="scalecommerce-vo-spotlight__headline">{{ data.headline }}</h2>{% endif %}
             <div class="scalecommerce-vo-spotlight__media">
-                {% if data.videoUuid and (data.playerMode == 'embed' or (data.embed and not data.hasError)) %}
+                {% if data.videoUuid and not data.hasError and (data.playerMode == 'embed' or data.embed) %}
                     {{ vo.surface(data.embed, data.presentation, data.playerMode, data.embedUrl, data.headline, surfaceOptions) }}
                 {% endif %}
             </div>

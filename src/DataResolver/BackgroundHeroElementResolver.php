@@ -2,21 +2,23 @@
 
 namespace ScaleCommerce\VideoOptimizer\DataResolver;
 
+use Psr\Log\LoggerInterface;
 use ScaleCommerce\VideoOptimizer\DataResolver\Struct\BackgroundHeroStruct;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\Content\Cms\Aggregate\CmsSlot\CmsSlotEntity;
 use Shopware\Core\Content\Cms\DataResolver\CriteriaCollection;
 use Shopware\Core\Content\Cms\DataResolver\Element\AbstractCmsElementResolver;
 use Shopware\Core\Content\Cms\DataResolver\Element\ElementDataCollection;
-use Shopware\Core\Content\Cms\DataResolver\FieldConfigCollection;
 use Shopware\Core\Content\Cms\DataResolver\ResolverContext\ResolverContext;
 
 class BackgroundHeroElementResolver extends AbstractCmsElementResolver
 {
     use VideoSurfaceTrait;
 
-    public function __construct(private readonly VideoOptimizerClient $client)
-    {
+    public function __construct(
+        private readonly VideoOptimizerClient $client,
+        private readonly LoggerInterface $logger,
+    ) {
     }
 
     public function getType(): string
@@ -41,7 +43,7 @@ class BackgroundHeroElementResolver extends AbstractCmsElementResolver
         $struct->setHeadline($string('headline'));
         $struct->setSubline($string('subline'));
         $struct->setCtaLabel($string('ctaLabel'));
-        $struct->setCtaUrl($string('ctaUrl'));
+        $struct->setCtaUrl($this->safeUrl($string('ctaUrl')));
         $struct->setOverlay(in_array($config->get('overlay')?->getValue(), ['gradient', 'dark', 'none'], true) ? $config->get('overlay')->getValue() : 'gradient');
         $struct->setHeight(in_array($config->get('height')?->getValue(), ['full', 'large', 'medium'], true) ? $config->get('height')->getValue() : 'large');
         $struct->setHeadlineColor($this->hexColor($string('headlineColor')));
@@ -56,7 +58,12 @@ class BackgroundHeroElementResolver extends AbstractCmsElementResolver
 
         try {
             $struct->setEmbed($this->normalizeEmbed($this->client->getEmbed($uuid)));
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logger->warning('VideoOptimizer embed lookup failed; hiding background video.', [
+                'uuid' => $uuid,
+                'element' => $this->getType(),
+                'error' => $e->getMessage(),
+            ]);
             $struct->setError(true);
         }
     }

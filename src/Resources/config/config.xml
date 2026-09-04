@@ -15,6 +15,16 @@
             <label>API base URL</label>
             <label lang="de-DE">API-Basis-URL</label>
             <defaultValue>https://api.videooptimizer.eu/api/v1</defaultValue>
+            <helpText>Must be an absolute https URL; the default is https://api.videooptimizer.eu/api/v1</helpText>
+            <helpText lang="de-DE">Muss eine absolute https-URL sein; Standard ist https://api.videooptimizer.eu/api/v1</helpText>
+        </input-field>
+        <input-field>
+            <name>embedBaseUrl</name>
+            <label>Embed base URL</label>
+            <label lang="de-DE">Embed-Basis-URL</label>
+            <defaultValue>https://videooptimizer.eu</defaultValue>
+            <helpText>Public host that serves the hosted player, usually https://videooptimizer.eu</helpText>
+            <helpText lang="de-DE">Öffentlicher Host, der den gehosteten Player ausliefert, üblicherweise https://videooptimizer.eu</helpText>
         </input-field>
     </card>
 </config>

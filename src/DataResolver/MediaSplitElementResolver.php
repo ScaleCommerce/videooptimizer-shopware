@@ -2,6 +2,7 @@
 
 namespace ScaleCommerce\VideoOptimizer\DataResolver;
 
+use Psr\Log\LoggerInterface;
 use ScaleCommerce\VideoOptimizer\DataResolver\Struct\MediaSplitStruct;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\Content\Cms\Aggregate\CmsSlot\CmsSlotEntity;
@@ -9,13 +10,17 @@ use Shopware\Core\Content\Cms\DataResolver\CriteriaCollection;
 use Shopware\Core\Content\Cms\DataResolver\Element\AbstractCmsElementResolver;
 use Shopware\Core\Content\Cms\DataResolver\Element\ElementDataCollection;
 use Shopware\Core\Content\Cms\DataResolver\ResolverContext\ResolverContext;
+use Shopware\Core\Framework\Util\HtmlSanitizer;
 
 class MediaSplitElementResolver extends AbstractCmsElementResolver
 {
     use VideoSurfaceTrait;
 
-    public function __construct(private readonly VideoOptimizerClient $client)
-    {
+    public function __construct(
+        private readonly VideoOptimizerClient $client,
+        private readonly HtmlSanitizer $sanitizer,
+        private readonly LoggerInterface $logger,
+    ) {
     }
 
     public function getType(): string
@@ -40,9 +45,10 @@ class MediaSplitElementResolver extends AbstractCmsElementResolver
         $struct->setSide($config->get('side')?->getValue() === 'right' ? 'right' : 'left');
         $struct->setEyebrow($string('eyebrow'));
         $struct->setHeadline($string('headline'));
-        $struct->setText($string('text'));
+        $text = $string('text');
+        $struct->setText($text !== null && $text !== '' ? $this->sanitizer->sanitize($text) : null);
         $struct->setCtaLabel($string('ctaLabel'));
-        $struct->setCtaUrl($string('ctaUrl'));
+        $struct->setCtaUrl($this->safeUrl($string('ctaUrl')));
 
         $uuid = $config->get('video')?->getValue();
         if (!is_string($uuid) || $uuid === '') {
@@ -50,7 +56,7 @@ class MediaSplitElementResolver extends AbstractCmsElementResolver
         }
         $struct->setVideoUuid($uuid);
 
-        $surface = $this->buildVideoSurface($config, $uuid, $this->client, $struct->getPresentation());
+        $surface = $this->buildVideoSurface($config, $uuid, $this->client, $this->logger, $struct->getPresentation());
         $struct->setPlayerMode($surface['playerMode']);
         $struct->setEmbedUrl($surface['embedUrl']);
         $struct->setEmbed($surface['embed']);

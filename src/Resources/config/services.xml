@@ -6,6 +6,7 @@
         <service id="ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient">
             <argument type="service" id="Symfony\Contracts\HttpClient\HttpClientInterface"/>
             <argument type="service" id="Shopware\Core\System\SystemConfig\SystemConfigService"/>
+            <argument type="service" id="cache.object"/>
         </service>
 
         <service id="ScaleCommerce\VideoOptimizer\Controller\VideoOptimizerAdminController" public="true">
@@ -14,26 +15,32 @@
 
         <service id="ScaleCommerce\VideoOptimizer\DataResolver\VideoOptimizerElementResolver">
             <argument type="service" id="ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient"/>
+            <argument type="service" id="logger"/>
             <tag name="shopware.cms.data_resolver"/>
         </service>
 
         <service id="ScaleCommerce\VideoOptimizer\DataResolver\MediaSplitElementResolver">
             <argument type="service" id="ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient"/>
+            <argument type="service" id="Shopware\Core\Framework\Util\HtmlSanitizer"/>
+            <argument type="service" id="logger"/>
             <tag name="shopware.cms.data_resolver"/>
         </service>
 
         <service id="ScaleCommerce\VideoOptimizer\DataResolver\BackgroundHeroElementResolver">
             <argument type="service" id="ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient"/>
+            <argument type="service" id="logger"/>
             <tag name="shopware.cms.data_resolver"/>
         </service>
 
         <service id="ScaleCommerce\VideoOptimizer\DataResolver\SpotlightElementResolver">
             <argument type="service" id="ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient"/>
+            <argument type="service" id="logger"/>
             <tag name="shopware.cms.data_resolver"/>
         </service>
 
         <service id="ScaleCommerce\VideoOptimizer\DataResolver\VideoGridElementResolver">
             <argument type="service" id="ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient"/>
+            <argument type="service" id="logger"/>
             <tag name="shopware.cms.data_resolver"/>
         </service>
     </services>

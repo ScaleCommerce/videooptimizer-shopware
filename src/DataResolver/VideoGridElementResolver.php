@@ -2,6 +2,7 @@
 
 namespace ScaleCommerce\VideoOptimizer\DataResolver;
 
+use Psr\Log\LoggerInterface;
 use ScaleCommerce\VideoOptimizer\DataResolver\Struct\VideoGridStruct;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\Content\Cms\Aggregate\CmsSlot\CmsSlotEntity;
@@ -14,8 +15,10 @@ class VideoGridElementResolver extends AbstractCmsElementResolver
 {
     use VideoSurfaceTrait;
 
-    public function __construct(private readonly VideoOptimizerClient $client)
-    {
+    public function __construct(
+        private readonly VideoOptimizerClient $client,
+        private readonly LoggerInterface $logger,
+    ) {
     }
 
     public function getType(): string
@@ -50,14 +53,19 @@ class VideoGridElementResolver extends AbstractCmsElementResolver
             if (!is_string($uuid) || $uuid === '') {
                 continue;
             }
-            $surface = $this->buildVideoSurface($config, $uuid, $this->client, $presentation);
+            $surface = $this->buildVideoSurface($config, $uuid, $this->client, $this->logger, $presentation);
+            if ($surface['error']) {
+                // A video that no longer resolves upstream (e.g. deleted) is dropped rather than
+                // appended with an error flag - otherwise the grid renders a headline/intro with
+                // zero renderable tiles.
+                continue;
+            }
             $items[] = [
                 'videoUuid' => $uuid,
                 'label' => is_string($entry['label'] ?? null) ? $entry['label'] : null,
                 'playerMode' => $surface['playerMode'],
                 'embedUrl' => $surface['embedUrl'],
                 'embed' => $surface['embed'],
-                'error' => $surface['error'],
             ];
         }
         $struct->setItems($items);

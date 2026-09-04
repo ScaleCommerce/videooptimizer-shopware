@@ -101,15 +101,28 @@ Component.register('scalecommerce-vo-video-detail', {
             }
         },
 
+        // Rejects once the attempt cap is reached so callers don't proceed with stale poster data;
+        // the caller's existing catch block shows the error via _errorText (which reads error.message).
         _pollPoster(predicate, attempt = 0) {
-            if (attempt > 40) {
+            if (this._unmounted) {
                 return Promise.resolve();
+            }
+            if (attempt > 40) {
+                return Promise.reject(new Error(this.$tc('scalecommerce-vo.detail.posterTimeout')));
             }
             return new Promise((resolve) => {
                 window.setTimeout(async () => {
+                    if (this._unmounted) {
+                        resolve();
+                        return;
+                    }
                     try {
                         const response = await this.scalecommerceVoApiService.getVideo(this.uuid);
                         const video = response.data ?? response;
+                        if (this._unmounted) {
+                            resolve();
+                            return;
+                        }
                         if (predicate(video)) {
                             this.video = video;
                             this.cacheBust += 1;

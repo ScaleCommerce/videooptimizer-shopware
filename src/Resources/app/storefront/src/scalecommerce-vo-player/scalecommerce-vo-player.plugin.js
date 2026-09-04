@@ -1,5 +1,5 @@
 import Plugin from 'src/plugin-system/plugin.class';
-import Hls from 'hls.js';
+import Hls from 'hls.js/dist/hls.light.mjs';
 
 export default class ScalecommerceVoPlayer extends Plugin {
     static options = {
@@ -39,13 +39,13 @@ export default class ScalecommerceVoPlayer extends Plugin {
         const { hls, mp4, webm } = this.options;
 
         if (hls && Hls.isSupported()) {
-            const player = new Hls();
-            player.loadSource(hls);
-            player.attachMedia(this.video);
+            this.hls = new Hls();
+            this.hls.loadSource(hls);
+            this.hls.attachMedia(this.video);
             // With hls.js the media is fed via MSE; the autoplay attribute alone is unreliable,
             // so kick off playback once the manifest is ready (already muted when autoplay is on).
             if (this.options.autoplay) {
-                player.on(Hls.Events.MANIFEST_PARSED, () => this.video.play().catch(() => {}));
+                this.hls.on(Hls.Events.MANIFEST_PARSED, () => this.video.play().catch(() => {}));
             }
             return;
         }
@@ -58,6 +58,13 @@ export default class ScalecommerceVoPlayer extends Plugin {
         const fallback = mp4 || webm;
         if (fallback) {
             this.video.src = fallback;
+        }
+    }
+
+    destroy() {
+        if (this.hls) {
+            this.hls.destroy();
+            this.hls = null;
         }
     }
 }

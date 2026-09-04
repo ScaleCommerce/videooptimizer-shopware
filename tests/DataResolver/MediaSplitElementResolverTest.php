@@ -2,21 +2,26 @@
 
 namespace ScaleCommerce\VideoOptimizer\Tests\DataResolver;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use ScaleCommerce\VideoOptimizer\DataResolver\MediaSplitElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\Struct\MediaSplitStruct;
+use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\Content\Cms\Aggregate\CmsSlot\CmsSlotEntity;
 use Shopware\Core\Content\Cms\DataResolver\Element\ElementDataCollection;
 use Shopware\Core\Content\Cms\DataResolver\FieldConfig;
 use Shopware\Core\Content\Cms\DataResolver\FieldConfigCollection;
 use Shopware\Core\Content\Cms\DataResolver\ResolverContext\ResolverContext;
+use Shopware\Core\Framework\Util\HtmlSanitizer;
 
 class MediaSplitElementResolverTest extends TestCase
 {
     public function testTypeIsMediaSplit(): void
     {
-        $resolver = new MediaSplitElementResolver($this->createMock(VideoOptimizerClient::class));
+        $resolver = $this->resolver($this->createMock(VideoOptimizerClient::class));
         static::assertSame('scalecommerce-vo-media-split', $resolver->getType());
     }
 
@@ -28,13 +33,14 @@ class MediaSplitElementResolverTest extends TestCase
             'poster' => 'https://cdn/p.jpg',
             'resolution' => '1920x1080',
         ]);
+        $client->method('embedBaseUrl')->willReturn('https://videooptimizer.eu');
 
         $slot = $this->slot([
             'video' => 'uuid-1', 'playerMode' => 'native', 'presentation' => 'facade',
             'side' => 'right', 'eyebrow' => 'Neu', 'headline' => 'Titel', 'text' => '<p>Hi</p>',
             'ctaLabel' => 'Mehr', 'ctaUrl' => '/x',
         ]);
-        $resolver = new MediaSplitElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
@@ -45,7 +51,7 @@ class MediaSplitElementResolverTest extends TestCase
         static::assertSame('right', $data->getSide());
         static::assertSame('Titel', $data->getHeadline());
         static::assertSame('https://cdn/master.m3u8', $data->getEmbed()['hls']);
-        static::assertStringContainsString('/embed/uuid-1?', $data->getEmbedUrl());
+        static::assertStringStartsWith('https://videooptimizer.eu/embed/uuid-1?', $data->getEmbedUrl());
     }
 
     public function testEmbedModeWithFacadeStillResolvesPosterForPreview(): void
@@ -58,7 +64,7 @@ class MediaSplitElementResolverTest extends TestCase
         ]);
 
         $slot = $this->slot(['video' => 'uuid-2', 'playerMode' => 'embed', 'presentation' => 'facade']);
-        $resolver = new MediaSplitElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
@@ -68,35 +74,57 @@ class MediaSplitElementResolverTest extends TestCase
         static::assertFalse($data->hasError());
     }
 
-    public function testEmbedModeWithDirectSkipsUpstreamCall(): void
+    public function testEmbedModeWithDirectCallsUpstreamAndFlagsErrorWhenItThrows(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
-        $client->expects(static::never())->method('getEmbed');
+        $client->expects(static::once())->method('getEmbed')->with('uuid-3')
+            ->willThrowException(new \RuntimeException('video gone'));
 
         $slot = $this->slot(['video' => 'uuid-3', 'playerMode' => 'embed', 'presentation' => 'direct']);
-        $resolver = new MediaSplitElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
         static::assertSame('embed', $data->getPlayerMode());
         static::assertNull($data->getEmbed());
-        static::assertFalse($data->hasError());
+        // A deleted/missing upstream video must hide the element entirely, even in embed+direct
+        // mode - the iframe would otherwise render a bare 404.
+        static::assertTrue($data->hasError());
     }
 
-    public function testEmbedModeWithFacadeToleratesEmbedFetchFailure(): void
+    public function testEmbedModeWithFacadeSetsErrorOnUpstreamFailure(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
         $client->method('getEmbed')->willThrowException(new \RuntimeException('upstream down'));
 
         $slot = $this->slot(['video' => 'uuid-4', 'playerMode' => 'embed', 'presentation' => 'lightbox']);
-        $resolver = new MediaSplitElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
         static::assertSame('embed', $data->getPlayerMode());
         static::assertNull($data->getEmbed());
-        // The hosted iframe still plays on click, so a missing poster is not a hard error.
-        static::assertFalse($data->hasError());
+        // The upstream call now verifies the video still exists in every embed presentation -
+        // a deleted video must hide the element instead of rendering a broken facade/iframe.
+        static::assertTrue($data->hasError());
+    }
+
+    public function testInvalidEmbedBaseUrlSetsErrorWithoutCrashingThePage(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('embedBaseUrl')->willThrowException(new InvalidApiBaseUrlException());
+        $client->expects(static::never())->method('getEmbed');
+
+        // Covers VideoSurfaceTrait::buildVideoSurface()'s catch around buildEmbedUrl() - a
+        // misconfigured embedBaseUrl must become a per-element error, not a 500 for the whole page.
+        $slot = $this->slot(['video' => 'uuid-5']);
+        $resolver = $this->resolver($client);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+
+        $data = $slot->getData();
+        static::assertTrue($data->hasError());
+        static::assertSame('', $data->getEmbedUrl());
+        static::assertNull($data->getEmbed());
     }
 
     public function testEnrichWithoutVideoRendersNothingHarmlessly(): void
@@ -104,9 +132,94 @@ class MediaSplitElementResolverTest extends TestCase
         $client = $this->createMock(VideoOptimizerClient::class);
         $client->expects(static::never())->method('getEmbed');
         $slot = $this->slot(['headline' => 'x']);
-        $resolver = new MediaSplitElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
         static::assertNull($slot->getData()->getVideoUuid());
+    }
+
+    public function testTextIsSanitizedAgainstScriptAndEventHandlerInjection(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $slot = $this->slot(['text' => '<p>ok</p><img src=x onerror=alert(1)><script>x</script>']);
+        $resolver = $this->resolver($client);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+
+        // The resolver test uses a real HtmlSanitizer constructed with no configured element sets,
+        // so it strips all tags (not just dangerous ones) - there is no field-set config in a unit
+        // test. That's fine here: the point is that onerror/<script> cannot survive either way.
+        $text = $slot->getData()->getText();
+        static::assertStringNotContainsString('onerror', $text);
+        static::assertStringNotContainsString('<script>', $text);
+        static::assertStringContainsString('ok', $text);
+    }
+
+    public function testNullTextStaysNull(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $slot = $this->slot(['headline' => 'x']);
+        $resolver = $this->resolver($client);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+
+        static::assertNull($slot->getData()->getText());
+    }
+
+    #[DataProvider('ctaUrlProvider')]
+    public function testCtaUrlSchemeAllowlist(?string $input, ?string $expected): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $slot = $this->slot(['ctaUrl' => $input]);
+        $resolver = $this->resolver($client);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+
+        static::assertSame($expected, $slot->getData()->getCtaUrl());
+    }
+
+    public static function ctaUrlProvider(): iterable
+    {
+        yield 'javascript scheme is rejected' => ['javascript:alert(1)', null];
+        yield 'data scheme is rejected' => ['data:text/html,x', null];
+        yield 'uppercase javascript scheme is rejected' => ['JAVASCRIPT:alert(1)', null];
+        yield 'newline-obfuscated javascript scheme is rejected' => ["java\nscript:alert(1)", null];
+        yield 'https url passes' => ['https://example.com/x?y=1', 'https://example.com/x?y=1'];
+        yield 'relative path passes' => ['/checkout', '/checkout'];
+        yield 'mailto passes' => ['mailto:a@b.de', 'mailto:a@b.de'];
+    }
+
+    public function testInvalidEmbedBaseUrlLogsAWarning(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('embedBaseUrl')->willThrowException(new InvalidApiBaseUrlException('bad url'));
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(static::once())->method('warning')->with(
+            static::isType('string'),
+            ['uuid' => 'uuid-5', 'element' => 'scalecommerce-vo-media-split', 'error' => 'bad url']
+        );
+
+        $slot = $this->slot(['video' => 'uuid-5']);
+        $resolver = $this->resolver($client, $logger);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+    }
+
+    public function testEmbedLookupFailureLogsAWarning(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willThrowException(new \RuntimeException('video gone'));
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(static::once())->method('warning')->with(
+            static::isType('string'),
+            ['uuid' => 'uuid-3', 'element' => 'scalecommerce-vo-media-split', 'error' => 'video gone']
+        );
+
+        $slot = $this->slot(['video' => 'uuid-3', 'playerMode' => 'embed', 'presentation' => 'direct']);
+        $resolver = $this->resolver($client, $logger);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+    }
+
+    private function resolver(VideoOptimizerClient $client, ?LoggerInterface $logger = null): MediaSplitElementResolver
+    {
+        return new MediaSplitElementResolver($client, new HtmlSanitizer(), $logger ?? new NullLogger());
     }
 
     private function slot(array $config): CmsSlotEntity

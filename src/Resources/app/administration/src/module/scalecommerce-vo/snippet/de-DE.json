@@ -21,7 +21,14 @@
             "videoCount": "Videos",
             "since": "seit",
             "saved": "Bibliothek gespeichert.",
-            "created": "Bibliothek erstellt."
+            "created": "Bibliothek erstellt.",
+            "confirmDeleteTitle": "Bibliothek löschen?",
+            "confirmDeleteText": "Die Bibliothek „{name}“ und alle enthaltenen Videos werden dauerhaft gelöscht.",
+            "ladderChangedHint": "Die Encoding-Leiter gilt für neue Uploads. Bestehende Videos über „Videos neu verarbeiten“ aktualisieren.",
+            "reprocess": "Videos neu verarbeiten",
+            "reprocessConfirmTitle": "Videos neu verarbeiten?",
+            "reprocessConfirmText": "Alle Videos der Bibliothek „{name}“ werden mit der aktuellen Encoding-Leiter neu verarbeitet. Das kann einige Zeit dauern.",
+            "reprocessQueued": "{count} Videos zur Neuverarbeitung eingereiht."
         },
         "cms": {
             "label": "VideoOptimizer-Video",
@@ -124,6 +131,10 @@
             "uploadTitle": "Titel (optional)",
             "uploadStarted": "Upload gestartet – das Video wird verarbeitet.",
             "uploadHeading": "Neues Video hochladen",
+            "ingestHeading": "Video per URL importieren",
+            "ingestUrl": "Video-URL",
+            "ingest": "Von URL importieren",
+            "ingestStarted": "Import gestartet – das Video wird verarbeitet.",
             "rename": "Umbenennen",
             "renamePrompt": "Neuer Titel",
             "delete": "Löschen",
@@ -131,7 +142,12 @@
             "genericError": "Anfrage fehlgeschlagen.",
             "orientationPortrait": "hochkant",
             "orientationLandscape": "quer",
-            "orientationSquare": "quadratisch"
+            "orientationSquare": "quadratisch",
+            "processingFailed": "Die Verarbeitung des Videos ist fehlgeschlagen.",
+            "processingTimeout": "Die Verarbeitung dauert länger als erwartet. Die Liste wird später aktualisiert.",
+            "cancel": "Abbrechen",
+            "confirmDeleteTitle": "Video löschen?",
+            "confirmDeleteText": "„{title}“ wird dauerhaft bei VideoOptimizer gelöscht. Dies kann nicht rückgängig gemacht werden."
         },
         "detail": {
             "previewImage": "Vorschaubild",
@@ -143,6 +159,7 @@
             "processing": "Wird verarbeitet …",
             "posterUpdated": "Vorschaubild aktualisiert.",
             "posterFailed": "Das eigene Vorschaubild konnte nicht verarbeitet werden.",
+            "posterTimeout": "Das Verarbeiten des Vorschaubilds dauert länger als erwartet.",
             "done": "Fertig",
             "frame": "Bild",
             "genericError": "Anfrage fehlgeschlagen.",

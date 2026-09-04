@@ -2,7 +2,10 @@
 
 namespace ScaleCommerce\VideoOptimizer\Tests\DataResolver;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use ScaleCommerce\VideoOptimizer\DataResolver\BackgroundHeroElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\Struct\BackgroundHeroStruct;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
@@ -16,7 +19,7 @@ class BackgroundHeroElementResolverTest extends TestCase
 {
     public function testTypeIsBackgroundHero(): void
     {
-        $resolver = new BackgroundHeroElementResolver($this->createMock(VideoOptimizerClient::class));
+        $resolver = $this->resolver($this->createMock(VideoOptimizerClient::class));
         static::assertSame('scalecommerce-vo-background-hero', $resolver->getType());
     }
 
@@ -35,7 +38,7 @@ class BackgroundHeroElementResolverTest extends TestCase
             'overlay' => 'dark', 'height' => 'full',
             'headlineColor' => '#ff0000', 'textColor' => '#abc', 'priority' => true,
         ]);
-        $resolver = new BackgroundHeroElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
@@ -62,7 +65,7 @@ class BackgroundHeroElementResolverTest extends TestCase
             'video' => 'uuid-9', 'overlay' => 'rainbow', 'height' => 'gigantic',
             'headlineColor' => 'red', 'textColor' => 'javascript:alert(1)',
         ]);
-        $resolver = new BackgroundHeroElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
@@ -81,7 +84,7 @@ class BackgroundHeroElementResolverTest extends TestCase
         $slot = $this->slot([
             'video' => 'uuid-a', 'headlineColor' => '#ff000080', 'textColor' => '#abcd',
         ]);
-        $resolver = new BackgroundHeroElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
@@ -94,7 +97,7 @@ class BackgroundHeroElementResolverTest extends TestCase
         $client = $this->createMock(VideoOptimizerClient::class);
         $client->expects(static::never())->method('getEmbed');
         $slot = $this->slot(['headline' => 'x']);
-        $resolver = new BackgroundHeroElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
         static::assertNull($slot->getData()->getVideoUuid());
     }
@@ -104,13 +107,56 @@ class BackgroundHeroElementResolverTest extends TestCase
         $client = $this->createMock(VideoOptimizerClient::class);
         $client->method('getEmbed')->willThrowException(new \RuntimeException('down'));
         $slot = $this->slot(['video' => 'uuid-2']);
-        $resolver = new BackgroundHeroElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
         static::assertSame('uuid-2', $data->getVideoUuid());
         static::assertNull($data->getEmbed());
         static::assertTrue($data->hasError());
+    }
+
+    #[DataProvider('ctaUrlProvider')]
+    public function testCtaUrlSchemeAllowlist(?string $input, ?string $expected): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $slot = $this->slot(['ctaUrl' => $input]);
+        $resolver = $this->resolver($client);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+
+        static::assertSame($expected, $slot->getData()->getCtaUrl());
+    }
+
+    public static function ctaUrlProvider(): iterable
+    {
+        yield 'javascript scheme is rejected' => ['javascript:alert(1)', null];
+        yield 'data scheme is rejected' => ['data:text/html,x', null];
+        yield 'uppercase javascript scheme is rejected' => ['JAVASCRIPT:alert(1)', null];
+        yield 'newline-obfuscated javascript scheme is rejected' => ["java\nscript:alert(1)", null];
+        yield 'https url passes' => ['https://example.com/x?y=1', 'https://example.com/x?y=1'];
+        yield 'relative path passes' => ['/checkout', '/checkout'];
+        yield 'mailto passes' => ['mailto:a@b.de', 'mailto:a@b.de'];
+    }
+
+    public function testEmbedFetchFailureLogsAWarning(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willThrowException(new \RuntimeException('down'));
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(static::once())->method('warning')->with(
+            static::isType('string'),
+            ['uuid' => 'uuid-2', 'element' => 'scalecommerce-vo-background-hero', 'error' => 'down']
+        );
+
+        $slot = $this->slot(['video' => 'uuid-2']);
+        $resolver = $this->resolver($client, $logger);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+    }
+
+    private function resolver(VideoOptimizerClient $client, ?LoggerInterface $logger = null): BackgroundHeroElementResolver
+    {
+        return new BackgroundHeroElementResolver($client, $logger ?? new NullLogger());
     }
 
     private function slot(array $config): CmsSlotEntity

@@ -1,7 +1,7 @@
 {
     "name": "scalecommerce/videooptimizer-shopware",
     "description": "Deliver fast, adaptive, CDN-hosted videos in Shopware with VideoOptimizer - a privacy-friendly alternative to YouTube, Vimeo and self-hosting.",
-    "version": "0.4.7",
+    "version": "0.5.0",
     "type": "shopware-platform-plugin",
     "license": "MIT",
     "authors": [{ "name": "ScaleCommerce GmbH" }],
@@ -22,7 +22,7 @@
             "en-GB": "VideoOptimizer"
         },
         "description": {
-            "de-DE": "Schnelle, adaptive Videos per CDN in Shopware ausspielen - mit VideoOptimizer statt YouTube, Vimeo oder Self-Hosting. Weniger Server-Traffic, bessere Ladezeiten, volle Kontrolle, DSGVO-freundlich.",
+            "de-DE": "Schnelle, adaptive Videos per CDN in Shopware ausspielen – mit VideoOptimizer statt YouTube, Vimeo oder Self-Hosting. Weniger Traffic, bessere Ladezeiten, DSGVO-freundlich.",
             "en-GB": "Deliver fast, adaptive CDN-hosted videos in Shopware with VideoOptimizer instead of YouTube, Vimeo or self-hosting. Less server traffic, faster load times, full control, GDPR-friendly."
         },
         "manufacturerLink": {

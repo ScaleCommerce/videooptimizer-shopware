@@ -2,6 +2,7 @@
 
 namespace ScaleCommerce\VideoOptimizer\DataResolver;
 
+use Psr\Log\LoggerInterface;
 use ScaleCommerce\VideoOptimizer\DataResolver\Struct\SpotlightStruct;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\Content\Cms\Aggregate\CmsSlot\CmsSlotEntity;
@@ -14,8 +15,10 @@ class SpotlightElementResolver extends AbstractCmsElementResolver
 {
     use VideoSurfaceTrait;
 
-    public function __construct(private readonly VideoOptimizerClient $client)
-    {
+    public function __construct(
+        private readonly VideoOptimizerClient $client,
+        private readonly LoggerInterface $logger,
+    ) {
     }
 
     public function getType(): string
@@ -47,7 +50,7 @@ class SpotlightElementResolver extends AbstractCmsElementResolver
         }
         $struct->setVideoUuid($uuid);
 
-        $surface = $this->buildVideoSurface($config, $uuid, $this->client, $struct->getPresentation());
+        $surface = $this->buildVideoSurface($config, $uuid, $this->client, $this->logger, $struct->getPresentation());
         $struct->setPlayerMode($surface['playerMode']);
         $struct->setEmbedUrl($surface['embedUrl']);
         $struct->setEmbed($surface['embed']);

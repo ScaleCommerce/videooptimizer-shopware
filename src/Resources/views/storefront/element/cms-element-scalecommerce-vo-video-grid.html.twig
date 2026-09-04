@@ -14,7 +14,7 @@
             {% if data.intro %}<p class="scalecommerce-vo-video-grid__intro">{{ data.intro|nl2br }}</p>{% endif %}
             <div class="scalecommerce-vo-video-grid__items">
                 {% for item in data.items %}
-                    {% if item.videoUuid and (item.playerMode == 'embed' or (item.embed and not item.error)) %}
+                    {% if item.videoUuid and (item.playerMode == 'embed' or item.embed) %}
                         <figure class="scalecommerce-vo-video-grid__item">
                             {{ vo.surface(item.embed, data.presentation, item.playerMode, item.embedUrl, item.label, surfaceOptions) }}
                             {% if item.label %}<figcaption class="scalecommerce-vo-video-grid__caption">{{ item.label }}</figcaption>{% endif %}

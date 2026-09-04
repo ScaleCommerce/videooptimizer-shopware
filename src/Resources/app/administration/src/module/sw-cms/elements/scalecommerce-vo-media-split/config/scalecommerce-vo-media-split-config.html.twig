@@ -30,6 +30,8 @@
     <sw-text-editor
         :label="$tc('scalecommerce-vo.mediaSplit.text')"
         :value="element.config.text.value"
+        sanitize-input
+        sanitize-field-name="app_cms_block.template"
         @update:value="onTextChange" />
 
     <mt-text-field

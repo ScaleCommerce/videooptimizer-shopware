@@ -2,24 +2,43 @@
 
 namespace ScaleCommerce\VideoOptimizer\Tests\Service;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class VideoOptimizerClientTest extends TestCase
 {
-    private function config(string $token = 'vp_test'): SystemConfigService
-    {
+    private function config(
+        string $token = 'vp_test',
+        string $baseUrl = 'https://api.videooptimizer.eu/api/v1',
+        string $embedBaseUrl = 'https://videooptimizer.eu',
+    ): SystemConfigService {
         $config = $this->createMock(SystemConfigService::class);
         $config->method('getString')->willReturnMap([
             ['ScaleVideoOptimizer.config.apiToken', null, $token],
-            ['ScaleVideoOptimizer.config.apiBaseUrl', null, 'https://api.videooptimizer.eu/api/v1'],
+            ['ScaleVideoOptimizer.config.apiBaseUrl', null, $baseUrl],
+            ['ScaleVideoOptimizer.config.embedBaseUrl', null, $embedBaseUrl],
         ]);
         return $config;
+    }
+
+    /**
+     * Builds a client with a fresh ArrayAdapter cache by default so tests don't leak cached
+     * getEmbed() results into each other; pass one explicitly to assert on cache behavior.
+     */
+    private function client(HttpClientInterface $http, ?SystemConfigService $config = null, ?CacheInterface $cache = null): VideoOptimizerClient
+    {
+        return new VideoOptimizerClient($http, $config ?? $this->config(), $cache ?? new ArrayAdapter());
     }
 
     public function testListLibrariesSendsBearerTokenAndUnwrapsData(): void
@@ -36,7 +55,7 @@ class VideoOptimizerClientTest extends TestCase
             return new MockResponse(json_encode(['data' => [['id' => 'lib-1', 'name' => 'Demo']]]));
         });
 
-        $client = new VideoOptimizerClient($http, $this->config());
+        $client = $this->client($http, $this->config());
         $result = $client->listLibraries();
 
         static::assertStringContainsString('https://api.videooptimizer.eu/api/v1/libraries', $capturedUrl);
@@ -63,7 +82,7 @@ class VideoOptimizerClientTest extends TestCase
             return array_shift($responses);
         });
 
-        $client = new VideoOptimizerClient($http, $this->config());
+        $client = $this->client($http, $this->config());
         $result = $client->listLibraries();
 
         static::assertSame([['id' => 'lib-1'], ['id' => 'lib-2']], $result);
@@ -85,7 +104,7 @@ class VideoOptimizerClientTest extends TestCase
             return new MockResponse(json_encode(['data' => [['id' => 'lib-1']]]));
         });
 
-        $client = new VideoOptimizerClient($http, $this->config());
+        $client = $this->client($http, $this->config());
         $result = $client->listLibraries();
 
         static::assertSame(2, $count);
@@ -94,7 +113,7 @@ class VideoOptimizerClientTest extends TestCase
 
     public function testMissingTokenThrows(): void
     {
-        $client = new VideoOptimizerClient(new MockHttpClient(), $this->config(''));
+        $client = $this->client(new MockHttpClient(), $this->config(''));
         $this->expectException(MissingApiTokenException::class);
         $client->listLibraries();
     }
@@ -105,7 +124,7 @@ class VideoOptimizerClientTest extends TestCase
             json_encode(['statusCode' => 401, 'message' => 'Unauthorized']),
             ['http_code' => 401]
         ));
-        $client = new VideoOptimizerClient($http, $this->config());
+        $client = $this->client($http, $this->config());
 
         try {
             $client->listLibraries();
@@ -122,7 +141,7 @@ class VideoOptimizerClientTest extends TestCase
             json_encode(['statusCode' => 403, 'statusMessage' => 'Forbidden here']),
             ['http_code' => 403]
         ));
-        $client = new VideoOptimizerClient($http, $this->config());
+        $client = $this->client($http, $this->config());
 
         try {
             $client->listLibraries();
@@ -136,7 +155,7 @@ class VideoOptimizerClientTest extends TestCase
     public function testGetEmbedDoesNotRequireToken(): void
     {
         $http = new MockHttpClient(new MockResponse(json_encode(['data' => ['uuid' => 'v1', 'sources' => []]])));
-        $client = new VideoOptimizerClient($http, $this->config(''));
+        $client = $this->client($http, $this->config(''));
         $result = $client->getEmbed('v1');
         static::assertSame('v1', $result['uuid']);
     }
@@ -152,7 +171,7 @@ class VideoOptimizerClientTest extends TestCase
             ]]));
         });
 
-        $client = new VideoOptimizerClient($http, $this->config());
+        $client = $this->client($http, $this->config());
         $result = $client->initiateUpload(['libraryId' => 'lib-1', 'filename' => 'a.mp4', 'contentType' => 'video/mp4', 'fileSize' => 10]);
 
         static::assertSame('POST', $captured['method']);
@@ -170,7 +189,7 @@ class VideoOptimizerClientTest extends TestCase
             return new MockResponse(json_encode(['data' => ['uuid' => 'v1', 'status' => 'processing']]));
         });
 
-        $client = new VideoOptimizerClient($http, $this->config());
+        $client = $this->client($http, $this->config());
         $payload = ['libraryId' => 'lib-1', 'uuid' => 'v1', 'key' => 'k', 'uploadId' => 'u1', 'parts' => [['partNumber' => 1, 'etag' => '"abc"']]];
         $result = $client->completeUpload($payload);
 
@@ -190,7 +209,7 @@ class VideoOptimizerClientTest extends TestCase
             return new MockResponse(json_encode(['data' => [['uuid' => 'v1', 'library_id' => 'lib-1']]]));
         });
 
-        $client = new VideoOptimizerClient($http, $this->config());
+        $client = $this->client($http, $this->config());
         $result = $client->listAllVideos('lib-1');
 
         static::assertStringContainsString('/videos', $capturedUrl);
@@ -210,7 +229,7 @@ class VideoOptimizerClientTest extends TestCase
             return new MockResponse(json_encode(['data' => ['id' => 'lib-9', 'name' => 'Demo']]));
         });
 
-        $client = new VideoOptimizerClient($http, $this->config());
+        $client = $this->client($http, $this->config());
         $result = $client->createLibrary(['name' => 'Demo']);
 
         static::assertSame('POST', $capturedMethod);
@@ -236,7 +255,7 @@ class VideoOptimizerClientTest extends TestCase
             ]));
         });
 
-        $client = new VideoOptimizerClient($http, $this->config());
+        $client = $this->client($http, $this->config());
         $result = $client->listEncodings();
 
         static::assertSame('Authorization: Bearer vp_test', $capturedAuth);
@@ -249,7 +268,7 @@ class VideoOptimizerClientTest extends TestCase
         $http = new MockHttpClient(new MockResponse(json_encode([
             'data' => ['thumbnails' => [['index' => 0, 'url' => 'https://api/x/thumbnails/0']]],
         ])));
-        $client = new VideoOptimizerClient($http, $this->config());
+        $client = $this->client($http, $this->config());
         $result = $client->listThumbnails('vid-1');
         static::assertSame(0, $result['thumbnails'][0]['index']);
     }
@@ -261,7 +280,7 @@ class VideoOptimizerClientTest extends TestCase
             $captured = ['method' => $method, 'url' => $url, 'body' => $options['body'] ?? null];
             return new MockResponse(json_encode(['data' => ['poster' => ['source' => 'thumbnail']]]));
         });
-        $client = new VideoOptimizerClient($http, $this->config());
+        $client = $this->client($http, $this->config());
         $client->selectThumbnail('vid-1', 3);
         static::assertSame('POST', $captured['method']);
         static::assertStringEndsWith('/videos/vid-1/thumbnail', $captured['url']);
@@ -275,7 +294,7 @@ class VideoOptimizerClientTest extends TestCase
             $urls[] = "$method $url" . (isset($options['body']) ? ' ' . $options['body'] : '');
             return new MockResponse(json_encode(['data' => ['key' => 'k', 'uploadUrl' => 'https://s3/put']]));
         });
-        $client = new VideoOptimizerClient($http, $this->config());
+        $client = $this->client($http, $this->config());
         $init = $client->initiatePosterUpload('vid-1', ['contentType' => 'image/png', 'fileSize' => 10]);
         static::assertSame('k', $init['key']);
         $client->completePosterUpload('vid-1', 'k');
@@ -290,9 +309,337 @@ class VideoOptimizerClientTest extends TestCase
     public function testGetThumbnailImageReturnsRawBytes(): void
     {
         $http = new MockHttpClient(new MockResponse('IMG-BYTES', ['response_headers' => ['content-type' => 'image/jpeg']]));
-        $client = new VideoOptimizerClient($http, $this->config());
+        $client = $this->client($http, $this->config());
         $image = $client->getThumbnailImage('vid-1', 2);
         static::assertSame('IMG-BYTES', $image['content']);
         static::assertSame('image/jpeg', $image['contentType']);
+    }
+
+    public function testGetThumbnailImageSendsListStyleHeaders(): void
+    {
+        $capturedOptions = null;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$capturedOptions): MockResponse {
+            $capturedOptions = $options;
+            return new MockResponse('IMG', ['response_headers' => ['content-type' => 'image/jpeg']]);
+        });
+
+        $client = $this->client($http, $this->config());
+        $client->getThumbnailImage('vid-1', 2);
+
+        // Same list-of-"Name: Value"-strings shape as request() uses, not a mix of list and
+        // assoc keys.
+        static::assertSame(['Authorization: Bearer vp_test', 'Accept: image/*'], $capturedOptions['headers']);
+    }
+
+    public function testNonHttpsApiBaseUrlThrows(): void
+    {
+        $client = $this->client(new MockHttpClient(), $this->config(baseUrl: 'http://api.videooptimizer.eu/api/v1'));
+        $this->expectException(InvalidApiBaseUrlException::class);
+        $client->listLibraries();
+    }
+
+    public function testHttpsApiBaseUrlTrimsTrailingSlash(): void
+    {
+        $capturedUrl = null;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$capturedUrl): MockResponse {
+            $capturedUrl = $url;
+            return new MockResponse(json_encode(['data' => []]));
+        });
+
+        $client = $this->client($http, $this->config(baseUrl: 'https://api.example/api/v1/'));
+        $client->listLibraries();
+
+        static::assertStringStartsWith('https://api.example/api/v1/libraries', $capturedUrl);
+    }
+
+    public function testEmbedBaseUrlReadsConfigAndTrimsTrailingSlash(): void
+    {
+        $client = $this->client(new MockHttpClient(), $this->config(embedBaseUrl: 'https://embed.example/'));
+        static::assertSame('https://embed.example', $client->embedBaseUrl());
+    }
+
+    public function testEmbedBaseUrlFallsBackToDefault(): void
+    {
+        $client = $this->client(new MockHttpClient(), $this->config(embedBaseUrl: ''));
+        static::assertSame('https://videooptimizer.eu', $client->embedBaseUrl());
+    }
+
+    public function testNonHttpsEmbedBaseUrlThrows(): void
+    {
+        $client = $this->client(new MockHttpClient(), $this->config(embedBaseUrl: 'http://embed.example'));
+        $this->expectException(InvalidApiBaseUrlException::class);
+        $client->embedBaseUrl();
+    }
+
+    public function testGetEmbedCachesResultPerUuid(): void
+    {
+        $count = 0;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$count): MockResponse {
+            ++$count;
+            return new MockResponse(json_encode(['data' => ['uuid' => 'v1', 'sources' => []]]));
+        });
+        $client = $this->client($http, $this->config());
+
+        $first = $client->getEmbed('v1');
+        $second = $client->getEmbed('v1');
+
+        static::assertSame(1, $count);
+        static::assertSame($first, $second);
+    }
+
+    public function testGetEmbedCachesFailedLookupsForSixtySeconds(): void
+    {
+        $count = 0;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$count): MockResponse {
+            ++$count;
+            return new MockResponse(json_encode(['statusMessage' => 'Upstream exploded']), ['http_code' => 500]);
+        });
+        $client = $this->client($http, $this->config());
+
+        try {
+            $client->getEmbed('v1');
+            static::fail('Expected VideoOptimizerApiException');
+        } catch (VideoOptimizerApiException $e) {
+            // First failure propagates the real upstream status/message.
+            static::assertSame(500, $e->getStatusCode());
+            static::assertStringContainsString('Upstream exploded', $e->getMessage());
+        }
+
+        try {
+            $client->getEmbed('v1');
+            static::fail('Expected VideoOptimizerApiException');
+        } catch (VideoOptimizerApiException $e) {
+            // Second call within the 60s negative-cache TTL is served from cache, not upstream.
+            static::assertSame(503, $e->getStatusCode());
+            static::assertStringContainsString('cached failure', $e->getMessage());
+        }
+
+        static::assertSame(1, $count);
+    }
+
+    public function testForgetEmbedClearsNegativeCacheEntry(): void
+    {
+        $count = 0;
+        $responses = [
+            new MockResponse('', ['http_code' => 500]),
+            new MockResponse(json_encode(['data' => ['uuid' => 'v1']])),
+        ];
+        $http = new MockHttpClient(function () use (&$count, &$responses): MockResponse {
+            ++$count;
+            return array_shift($responses);
+        });
+        $client = $this->client($http, $this->config());
+
+        try {
+            $client->getEmbed('v1');
+            static::fail('Expected VideoOptimizerApiException');
+        } catch (VideoOptimizerApiException) {
+        }
+
+        // Admin fixes the poster (or the outage clears) and forgets the cached embed - including
+        // the negative cache entry, not just a successful one.
+        $client->forgetEmbed('v1');
+        $result = $client->getEmbed('v1');
+
+        static::assertSame('v1', $result['uuid']);
+        static::assertSame(2, $count);
+    }
+
+    public function testForgetEmbedOnNeverCachedUuidIsNoop(): void
+    {
+        $client = $this->client(new MockHttpClient(), $this->config());
+
+        $client->forgetEmbed('never-cached');
+
+        // No exception, and nothing to assert on the wire - deleting a missing cache entry is a no-op.
+        $this->addToAssertionCount(1);
+    }
+
+    #[DataProvider('embedInvalidatingMutations')]
+    public function testMutatingClientMethodInvalidatesTheEmbedCache(callable $mutate, array $responses): void
+    {
+        $embedResponses = [
+            new MockResponse(json_encode(['data' => ['uuid' => 'v1', 'call' => 1]])),
+            new MockResponse(json_encode(['data' => ['uuid' => 'v1', 'call' => 2]])),
+        ];
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$embedResponses, &$responses): MockResponse {
+            if (str_contains($url, '/embed/')) {
+                return array_shift($embedResponses);
+            }
+            return array_shift($responses);
+        });
+        $client = $this->client($http, $this->config());
+
+        $first = $client->getEmbed('v1');
+        $mutate($client);
+        $second = $client->getEmbed('v1');
+
+        static::assertSame(1, $first['call']);
+        static::assertSame(2, $second['call']);
+    }
+
+    public static function embedInvalidatingMutations(): iterable
+    {
+        yield 'updateVideo' => [
+            fn (VideoOptimizerClient $client) => $client->updateVideo('v1', ['title' => 'New title']),
+            [new MockResponse(json_encode(['data' => ['uuid' => 'v1']]))],
+        ];
+        yield 'deleteVideo' => [
+            fn (VideoOptimizerClient $client) => $client->deleteVideo('v1'),
+            [new MockResponse('')],
+        ];
+        yield 'selectThumbnail' => [
+            fn (VideoOptimizerClient $client) => $client->selectThumbnail('v1', 2),
+            [new MockResponse(json_encode(['data' => ['poster' => ['source' => 'thumbnail']]]))],
+        ];
+        yield 'completePosterUpload' => [
+            fn (VideoOptimizerClient $client) => $client->completePosterUpload('v1', 'k'),
+            [new MockResponse(json_encode(['data' => ['poster' => ['source' => 'custom']]]))],
+        ];
+        yield 'selectPoster' => [
+            fn (VideoOptimizerClient $client) => $client->selectPoster('v1', ['source' => 'custom']),
+            [new MockResponse(json_encode(['data' => ['poster' => ['source' => 'custom']]]))],
+        ];
+        yield 'deletePoster' => [
+            fn (VideoOptimizerClient $client) => $client->deletePoster('v1'),
+            [new MockResponse('')],
+        ];
+    }
+
+    public function testGetEmbedDoesNotRetryOn429(): void
+    {
+        $count = 0;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$count): MockResponse {
+            ++$count;
+            return new MockResponse(json_encode(['statusMessage' => 'slow down']), [
+                'http_code' => 429,
+                'response_headers' => ['retry-after' => '0'],
+            ]);
+        });
+        $client = $this->client($http, $this->config());
+
+        try {
+            $client->getEmbed('v1');
+            static::fail('Expected VideoOptimizerApiException');
+        } catch (VideoOptimizerApiException $e) {
+            static::assertSame(429, $e->getStatusCode());
+        }
+
+        // No sleep()-based retry during storefront rendering: exactly one request.
+        static::assertSame(1, $count);
+    }
+
+    public function testGetEmbedCapsMaxDurationAtThreeSeconds(): void
+    {
+        $capturedOptions = null;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$capturedOptions): MockResponse {
+            $capturedOptions = $options;
+            return new MockResponse(json_encode(['data' => ['uuid' => 'v1']]));
+        });
+        $client = $this->client($http, $this->config());
+        $client->getEmbed('v1');
+
+        static::assertSame(3.0, $capturedOptions['max_duration']);
+    }
+
+    public function testAdminCallsDefaultToThirtySecondMaxDuration(): void
+    {
+        $capturedOptions = null;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$capturedOptions): MockResponse {
+            $capturedOptions = $options;
+            return new MockResponse(json_encode(['data' => []]));
+        });
+        $client = $this->client($http, $this->config());
+        $client->listLibraries();
+
+        static::assertSame(30.0, $capturedOptions['max_duration']);
+    }
+
+    public function testGetThumbnailImageDefaultsToThirtySecondMaxDuration(): void
+    {
+        $capturedOptions = null;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$capturedOptions): MockResponse {
+            $capturedOptions = $options;
+            return new MockResponse('IMG', ['response_headers' => ['content-type' => 'image/jpeg']]);
+        });
+        $client = $this->client($http, $this->config());
+        $client->getThumbnailImage('vid-1', 2);
+
+        static::assertSame(30.0, $capturedOptions['max_duration']);
+    }
+
+    public function testUppercaseHttpsSchemeIsAcceptedForApiBaseUrl(): void
+    {
+        $capturedUrl = null;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$capturedUrl): MockResponse {
+            $capturedUrl = $url;
+            return new MockResponse(json_encode(['data' => []]));
+        });
+
+        // parse_url() does not normalize scheme case; the https check must not be case-sensitive.
+        $client = $this->client($http, $this->config(baseUrl: 'HTTPS://api.videooptimizer.eu/api/v1'));
+        $client->listLibraries();
+
+        static::assertStringContainsString('/libraries', $capturedUrl);
+    }
+
+    public function testUppercaseHttpsSchemeIsAcceptedForEmbedBaseUrl(): void
+    {
+        $client = $this->client(new MockHttpClient(), $this->config(embedBaseUrl: 'HTTPS://embed.example'));
+        static::assertSame('HTTPS://embed.example', $client->embedBaseUrl());
+    }
+
+    public function testGetEmbedSanitizesCacheKeyForUuidWithReservedCharacters(): void
+    {
+        // PSR-6 forbids "{}()/\@:" in cache keys; a UUID containing "/" must not reach the cache
+        // key unescaped.
+        $uuid = 'a/b';
+        $cache = $this->createMock(CacheInterface::class);
+        $cache->expects(static::once())
+            ->method('get')
+            ->with('scalecommerce_vo_embed_' . rawurlencode($uuid), static::isType('callable'))
+            ->willReturnCallback(fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)));
+
+        $http = new MockHttpClient(new MockResponse(json_encode(['data' => ['uuid' => $uuid]])));
+        $client = $this->client($http, $this->config(), $cache);
+        $result = $client->getEmbed($uuid);
+
+        static::assertSame($uuid, $result['uuid']);
+    }
+
+    public function testReprocessLibrarySendsPostAndUnwrapsData(): void
+    {
+        $capturedMethod = null;
+        $capturedUrl = null;
+        $http = new MockHttpClient(function (string $method, string $url) use (&$capturedMethod, &$capturedUrl): MockResponse {
+            $capturedMethod = $method;
+            $capturedUrl = $url;
+            return new MockResponse(json_encode(['data' => ['queued' => 3]]));
+        });
+
+        $client = $this->client($http, $this->config());
+        $result = $client->reprocessLibrary('lib-1');
+
+        static::assertSame('POST', $capturedMethod);
+        static::assertStringEndsWith('/libraries/lib-1/reprocess', $capturedUrl);
+        static::assertSame(['queued' => 3], $result);
+    }
+
+    public function testIngestVideoUrlPostsPayloadAndUnwrapsData(): void
+    {
+        $captured = null;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$captured): MockResponse {
+            $captured = ['method' => $method, 'url' => $url, 'body' => $options['body'] ?? null];
+            return new MockResponse(json_encode(['data' => ['uuid' => 'v1', 'status' => 'processing']]));
+        });
+
+        $client = $this->client($http, $this->config());
+        $payload = ['library_id' => 'lib-1', 'source_url' => 'https://example.com/video.mp4'];
+        $result = $client->ingestVideoUrl($payload);
+
+        static::assertSame('POST', $captured['method']);
+        static::assertStringEndsWith('/videos', $captured['url']);
+        static::assertSame($payload, json_decode((string) $captured['body'], true));
+        static::assertSame('processing', $result['status']);
     }
 }

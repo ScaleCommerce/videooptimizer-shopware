@@ -31,7 +31,7 @@
                                 :key="option.key"
                                 :label="optionLabel(option)"
                                 :model-value="selectedCodecs.includes(option.key)"
-                                :disabled="optionDisabled(option)"
+                                :disabled="optionDisabled(option, 'codecs')"
                                 @update:model-value="toggleCodec(option.key)" />
                         </div>
                     </div>
@@ -44,10 +44,14 @@
                                 :key="option.key"
                                 :label="optionLabel(option)"
                                 :model-value="selectedResolutions.includes(option.key)"
-                                :disabled="optionDisabled(option)"
+                                :disabled="optionDisabled(option, 'resolutions')"
                                 @update:model-value="toggleResolution(option.key)" />
                         </div>
                     </div>
+
+                    <p v-if="ladderChanged" class="scalecommerce-vo-list__hint">
+                        {{ $tc('scalecommerce-vo.library.ladderChangedHint') }}
+                    </p>
 
                     <div class="scalecommerce-vo-list__form-actions">
                         <mt-button variant="primary" :disabled="!canSave" @click="onSave">
@@ -56,15 +60,52 @@
                         <mt-button v-if="mode === 'create'" variant="secondary" @click="onCancelCreate">
                             {{ $tc('scalecommerce-vo.library.cancel') }}
                         </mt-button>
-                        <mt-button v-else-if="selectedLibraryId" variant="critical" @click="onDeleteLibrary">
-                            {{ $tc('scalecommerce-vo.library.delete') }}
-                        </mt-button>
+                        <template v-else-if="selectedLibraryId">
+                            <mt-button variant="secondary" :disabled="!mediaManaged || isReprocessing" @click="onReprocessLibraryClick">
+                                {{ $tc('scalecommerce-vo.library.reprocess') }}
+                            </mt-button>
+                            <mt-button variant="critical" @click="onDeleteLibraryClick">
+                                {{ $tc('scalecommerce-vo.library.delete') }}
+                            </mt-button>
+                        </template>
                     </div>
 
                     <p v-if="mode !== 'create' && activeLibrary" class="scalecommerce-vo-list__info">
                         {{ activeLibrary.video_count }} {{ $tc('scalecommerce-vo.library.videoCount') }} · {{ storageLabel }}<template v-if="createdLabel"> · {{ $tc('scalecommerce-vo.library.since') }} {{ createdLabel }}</template>
                     </p>
                 </div>
+
+                <sw-modal
+                    v-if="confirmDeleteLibrary"
+                    variant="small"
+                    :title="$t('scalecommerce-vo.library.confirmDeleteTitle')"
+                    @modal-close="confirmDeleteLibrary = false">
+                    <p>{{ $t('scalecommerce-vo.library.confirmDeleteText', { name: activeLibrary ? activeLibrary.name : '' }) }}</p>
+                    <template #modal-footer>
+                        <mt-button size="small" variant="secondary" @click="confirmDeleteLibrary = false">
+                            {{ $tc('scalecommerce-vo.library.cancel') }}
+                        </mt-button>
+                        <mt-button size="small" variant="critical" @click="onConfirmDeleteLibrary">
+                            {{ $tc('scalecommerce-vo.library.delete') }}
+                        </mt-button>
+                    </template>
+                </sw-modal>
+
+                <sw-modal
+                    v-if="confirmReprocessLibrary"
+                    variant="small"
+                    :title="$t('scalecommerce-vo.library.reprocessConfirmTitle')"
+                    @modal-close="confirmReprocessLibrary = false">
+                    <p>{{ $t('scalecommerce-vo.library.reprocessConfirmText', { name: activeLibrary ? activeLibrary.name : '' }) }}</p>
+                    <template #modal-footer>
+                        <mt-button size="small" variant="secondary" @click="confirmReprocessLibrary = false">
+                            {{ $tc('scalecommerce-vo.library.cancel') }}
+                        </mt-button>
+                        <mt-button size="small" variant="critical" @click="onConfirmReprocessLibrary">
+                            {{ $tc('scalecommerce-vo.library.reprocess') }}
+                        </mt-button>
+                    </template>
+                </sw-modal>
             </mt-card>
 
             <mt-card :title="$tc('scalecommerce-vo.list.videosTitle')" position-identifier="scalecommerce-vo-videos">

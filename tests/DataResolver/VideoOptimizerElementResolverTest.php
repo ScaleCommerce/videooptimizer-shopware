@@ -3,8 +3,11 @@
 namespace ScaleCommerce\VideoOptimizer\Tests\DataResolver;
 
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use ScaleCommerce\VideoOptimizer\DataResolver\Struct\VideoOptimizerVideoStruct;
 use ScaleCommerce\VideoOptimizer\DataResolver\VideoOptimizerElementResolver;
+use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\Content\Cms\Aggregate\CmsSlot\CmsSlotEntity;
@@ -17,7 +20,7 @@ class VideoOptimizerElementResolverTest extends TestCase
 {
     public function testGetTypeIsScaleVideoOptimizerVideo(): void
     {
-        $resolver = new VideoOptimizerElementResolver($this->createMock(VideoOptimizerClient::class));
+        $resolver = $this->resolver($this->createMock(VideoOptimizerClient::class));
         static::assertSame('scalecommerce-vo-video', $resolver->getType());
     }
 
@@ -40,7 +43,7 @@ class VideoOptimizerElementResolverTest extends TestCase
         ]);
 
         $slot = $this->slotWithUuid('uuid-1');
-        $resolver = new VideoOptimizerElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
@@ -61,7 +64,7 @@ class VideoOptimizerElementResolverTest extends TestCase
         $client->method('getEmbed')->willReturn(['poster' => null]);
 
         $slot = $this->slotWithUuid('uuid-2');
-        $resolver = new VideoOptimizerElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
@@ -76,16 +79,20 @@ class VideoOptimizerElementResolverTest extends TestCase
         $client->method('getEmbed')->willThrowException(new VideoOptimizerApiException(404, 'Not found'));
 
         $slot = $this->slotWithUuid('missing');
-        $resolver = new VideoOptimizerElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
 
         static::assertTrue($slot->getData()->hasError());
     }
 
-    public function testEmbedModeBuildsEmbedUrlAndSkipsGetEmbed(): void
+    public function testEmbedModeBuildsEmbedUrlAndCallsGetEmbedToVerifyTheVideoExists(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
-        $client->expects(static::never())->method('getEmbed');
+        $client->expects(static::once())->method('getEmbed')->with('uuid-embed')->willReturn([
+            'sources' => [['src' => 'https://cdn/master.m3u8', 'type' => 'application/vnd.apple.mpegurl', 'codec' => 'hls']],
+            'poster' => 'https://cdn/p.jpg',
+        ]);
+        $client->method('embedBaseUrl')->willReturn('https://videooptimizer.eu');
 
         $slot = $this->slotWithUuid('uuid-embed', [
             'playerMode' => 'embed',
@@ -94,17 +101,35 @@ class VideoOptimizerElementResolverTest extends TestCase
             'loop' => false,
             'showControls' => false,
         ]);
-        $resolver = new VideoOptimizerElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
         static::assertSame('embed', $data->getPlayerMode());
+        static::assertFalse($data->hasError());
         $url = $data->getEmbedUrl();
         static::assertStringStartsWith('https://videooptimizer.eu/embed/uuid-embed?', $url);
         static::assertStringContainsString('autoplay=1', $url);
         static::assertStringContainsString('muted=1', $url);
         static::assertStringContainsString('loop=0', $url);
         static::assertStringContainsString('controls=0', $url);
+    }
+
+    public function testEmbedModeFlagsErrorWhenUpstreamVideoIsGone(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('getEmbed')->with('uuid-deleted')
+            ->willThrowException(new VideoOptimizerApiException(404, 'Not found'));
+        $client->method('embedBaseUrl')->willReturn('https://videooptimizer.eu');
+
+        $slot = $this->slotWithUuid('uuid-deleted', ['playerMode' => 'embed']);
+        $resolver = $this->resolver($client);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+
+        $data = $slot->getData();
+        static::assertSame('embed', $data->getPlayerMode());
+        static::assertTrue($data->hasError());
+        static::assertNull($data->getEmbed());
     }
 
     public function testNativeModeFetchesEmbedAndSetsMode(): void
@@ -114,15 +139,71 @@ class VideoOptimizerElementResolverTest extends TestCase
             'sources' => [['src' => 'https://cdn/master.m3u8', 'type' => 'application/vnd.apple.mpegurl', 'codec' => 'hls']],
             'poster' => 'https://cdn/p.jpg',
         ]);
+        $client->method('embedBaseUrl')->willReturn('https://videooptimizer.eu');
 
         $slot = $this->slotWithUuid('uuid-native', ['playerMode' => 'native']);
-        $resolver = new VideoOptimizerElementResolver($client);
+        $resolver = $this->resolver($client);
         $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
         static::assertSame('native', $data->getPlayerMode());
         static::assertSame('https://cdn/master.m3u8', $data->getEmbed()['hls']);
         static::assertStringStartsWith('https://videooptimizer.eu/embed/uuid-native?', $data->getEmbedUrl());
+    }
+
+    public function testInvalidEmbedBaseUrlSetsErrorWithoutCrashingThePage(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('embedBaseUrl')->willThrowException(new InvalidApiBaseUrlException());
+        $client->expects(static::never())->method('getEmbed');
+
+        $slot = $this->slotWithUuid('uuid-bad-embed-base');
+        $resolver = $this->resolver($client);
+        // A misconfigured embedBaseUrl must become a per-element error, not an exception that
+        // takes down the whole CMS page render.
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+
+        $data = $slot->getData();
+        static::assertTrue($data->hasError());
+        static::assertSame('', $data->getEmbedUrl());
+        static::assertNull($data->getEmbed());
+    }
+
+    public function testInvalidEmbedBaseUrlLogsAWarning(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('embedBaseUrl')->willThrowException(new InvalidApiBaseUrlException('bad url'));
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(static::once())->method('warning')->with(
+            static::isType('string'),
+            ['uuid' => 'uuid-bad-embed-base', 'element' => 'scalecommerce-vo-video', 'error' => 'bad url']
+        );
+
+        $slot = $this->slotWithUuid('uuid-bad-embed-base');
+        $resolver = $this->resolver($client, $logger);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+    }
+
+    public function testEmbedLookupFailureLogsAWarning(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willThrowException(new VideoOptimizerApiException(404, 'Not found'));
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(static::once())->method('warning')->with(
+            static::isType('string'),
+            ['uuid' => 'missing', 'element' => 'scalecommerce-vo-video', 'error' => 'Not found']
+        );
+
+        $slot = $this->slotWithUuid('missing');
+        $resolver = $this->resolver($client, $logger);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+    }
+
+    private function resolver(VideoOptimizerClient $client, ?LoggerInterface $logger = null): VideoOptimizerElementResolver
+    {
+        return new VideoOptimizerElementResolver($client, $logger ?? new NullLogger());
     }
 
     private function slotWithUuid(string $uuid, array $extraConfig = []): CmsSlotEntity
