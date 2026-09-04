@@ -15,6 +15,12 @@ export default class ScalecommerceVoBlocks extends Plugin {
     }
 
     destroy() {
+        // The lightbox overlay lives on document.body, outside this.el, so it would
+        // otherwise survive plugin teardown — leaking its Hls instance and leaving the
+        // module-scoped lightboxOpen guard stuck "open" for the rest of the page.
+        if (this._closeLightbox) {
+            this._closeLightbox();
+        }
         this.el.querySelectorAll('video').forEach((video) => this._destroyVideo(video));
     }
 
@@ -124,6 +130,7 @@ export default class ScalecommerceVoBlocks extends Plugin {
                 document.removeEventListener('keydown', onKey);
                 document.body.classList.remove('scalecommerce-vo-lightbox-open');
                 lightboxOpen = false;
+                this._closeLightbox = null;
                 this.facade.focus();
             }
         };
@@ -134,5 +141,6 @@ export default class ScalecommerceVoBlocks extends Plugin {
         document.body.classList.add('scalecommerce-vo-lightbox-open');
         document.body.appendChild(overlay);
         close.focus();
+        this._closeLightbox = () => dismiss({ currentTarget: close });
     }
 }
