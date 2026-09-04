@@ -11,7 +11,7 @@
     {% if data and data.videoUuid %}
         <div class="scalecommerce-vo-media-split{{ data.side == 'right' ? ' is-reversed' : '' }}">
             <div class="scalecommerce-vo-media-split__media">
-                {% if data.videoUuid and (data.playerMode == 'embed' or (data.embed and not data.hasError)) %}
+                {% if data.videoUuid and not data.hasError and (data.playerMode == 'embed' or data.embed) %}
                     {{ vo.surface(data.embed, data.presentation, data.playerMode, data.embedUrl, data.headline, surfaceOptions) }}
                 {% endif %}
             </div>

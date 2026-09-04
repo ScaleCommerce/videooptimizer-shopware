@@ -72,10 +72,11 @@ class MediaSplitElementResolverTest extends TestCase
         static::assertFalse($data->hasError());
     }
 
-    public function testEmbedModeWithDirectSkipsUpstreamCall(): void
+    public function testEmbedModeWithDirectCallsUpstreamAndFlagsErrorWhenItThrows(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
-        $client->expects(static::never())->method('getEmbed');
+        $client->expects(static::once())->method('getEmbed')->with('uuid-3')
+            ->willThrowException(new \RuntimeException('video gone'));
 
         $slot = $this->slot(['video' => 'uuid-3', 'playerMode' => 'embed', 'presentation' => 'direct']);
         $resolver = $this->resolver($client);
@@ -84,10 +85,12 @@ class MediaSplitElementResolverTest extends TestCase
         $data = $slot->getData();
         static::assertSame('embed', $data->getPlayerMode());
         static::assertNull($data->getEmbed());
-        static::assertFalse($data->hasError());
+        // A deleted/missing upstream video must hide the element entirely, even in embed+direct
+        // mode - the iframe would otherwise render a bare 404.
+        static::assertTrue($data->hasError());
     }
 
-    public function testEmbedModeWithFacadeToleratesEmbedFetchFailure(): void
+    public function testEmbedModeWithFacadeSetsErrorOnUpstreamFailure(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
         $client->method('getEmbed')->willThrowException(new \RuntimeException('upstream down'));
@@ -99,8 +102,9 @@ class MediaSplitElementResolverTest extends TestCase
         $data = $slot->getData();
         static::assertSame('embed', $data->getPlayerMode());
         static::assertNull($data->getEmbed());
-        // The hosted iframe still plays on click, so a missing poster is not a hard error.
-        static::assertFalse($data->hasError());
+        // The upstream call now verifies the video still exists in every embed presentation -
+        // a deleted video must hide the element instead of rendering a broken facade/iframe.
+        static::assertTrue($data->hasError());
     }
 
     public function testInvalidEmbedBaseUrlSetsErrorWithoutCrashingThePage(): void

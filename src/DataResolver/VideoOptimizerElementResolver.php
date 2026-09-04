@@ -56,11 +56,8 @@ class VideoOptimizerElementResolver extends AbstractCmsElementResolver
             return;
         }
 
-        // Embed mode: the hosted iframe loads poster + sources itself, no upstream call needed.
-        if ($playerMode === 'embed') {
-            return;
-        }
-
+        // Always verify the video still exists upstream, even in embed mode - the hosted iframe
+        // would otherwise render a bare 404 for a deleted video.
         try {
             $struct->setEmbed($this->normalizeEmbed($this->client->getEmbed($uuid)));
         } catch (\Throwable) {

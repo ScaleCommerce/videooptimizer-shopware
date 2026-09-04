@@ -83,10 +83,13 @@ class VideoOptimizerElementResolverTest extends TestCase
         static::assertTrue($slot->getData()->hasError());
     }
 
-    public function testEmbedModeBuildsEmbedUrlAndSkipsGetEmbed(): void
+    public function testEmbedModeBuildsEmbedUrlAndCallsGetEmbedToVerifyTheVideoExists(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
-        $client->expects(static::never())->method('getEmbed');
+        $client->expects(static::once())->method('getEmbed')->with('uuid-embed')->willReturn([
+            'sources' => [['src' => 'https://cdn/master.m3u8', 'type' => 'application/vnd.apple.mpegurl', 'codec' => 'hls']],
+            'poster' => 'https://cdn/p.jpg',
+        ]);
         $client->method('embedBaseUrl')->willReturn('https://videooptimizer.eu');
 
         $slot = $this->slotWithUuid('uuid-embed', [
@@ -101,12 +104,30 @@ class VideoOptimizerElementResolverTest extends TestCase
 
         $data = $slot->getData();
         static::assertSame('embed', $data->getPlayerMode());
+        static::assertFalse($data->hasError());
         $url = $data->getEmbedUrl();
         static::assertStringStartsWith('https://videooptimizer.eu/embed/uuid-embed?', $url);
         static::assertStringContainsString('autoplay=1', $url);
         static::assertStringContainsString('muted=1', $url);
         static::assertStringContainsString('loop=0', $url);
         static::assertStringContainsString('controls=0', $url);
+    }
+
+    public function testEmbedModeFlagsErrorWhenUpstreamVideoIsGone(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('getEmbed')->with('uuid-deleted')
+            ->willThrowException(new VideoOptimizerApiException(404, 'Not found'));
+        $client->method('embedBaseUrl')->willReturn('https://videooptimizer.eu');
+
+        $slot = $this->slotWithUuid('uuid-deleted', ['playerMode' => 'embed']);
+        $resolver = new VideoOptimizerElementResolver($client);
+        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+
+        $data = $slot->getData();
+        static::assertSame('embed', $data->getPlayerMode());
+        static::assertTrue($data->hasError());
+        static::assertNull($data->getEmbed());
     }
 
     public function testNativeModeFetchesEmbedAndSetsMode(): void

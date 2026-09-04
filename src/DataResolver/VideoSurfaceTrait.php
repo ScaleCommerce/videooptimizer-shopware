@@ -27,26 +27,15 @@ trait VideoSurfaceTrait
             return ['playerMode' => $playerMode, 'embedUrl' => '', 'embed' => null, 'error' => true];
         }
 
-        if ($playerMode === 'embed') {
-            // The hosted iframe is self-contained, but facade/lightbox show a poster before the
-            // click, so those still need the upstream embed data. Direct embed needs nothing.
-            if ($presentation === 'direct') {
-                return ['playerMode' => 'embed', 'embedUrl' => $embedUrl, 'embed' => null, 'error' => false];
-            }
-
-            try {
-                return ['playerMode' => 'embed', 'embedUrl' => $embedUrl, 'embed' => $this->normalizeEmbed($client->getEmbed($uuid)), 'error' => false];
-            } catch (\Throwable) {
-                // No poster available, but the iframe still plays on click - not a hard error.
-                return ['playerMode' => 'embed', 'embedUrl' => $embedUrl, 'embed' => null, 'error' => false];
-            }
-        }
-
+        // Always verify the video still exists upstream, regardless of player mode or
+        // presentation - a hosted iframe for a deleted video would otherwise render a bare 404.
         try {
-            return ['playerMode' => 'native', 'embedUrl' => $embedUrl, 'embed' => $this->normalizeEmbed($client->getEmbed($uuid)), 'error' => false];
+            $embed = $this->normalizeEmbed($client->getEmbed($uuid));
         } catch (\Throwable) {
-            return ['playerMode' => 'native', 'embedUrl' => $embedUrl, 'embed' => null, 'error' => true];
+            return ['playerMode' => $playerMode, 'embedUrl' => $embedUrl, 'embed' => null, 'error' => true];
         }
+
+        return ['playerMode' => $playerMode, 'embedUrl' => $embedUrl, 'embed' => $embed, 'error' => false];
     }
 
     protected function buildEmbedUrl(string $uuid, FieldConfigCollection $config, VideoOptimizerClient $client): string

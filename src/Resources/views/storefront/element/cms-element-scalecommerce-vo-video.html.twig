@@ -1,7 +1,7 @@
 {% block element_scalecommerce_vo_video %}
     {% set videoData = element.data %}
     {% set config = element.config %}
-    {% if videoData and videoData.videoUuid %}
+    {% if videoData and videoData.videoUuid and not videoData.hasError %}
         {% if videoData.playerMode == 'embed' %}
             <div class="cms-element-scalecommerce-vo-video" style="width:100%">
                 <div class="scalecommerce-vo-video" style="position:relative;width:100%;aspect-ratio:16 / 9">
