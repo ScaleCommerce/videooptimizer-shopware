@@ -5,6 +5,16 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0] - unreleased
+
+> Publish only once `https://player.videooptimizer.eu` is live: new installations default to it.
+
+### Changed
+- The `embedBaseUrl` default is now `https://player.videooptimizer.eu`, VideoOptimizer's dedicated player host (the apex `videooptimizer.eu` becomes the marketing site). Existing installations keep their stored value; `https://videooptimizer.eu` keeps serving embeds permanently, so nothing breaks — switch the setting to the player host at your convenience and clear the cache.
+
+### Fixed
+- Hosted-embed `<iframe>`s (direct surface, single-video element, blocks facade/lightbox) now carry `allow="autoplay; fullscreen; picture-in-picture"` plus `allowfullscreen`, matching VideoOptimizer's own snippets — picture-in-picture was not delegated before.
+
 ## [0.5.2] - 2026-09-04
 
 ### Fixed
