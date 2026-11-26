@@ -54,6 +54,12 @@ export default class VideoOptimizerApiService extends ApiService {
             .then((response) => ApiService.handleResponse(response));
     }
 
+    getPlayback(uuid) {
+        return this.httpClient
+            .get(`${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/playback`, { headers: this.getBasicHeaders() })
+            .then((response) => ApiService.handleResponse(response));
+    }
+
     getAllVideos(libraryId) {
         const query = libraryId ? `?libraryId=${encodeURIComponent(libraryId)}` : '';
         return this.httpClient

@@ -1,11 +1,20 @@
 {
+  "../node_modules/hls.js/dist/hls.light.mjs": {
+    "file": "assets/hls.light-CqmBNinQ.js",
+    "name": "hls.light",
+    "src": "../node_modules/hls.js/dist/hls.light.mjs",
+    "isDynamicEntry": true
+  },
   "main.js": {
-    "file": "assets/scale-video-optimizer-jtF2DvTc.js",
+    "file": "assets/scale-video-optimizer-D0DQubi7.js",
     "name": "scale-video-optimizer",
     "src": "main.js",
     "isEntry": true,
+    "dynamicImports": [
+      "../node_modules/hls.js/dist/hls.light.mjs"
+    ],
     "css": [
-      "assets/scale-video-optimizer-DnYAgGYF.css"
+      "assets/scale-video-optimizer-DurhBAhx.css"
     ]
   }
 }

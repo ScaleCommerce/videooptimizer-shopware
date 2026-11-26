@@ -5,6 +5,9 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- The video detail dialog in the administration plays the video (adaptive HLS via hls.js, MP4 fallback) instead of only showing its poster. hls.js is loaded on demand when a video is opened, so the rest of the administration does not grow. Sources come from a new read-only proxy endpoint `GET /api/_action/scalecommerce-vo/videos/{uuid}/playback` (ACL `scalecommerce_vo:read`), because the API's `hls_url` redirects to the CDN without CORS headers and can't be loaded by browsers.
+
 ## [1.0.0] - 2026-11-26
 
 First stable release. No breaking changes compared to 0.5.x: configuration, CMS element data and routes stay the same.
