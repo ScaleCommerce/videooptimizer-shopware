@@ -6,7 +6,15 @@
 
     <template v-if="video">
         <div class="scalecommerce-vo-detail__poster">
-            <img v-if="posterSrc" :src="posterSrc" :alt="video.title" />
+            <video
+                v-if="canPlay"
+                ref="player"
+                controls
+                playsinline
+                preload="metadata"
+                :poster="posterSrc"
+                :aria-label="video.title"></video>
+            <img v-else-if="posterSrc" :src="posterSrc" :alt="video.title" />
         </div>
         <p class="scalecommerce-vo-detail__meta">{{ metaLine }}</p>
 

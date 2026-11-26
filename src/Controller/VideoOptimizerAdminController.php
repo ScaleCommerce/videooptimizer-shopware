@@ -2,6 +2,7 @@
 
 namespace ScaleCommerce\VideoOptimizer\Controller;
 
+use ScaleCommerce\VideoOptimizer\Service\EmbedSources;
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidRequestException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
@@ -134,6 +135,25 @@ class VideoOptimizerAdminController
             $this->client->deleteVideo($uuid);
             return [];
         }, Response::HTTP_NO_CONTENT);
+    }
+
+    /**
+     * Direct CDN sources for the admin preview player. The `hls_url` on the video record points at
+     * the API, which redirects to the CDN without CORS headers, so browsers can't load it via XHR;
+     * the embed payload carries the CDN URLs themselves.
+     */
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/playback', name: 'api.action.scalecommerce-vo.videos.playback', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
+    public function getPlayback(string $uuid): JsonResponse
+    {
+        return $this->wrap(function () use ($uuid): array {
+            $embed = $this->client->getEmbed($uuid);
+            $sources = is_array($embed['sources'] ?? null) ? $embed['sources'] : [];
+
+            return [
+                'hls' => EmbedSources::hls($sources),
+                'mp4' => EmbedSources::mp4($sources),
+            ];
+        });
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/thumbnails', name: 'api.action.scalecommerce-vo.thumbnails.list', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]

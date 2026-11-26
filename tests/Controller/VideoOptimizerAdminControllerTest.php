@@ -513,4 +513,55 @@ class VideoOptimizerAdminControllerTest extends TestCase
         static::assertSame('api.action.scalecommerce-vo.videos.get', $getMatch['_route']);
         static::assertSame('ingest', $getMatch['uuid']);
     }
+
+    public function testPlaybackReturnsCdnSourcesFromEmbed(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('getEmbed')->with('vid-1')->willReturn([
+            'sources' => [
+                ['src' => 'https://cdn.example/v/h264/480p.mp4', 'type' => 'video/mp4', 'size' => 10],
+                ['src' => 'https://cdn.example/v/hls/master.m3u8', 'type' => 'application/vnd.apple.mpegurl', 'codec' => 'hls'],
+                ['src' => 'https://cdn.example/v/h264/1080p.mp4', 'type' => 'video/mp4', 'size' => 30],
+            ],
+        ]);
+
+        $response = (new VideoOptimizerAdminController($client))->getPlayback('vid-1');
+
+        static::assertSame(200, $response->getStatusCode());
+        static::assertSame(
+            ['data' => ['hls' => 'https://cdn.example/v/hls/master.m3u8', 'mp4' => 'https://cdn.example/v/h264/1080p.mp4']],
+            json_decode((string) $response->getContent(), true)
+        );
+    }
+
+    public function testPlaybackWithoutSourcesReturnsNulls(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willReturn(['sources' => 'garbage']);
+
+        $response = (new VideoOptimizerAdminController($client))->getPlayback('vid-1');
+
+        static::assertSame(['data' => ['hls' => null, 'mp4' => null]], json_decode((string) $response->getContent(), true));
+    }
+
+    public function testPlaybackPropagatesUpstreamErrors(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willThrowException(new VideoOptimizerApiException(404, 'Video not found'));
+
+        $response = (new VideoOptimizerAdminController($client))->getPlayback('vid-1');
+
+        static::assertSame(404, $response->getStatusCode());
+    }
+
+    public function testPlaybackRouteResolves(): void
+    {
+        $routes = (new AttributeRouteControllerLoader())->load(VideoOptimizerAdminController::class, 'attribute');
+        $context = new RequestContext();
+        $context->setMethod('GET');
+        $match = (new UrlMatcher($routes, $context))->match('/api/_action/scalecommerce-vo/videos/abc/playback');
+
+        static::assertSame('api.action.scalecommerce-vo.videos.playback', $match['_route']);
+        static::assertSame(['scalecommerce_vo:read'], $match['_acl']);
+    }
 }

@@ -26,6 +26,7 @@ Component.register('scalecommerce-vo-video-detail', {
             statusText: '',
             mediaModalOpen: false,
             cacheBust: 1,
+            playback: null,
         };
     },
 
@@ -36,6 +37,9 @@ Component.register('scalecommerce-vo-video-detail', {
                 return null;
             }
             return url + (url.indexOf('?') === -1 ? '?' : '&') + `_=${this.cacheBust}`;
+        },
+        canPlay() {
+            return !!(this.playback && (this.playback.hls || this.playback.mp4));
         },
         hasCustomPoster() {
             return this.video?.poster?.source === 'custom';
@@ -69,6 +73,7 @@ Component.register('scalecommerce-vo-video-detail', {
 
     beforeUnmount() {
         this._unmounted = true;
+        this._destroyPlayer();
         Object.values(this.frameSrcById).forEach((src) => URL.revokeObjectURL(src));
     },
 
@@ -77,12 +82,73 @@ Component.register('scalecommerce-vo-video-detail', {
             try {
                 const videoResponse = await this.scalecommerceVoApiService.getVideo(this.uuid);
                 this.video = videoResponse.data ?? videoResponse;
+                this._loadPlayback();
                 const thumbsResponse = await this.scalecommerceVoApiService.getThumbnails(this.uuid);
                 const thumbs = (thumbsResponse.data ?? thumbsResponse).thumbnails ?? [];
                 this.thumbnails = thumbs;
                 thumbs.forEach((thumb) => this._loadFrame(thumb.index));
             } catch (error) {
                 this.createNotificationError({ message: this._errorText(error) });
+            }
+        },
+
+        async _loadPlayback() {
+            if (this.video?.status !== 'ready') {
+                return;
+            }
+            try {
+                const response = await this.scalecommerceVoApiService.getPlayback(this.uuid);
+                if (this._unmounted) {
+                    return;
+                }
+                this.playback = response.data ?? response;
+                await this.$nextTick();
+                await this._attachPlayer();
+            } catch (error) {
+                // Playback is a convenience on top of the poster; keep showing the poster.
+                console.warn('[VideoOptimizer] failed to load playback sources', error);
+            }
+        },
+
+        // Same source order as the storefront player: hls.js (MSE), native HLS (Safari), then MP4.
+        // hls.js is imported on demand so it only loads when a video is actually opened.
+        async _attachPlayer() {
+            const el = this.$refs.player;
+            if (!el || !this.playback) {
+                return;
+            }
+            const { hls, mp4 } = this.playback;
+            if (hls) {
+                const { default: Hls } = await import('hls.js/dist/hls.light.mjs');
+                if (this._unmounted) {
+                    return;
+                }
+                if (Hls.isSupported()) {
+                    this._hls = new Hls();
+                    this._hls.on(Hls.Events.ERROR, (event, data) => {
+                        if (data.fatal && mp4) {
+                            this._destroyPlayer();
+                            el.src = mp4;
+                        }
+                    });
+                    this._hls.loadSource(hls);
+                    this._hls.attachMedia(el);
+                    return;
+                }
+                if (el.canPlayType('application/vnd.apple.mpegurl')) {
+                    el.src = hls;
+                    return;
+                }
+            }
+            if (mp4) {
+                el.src = mp4;
+            }
+        },
+
+        _destroyPlayer() {
+            if (this._hls) {
+                this._hls.destroy();
+                this._hls = null;
             }
         },
 

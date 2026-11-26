@@ -3,6 +3,7 @@
 namespace ScaleCommerce\VideoOptimizer\DataResolver;
 
 use Psr\Log\LoggerInterface;
+use ScaleCommerce\VideoOptimizer\Service\EmbedSources;
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\Content\Cms\DataResolver\FieldConfigCollection;
@@ -103,8 +104,8 @@ trait VideoSurfaceTrait
         $sources = $embed['sources'] ?? [];
 
         return [
-            'hls' => $this->pickHlsSource($sources),
-            'mp4' => $this->pickMp4Source($sources),
+            'hls' => EmbedSources::hls($sources),
+            'mp4' => EmbedSources::mp4($sources),
             'poster' => $embed['poster'] ?? null,
             'title' => $embed['title'] ?? null,
             'duration' => $embed['duration'] ?? null,
@@ -122,43 +123,5 @@ trait VideoSurfaceTrait
         }
 
         return $m[1] . ' / ' . $m[2];
-    }
-
-    protected function pickHlsSource(array $sources): ?string
-    {
-        foreach ($sources as $source) {
-            $isHls = ($source['codec'] ?? null) === 'hls' || ($source['type'] ?? null) === 'application/vnd.apple.mpegurl';
-            if ($isHls && $this->isPlayableSource($source)) {
-                return $source['src'];
-            }
-        }
-
-        return null;
-    }
-
-    protected function pickMp4Source(array $sources): ?string
-    {
-        $best = null;
-        $bestSize = -1;
-        foreach ($sources as $source) {
-            if (($source['type'] ?? null) !== 'video/mp4' || !$this->isPlayableSource($source)) {
-                continue;
-            }
-            if (!str_ends_with((string) $source['src'], '.mp4')) {
-                continue;
-            }
-            $size = (int) ($source['size'] ?? 0);
-            if ($size > $bestSize) {
-                $bestSize = $size;
-                $best = $source['src'];
-            }
-        }
-
-        return $best;
-    }
-
-    protected function isPlayableSource(array $source): bool
-    {
-        return isset($source['src']) && is_string($source['src']) && $source['src'] !== '';
     }
 }
