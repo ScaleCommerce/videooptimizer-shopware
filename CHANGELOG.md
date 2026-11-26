@@ -5,15 +5,17 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [0.6.0] - unreleased
+## [1.0.0] - 2026-11-26
 
-> Publish only once `https://player.videooptimizer.eu` is live: new installations default to it.
+First stable release. No breaking changes compared to 0.5.x: configuration, CMS element data and routes stay the same.
 
 ### Changed
 - The `embedBaseUrl` default is now `https://player.videooptimizer.eu`, VideoOptimizer's dedicated player host (the apex `videooptimizer.eu` becomes the marketing site). Existing installations keep their stored value; `https://videooptimizer.eu` keeps serving embeds permanently, so nothing breaks — switch the setting to the player host at your convenience and clear the cache.
 
 ### Fixed
 - Hosted-embed `<iframe>`s (direct surface, single-video element, blocks facade/lightbox) now carry `allow="autoplay; fullscreen; picture-in-picture"` plus `allowfullscreen`, matching VideoOptimizer's own snippets — picture-in-picture was not delegated before.
+- Renaming a video in the admin gallery opens a Shopware modal instead of the browser's native `prompt()` dialog.
+- `shopware-cli extension validate` passes without errors: administration snippets are loaded through Shopware's automatic snippet discovery instead of being bundled into the module registration (smaller admin bundle), storefront plugins extend `window.PluginBaseClass`, and leftover lint findings (unused catch bindings, a redundant type check, an internal `#[Package]` attribute) were cleaned up.
 
 ## [0.5.2] - 2026-09-04
 
