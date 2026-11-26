@@ -46,7 +46,7 @@ Shopware.Component.register('scalecommerce-vo-spotlight-config', {
             try {
                 const response = await this.scalecommerceVoApiService.getLibraries();
                 this.libraries = response.data ?? response;
-            } catch (error) {
+            } catch {
                 this.libraries = [];
             }
         },

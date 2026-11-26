@@ -39,7 +39,7 @@ Shopware.Component.register('scalecommerce-vo-cms-element-config', {
             try {
                 const response = await this.scalecommerceVoApiService.getLibraries();
                 this.libraries = response.data ?? response;
-            } catch (error) {
+            } catch {
                 this.libraries = [];
             }
         },

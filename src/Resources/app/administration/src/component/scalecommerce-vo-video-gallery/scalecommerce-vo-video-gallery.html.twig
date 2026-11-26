@@ -180,5 +180,24 @@
             </mt-button>
         </template>
     </sw-modal>
+
+    <sw-modal
+        v-if="renameVideo"
+        variant="small"
+        :title="$tc('scalecommerce-vo.gallery.rename')"
+        @modal-close="onRenameCancel">
+        <mt-text-field
+            v-model="renameTitle"
+            :label="$tc('scalecommerce-vo.gallery.renamePrompt')"
+            @keydown.enter="onConfirmRename" />
+        <template #modal-footer>
+            <mt-button size="small" variant="secondary" @click="onRenameCancel">
+                {{ $tc('scalecommerce-vo.gallery.cancel') }}
+            </mt-button>
+            <mt-button size="small" variant="primary" :disabled="!renameTitle.trim()" @click="onConfirmRename">
+                {{ $tc('scalecommerce-vo.gallery.rename') }}
+            </mt-button>
+        </template>
+    </sw-modal>
 </div>
 {% endblock %}

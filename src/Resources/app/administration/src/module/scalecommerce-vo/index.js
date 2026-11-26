@@ -1,6 +1,4 @@
 import './page/scalecommerce-vo-list';
-import deDE from './snippet/de-DE.json';
-import enGB from './snippet/en-GB.json';
 
 Shopware.Module.register('scalecommerce-vo', {
     type: 'plugin',
@@ -8,10 +6,6 @@ Shopware.Module.register('scalecommerce-vo', {
     title: 'scalecommerce-vo.general.mainMenuItemGeneral',
     color: '#ff3d58',
     icon: 'regular-play',
-    snippets: {
-        'de-DE': deDE,
-        'en-GB': enGB,
-    },
     routes: {
         list: {
             component: 'scalecommerce-vo-list',

@@ -14,7 +14,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 class VideoOptimizerClient
 {
     private const DEFAULT_BASE_URL = 'https://api.videooptimizer.eu/api/v1';
-    private const DEFAULT_EMBED_BASE_URL = 'https://videooptimizer.eu';
+    private const DEFAULT_EMBED_BASE_URL = 'https://player.videooptimizer.eu';
     private const PAGE_LIMIT = 100;
     private const MAX_PAGES = 100;
     private const MAX_RETRY_AFTER = 5;
@@ -176,7 +176,7 @@ class VideoOptimizerClient
             throw $freshFailure;
         }
 
-        if (is_array($result) && ($result['__scvo_failed'] ?? false) === true) {
+        if (($result['__scvo_failed'] ?? false) === true) {
             throw new VideoOptimizerApiException(503, 'VideoOptimizer embed temporarily unavailable (cached failure).');
         }
 

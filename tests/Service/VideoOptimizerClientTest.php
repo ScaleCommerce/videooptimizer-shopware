@@ -361,7 +361,7 @@ class VideoOptimizerClientTest extends TestCase
     public function testEmbedBaseUrlFallsBackToDefault(): void
     {
         $client = $this->client(new MockHttpClient(), $this->config(embedBaseUrl: ''));
-        static::assertSame('https://videooptimizer.eu', $client->embedBaseUrl());
+        static::assertSame('https://player.videooptimizer.eu', $client->embedBaseUrl());
     }
 
     public function testNonHttpsEmbedBaseUrlThrows(): void

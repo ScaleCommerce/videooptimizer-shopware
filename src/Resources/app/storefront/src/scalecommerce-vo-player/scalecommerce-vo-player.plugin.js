@@ -1,7 +1,6 @@
-import Plugin from 'src/plugin-system/plugin.class';
 import Hls from 'hls.js/dist/hls.light.mjs';
 
-export default class ScalecommerceVoPlayer extends Plugin {
+export default class ScalecommerceVoPlayer extends window.PluginBaseClass {
     static options = {
         hls: null,
         mp4: null,

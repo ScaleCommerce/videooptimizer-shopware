@@ -55,7 +55,7 @@ Shopware.Component.register('scalecommerce-vo-video-grid-config', {
             try {
                 const response = await this.scalecommerceVoApiService.getLibraries();
                 this.libraries = response.data ?? response;
-            } catch (error) {
+            } catch {
                 this.libraries = [];
             }
         },
@@ -68,7 +68,7 @@ Shopware.Component.register('scalecommerce-vo-video-grid-config', {
                     const response = await this.scalecommerceVoApiService.getVideo(uuid);
                     const video = response.data ?? response;
                     this.posters = { ...this.posters, [uuid]: video?.poster_url || video?.thumbnail_url || null };
-                } catch (error) {
+                } catch {
                     this.posters = { ...this.posters, [uuid]: null };
                 }
             }));
