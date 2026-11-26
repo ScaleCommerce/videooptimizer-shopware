@@ -1,11 +1,10 @@
-import Plugin from 'src/plugin-system/plugin.class';
 import Hls from 'hls.js/dist/hls.light.mjs';
 
 // Attaches an adaptive HLS source to the decorative background <video> of a
 // background-hero element. The video already carries muted/autoplay/loop/
 // playsinline; this only wires up the HLS stream (MP4-only heroes get a plain
 // `src` in Twig and never match this plugin's selector).
-export default class ScalecommerceVoHero extends Plugin {
+export default class ScalecommerceVoHero extends window.PluginBaseClass {
     init() {
         const hlsUrl = this.el.getAttribute('data-scalecommerce-vo-hero-hls');
         if (!hlsUrl) {

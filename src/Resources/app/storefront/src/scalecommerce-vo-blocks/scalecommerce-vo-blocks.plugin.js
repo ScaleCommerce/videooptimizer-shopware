@@ -1,4 +1,3 @@
-import Plugin from 'src/plugin-system/plugin.class';
 import Hls from 'hls.js/dist/hls.light.mjs';
 
 // Only one lightbox may be open at a time across the whole page (there can be several
@@ -6,7 +5,7 @@ import Hls from 'hls.js/dist/hls.light.mjs';
 // module scope rather than on the plugin instance.
 let lightboxOpen = false;
 
-export default class ScalecommerceVoBlocks extends Plugin {
+export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
     init() {
         this.facade = this.el.querySelector('[data-vo-action]');
         if (this.facade) {
@@ -28,8 +27,12 @@ export default class ScalecommerceVoBlocks extends Plugin {
         const action = this.facade.getAttribute('data-vo-action');
         const playerMode = this.el.getAttribute('data-vo-player-mode');
         const embedUrl = this.el.getAttribute('data-vo-embed-url');
-        let nativeOptions = {};
-        try { nativeOptions = JSON.parse(this.el.getAttribute('data-vo-native-options') || '{}'); } catch (e) { nativeOptions = {}; }
+        let nativeOptions;
+        try {
+            nativeOptions = JSON.parse(this.el.getAttribute('data-vo-native-options') || '{}');
+        } catch {
+            nativeOptions = {};
+        }
 
         if (action === 'lightbox') {
             this._openLightbox(playerMode, embedUrl, nativeOptions);

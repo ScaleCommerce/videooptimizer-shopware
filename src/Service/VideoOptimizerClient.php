@@ -176,7 +176,7 @@ class VideoOptimizerClient
             throw $freshFailure;
         }
 
-        if (is_array($result) && ($result['__scvo_failed'] ?? false) === true) {
+        if (($result['__scvo_failed'] ?? false) === true) {
             throw new VideoOptimizerApiException(503, 'VideoOptimizer embed temporarily unavailable (cached failure).');
         }
 
