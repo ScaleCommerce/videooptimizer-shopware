@@ -9,8 +9,8 @@ Shopware.Component.register('scalecommerce-vo-video-grid-config', {
     data() {
         return {
             libraries: [],
-            posters: {},        // uuid -> poster url
-            pickerIndex: null,  // null = closed, -1 = adding new, >=0 = editing that row
+            posters: {}, // uuid -> poster url
+            pickerIndex: null, // null = closed, -1 = adding new, >=0 = editing that row
             pickerLibraryId: null,
         };
     },
@@ -20,19 +20,43 @@ Shopware.Component.register('scalecommerce-vo-video-grid-config', {
             return this.element.config.items.value ?? [];
         },
         libraryOptions() {
-            return this.libraries.map((library) => ({ value: library.id, label: library.name }));
+            return this.libraries.map((library) => ({
+                value: library.id,
+                label: library.name,
+            }));
         },
         presentationOptions() {
             return [
-                { value: 'facade', label: this.$tc('scalecommerce-vo.videoGrid.presentationFacade') },
-                { value: 'lightbox', label: this.$tc('scalecommerce-vo.videoGrid.presentationLightbox') },
-                { value: 'direct', label: this.$tc('scalecommerce-vo.videoGrid.presentationDirect') },
+                {
+                    value: 'facade',
+                    label: this.$tc(
+                        'scalecommerce-vo.videoGrid.presentationFacade'
+                    ),
+                },
+                {
+                    value: 'lightbox',
+                    label: this.$tc(
+                        'scalecommerce-vo.videoGrid.presentationLightbox'
+                    ),
+                },
+                {
+                    value: 'direct',
+                    label: this.$tc(
+                        'scalecommerce-vo.videoGrid.presentationDirect'
+                    ),
+                },
             ];
         },
         playerModeOptions() {
             return [
-                { value: 'native', label: this.$tc('scalecommerce-vo.videoGrid.playerNative') },
-                { value: 'embed', label: this.$tc('scalecommerce-vo.videoGrid.playerEmbed') },
+                {
+                    value: 'native',
+                    label: this.$tc('scalecommerce-vo.videoGrid.playerNative'),
+                },
+                {
+                    value: 'embed',
+                    label: this.$tc('scalecommerce-vo.videoGrid.playerEmbed'),
+                },
             ];
         },
         pickerSelectedUuid() {
@@ -53,7 +77,8 @@ Shopware.Component.register('scalecommerce-vo-video-grid-config', {
     methods: {
         async loadLibraries() {
             try {
-                const response = await this.scalecommerceVoApiService.getLibraries();
+                const response =
+                    await this.scalecommerceVoApiService.getLibraries();
                 this.libraries = response.data ?? response;
             } catch {
                 this.libraries = [];
@@ -62,16 +87,27 @@ Shopware.Component.register('scalecommerce-vo-video-grid-config', {
         async loadPosters() {
             // Use key presence, not truthiness, so a video whose poster resolved to null
             // (posterless) is not re-fetched on every subsequent call.
-            const uuids = this.items.map((item) => item.video).filter((uuid) => uuid && !(uuid in this.posters));
-            await Promise.all(uuids.map(async (uuid) => {
-                try {
-                    const response = await this.scalecommerceVoApiService.getVideo(uuid);
-                    const video = response.data ?? response;
-                    this.posters = { ...this.posters, [uuid]: video?.poster_url || video?.thumbnail_url || null };
-                } catch {
-                    this.posters = { ...this.posters, [uuid]: null };
-                }
-            }));
+            const uuids = this.items
+                .map((item) => item.video)
+                .filter((uuid) => uuid && !(uuid in this.posters));
+            await Promise.all(
+                uuids.map(async (uuid) => {
+                    try {
+                        const response =
+                            await this.scalecommerceVoApiService.getVideo(uuid);
+                        const video = response.data ?? response;
+                        this.posters = {
+                            ...this.posters,
+                            [uuid]:
+                                video?.poster_url ||
+                                video?.thumbnail_url ||
+                                null,
+                        };
+                    } catch {
+                        this.posters = { ...this.posters, [uuid]: null };
+                    }
+                })
+            );
         },
         poster(uuid) {
             return uuid ? (this.posters[uuid] ?? null) : null;
@@ -86,7 +122,8 @@ Shopware.Component.register('scalecommerce-vo-video-grid-config', {
         },
         openPicker(index) {
             this.pickerIndex = index;
-            this.pickerLibraryId = this.items[index]?.libraryId ?? this.libraries[0]?.id ?? null;
+            this.pickerLibraryId =
+                this.items[index]?.libraryId ?? this.libraries[0]?.id ?? null;
         },
         closePicker() {
             this.pickerIndex = null;
@@ -96,18 +133,31 @@ Shopware.Component.register('scalecommerce-vo-video-grid-config', {
         },
         onPickVideo(uuid) {
             if (this.pickerIndex === -1) {
-                this.updateItems([...this.items, { video: uuid, libraryId: this.pickerLibraryId, label: '' }]);
+                this.updateItems([
+                    ...this.items,
+                    { video: uuid, libraryId: this.pickerLibraryId, label: '' },
+                ]);
             } else if (this.pickerIndex !== null) {
-                const next = this.items.map((item, i) => (i === this.pickerIndex
-                    ? { ...item, video: uuid, libraryId: this.pickerLibraryId }
-                    : item));
+                const next = this.items.map((item, i) =>
+                    i === this.pickerIndex
+                        ? {
+                              ...item,
+                              video: uuid,
+                              libraryId: this.pickerLibraryId,
+                          }
+                        : item
+                );
                 this.updateItems(next);
             }
             this.loadPosters();
             this.closePicker();
         },
         onLabelInput(index, value) {
-            this.updateItems(this.items.map((item, i) => (i === index ? { ...item, label: value } : item)));
+            this.updateItems(
+                this.items.map((item, i) =>
+                    i === index ? { ...item, label: value } : item
+                )
+            );
         },
         moveUp(index) {
             if (index <= 0) return;

@@ -66,6 +66,7 @@ class VideoOptimizerAdminController
     {
         return $this->wrap(function () use ($id): array {
             $this->client->deleteLibrary($id);
+
             return [];
         }, Response::HTTP_NO_CONTENT);
     }
@@ -86,6 +87,7 @@ class VideoOptimizerAdminController
     public function listAllVideos(Request $request): JsonResponse
     {
         $libraryId = $request->query->get('libraryId');
+
         return $this->wrap(fn () => $this->client->listAllVideos($libraryId !== null ? (string) $libraryId : null));
     }
 
@@ -139,6 +141,7 @@ class VideoOptimizerAdminController
     {
         return $this->wrap(function () use ($uuid): array {
             $this->client->deleteVideo($uuid);
+
             return [];
         }, Response::HTTP_NO_CONTENT);
     }
@@ -173,6 +176,7 @@ class VideoOptimizerAdminController
     {
         try {
             $image = $this->client->getThumbnailImage($uuid, (int) $index);
+
             return new Response($image['content'], Response::HTTP_OK, [
                 'Content-Type' => $this->safeThumbnailContentType($image['contentType']),
                 'X-Content-Type-Options' => 'nosniff',
@@ -192,6 +196,7 @@ class VideoOptimizerAdminController
         // of throwing an uncaught JsonException before wrap() is even called.
         return $this->wrap(function () use ($uuid, $request): array {
             $index = (int) ($this->payload($request)['thumbnailIndex'] ?? 0);
+
             return $this->client->selectThumbnail($uuid, $index);
         });
     }
@@ -213,6 +218,7 @@ class VideoOptimizerAdminController
         // payload() must run inside the wrap() closure - see selectThumbnail() above.
         return $this->wrap(function () use ($uuid, $request): array {
             $key = (string) ($this->payload($request)['key'] ?? '');
+
             return $this->client->completePosterUpload($uuid, $key);
         });
     }
@@ -228,6 +234,7 @@ class VideoOptimizerAdminController
     {
         return $this->wrap(function () use ($uuid): array {
             $this->client->deletePoster($uuid);
+
             return [];
         }, Response::HTTP_NO_CONTENT);
     }
@@ -297,6 +304,7 @@ class VideoOptimizerAdminController
 
         // Malformed JSON must fail loudly instead of silently becoming an empty payload.
         $decoded = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
+
         return is_array($decoded) ? $decoded : [];
     }
 
@@ -311,6 +319,7 @@ class VideoOptimizerAdminController
 
                 return $response;
             }
+
             return new JsonResponse(['data' => $data], $successStatus);
         } catch (MissingApiTokenException|InvalidApiBaseUrlException|InvalidRequestException $e) {
             return new JsonResponse(['errors' => [['status' => '400', 'detail' => $e->getMessage()]]], 400);

@@ -37,9 +37,10 @@ export function formatMetaLine(video, translate) {
     }
     const parsed = parseResolution(video.resolution);
     const dimensions = parsed ? `${parsed.width}×${parsed.height}` : null;
-    const duration = video.duration === null || video.duration === undefined
-        ? null
-        : formatDuration(video.duration);
+    const duration =
+        video.duration === null || video.duration === undefined
+            ? null
+            : formatDuration(video.duration);
     const key = orientationKey(video.resolution);
     const labels = {
         portrait: 'scalecommerce-vo.gallery.orientationPortrait',
@@ -48,5 +49,7 @@ export function formatMetaLine(video, translate) {
     };
     const orientation = key ? translate(labels[key]) : null;
 
-    return [dimensions, duration, orientation].filter((part) => part !== null).join(' · ');
+    return [dimensions, duration, orientation]
+        .filter((part) => part !== null)
+        .join(' · ');
 }

@@ -18,7 +18,9 @@ Shopware.Component.register('scalecommerce-vo-video-grid-component', {
 
     computed: {
         items() {
-            return (this.element.config?.items?.value ?? []).filter((item) => item.video);
+            return (this.element.config?.items?.value ?? []).filter(
+                (item) => item.video
+            );
         },
         headline() {
             return this.element.config?.headline?.value || '';
@@ -52,10 +54,12 @@ Shopware.Component.register('scalecommerce-vo-video-grid-component', {
                 return {
                     uuid: item.video,
                     label: item.label || '',
-                    posterUrl: video ? (video.poster_url || video.thumbnail_url || null) : null,
+                    posterUrl: video
+                        ? video.poster_url || video.thumbnail_url || null
+                        : null,
                     status: video?.status ?? null,
                     meta: formatMetaLine(video, (key) => this.$tc(key)),
-                    title: video ? (video.title || video.uuid) : null,
+                    title: video ? video.title || video.uuid : null,
                 };
             });
         },
@@ -85,15 +89,24 @@ Shopware.Component.register('scalecommerce-vo-video-grid-component', {
                 .map((item) => item.video)
                 .filter((uuid) => uuid && !(uuid in this.videos));
 
-            await Promise.all(uuids.map(async (uuid) => {
-                try {
-                    const response = await this.scalecommerceVoApiService.getVideo(uuid);
-                    this.videos = { ...this.videos, [uuid]: response.data ?? response };
-                } catch (error) {
-                    console.warn('[VideoOptimizer] failed to load video for preview', error);
-                    this.videos = { ...this.videos, [uuid]: null };
-                }
-            }));
+            await Promise.all(
+                uuids.map(async (uuid) => {
+                    try {
+                        const response =
+                            await this.scalecommerceVoApiService.getVideo(uuid);
+                        this.videos = {
+                            ...this.videos,
+                            [uuid]: response.data ?? response,
+                        };
+                    } catch (error) {
+                        console.warn(
+                            '[VideoOptimizer] failed to load video for preview',
+                            error
+                        );
+                        this.videos = { ...this.videos, [uuid]: null };
+                    }
+                })
+            );
         },
     },
 });

@@ -13,7 +13,10 @@ Shopware.Component.register('scalecommerce-vo-media-split-config', {
 
     computed: {
         libraryOptions() {
-            return this.libraries.map((library) => ({ value: library.id, label: library.name }));
+            return this.libraries.map((library) => ({
+                value: library.id,
+                label: library.name,
+            }));
         },
         selectedLibraryId() {
             return this.element.config.libraryId.value;
@@ -23,21 +26,48 @@ Shopware.Component.register('scalecommerce-vo-media-split-config', {
         },
         sideOptions() {
             return [
-                { value: 'left', label: this.$tc('scalecommerce-vo.mediaSplit.sideLeft') },
-                { value: 'right', label: this.$tc('scalecommerce-vo.mediaSplit.sideRight') },
+                {
+                    value: 'left',
+                    label: this.$tc('scalecommerce-vo.mediaSplit.sideLeft'),
+                },
+                {
+                    value: 'right',
+                    label: this.$tc('scalecommerce-vo.mediaSplit.sideRight'),
+                },
             ];
         },
         presentationOptions() {
             return [
-                { value: 'facade', label: this.$tc('scalecommerce-vo.mediaSplit.presentationFacade') },
-                { value: 'lightbox', label: this.$tc('scalecommerce-vo.mediaSplit.presentationLightbox') },
-                { value: 'direct', label: this.$tc('scalecommerce-vo.mediaSplit.presentationDirect') },
+                {
+                    value: 'facade',
+                    label: this.$tc(
+                        'scalecommerce-vo.mediaSplit.presentationFacade'
+                    ),
+                },
+                {
+                    value: 'lightbox',
+                    label: this.$tc(
+                        'scalecommerce-vo.mediaSplit.presentationLightbox'
+                    ),
+                },
+                {
+                    value: 'direct',
+                    label: this.$tc(
+                        'scalecommerce-vo.mediaSplit.presentationDirect'
+                    ),
+                },
             ];
         },
         playerModeOptions() {
             return [
-                { value: 'native', label: this.$tc('scalecommerce-vo.mediaSplit.playerNative') },
-                { value: 'embed', label: this.$tc('scalecommerce-vo.mediaSplit.playerEmbed') },
+                {
+                    value: 'native',
+                    label: this.$tc('scalecommerce-vo.mediaSplit.playerNative'),
+                },
+                {
+                    value: 'embed',
+                    label: this.$tc('scalecommerce-vo.mediaSplit.playerEmbed'),
+                },
             ];
         },
     },
@@ -50,7 +80,8 @@ Shopware.Component.register('scalecommerce-vo-media-split-config', {
     methods: {
         async loadLibraries() {
             try {
-                const response = await this.scalecommerceVoApiService.getLibraries();
+                const response =
+                    await this.scalecommerceVoApiService.getLibraries();
                 this.libraries = response.data ?? response;
             } catch {
                 this.libraries = [];

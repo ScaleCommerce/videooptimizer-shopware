@@ -54,7 +54,11 @@
         right: 0;
         bottom: 0;
         height: 14px;
-        background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.55) 100%);
+        background: linear-gradient(
+            180deg,
+            rgba(0, 0, 0, 0) 0%,
+            rgba(0, 0, 0, 0.55) 100%
+        );
 
         &::before,
         &::after {
@@ -99,9 +103,15 @@
         background: rgba(15, 23, 42, 0.6);
         color: #fff;
 
-        &.is-ready { opacity: 0.55; }
-        &.is-pending { background: #e69200; }
-        &.is-failed { background: #de294c; }
+        &.is-ready {
+            opacity: 0.55;
+        }
+        &.is-pending {
+            background: #e69200;
+        }
+        &.is-failed {
+            background: #de294c;
+        }
     }
 
     &__meta {
@@ -139,7 +149,9 @@
         border-radius: 4px;
         background: #e4e8ed;
 
-        &:last-child { width: 65%; }
+        &:last-child {
+            width: 65%;
+        }
     }
 }
 

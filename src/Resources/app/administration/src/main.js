@@ -17,5 +17,8 @@ import './module/sw-cms/blocks/video/scalecommerce-vo-video-grid';
 
 Shopware.Service().register('scalecommerceVoApiService', (container) => {
     const initContainer = Shopware.Application.getContainer('init');
-    return new VideoOptimizerApiService(initContainer.httpClient, container.loginService);
+    return new VideoOptimizerApiService(
+        initContainer.httpClient,
+        container.loginService
+    );
 });

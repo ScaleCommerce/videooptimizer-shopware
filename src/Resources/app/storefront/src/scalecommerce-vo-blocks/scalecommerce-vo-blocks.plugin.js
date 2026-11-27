@@ -20,7 +20,9 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
         if (this._closeLightbox) {
             this._closeLightbox();
         }
-        this.el.querySelectorAll('video').forEach((video) => this._destroyVideo(video));
+        this.el
+            .querySelectorAll('video')
+            .forEach((video) => this._destroyVideo(video));
     }
 
     _onFacadeClick() {
@@ -29,7 +31,9 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
         const embedUrl = this.el.getAttribute('data-vo-embed-url');
         let nativeOptions;
         try {
-            nativeOptions = JSON.parse(this.el.getAttribute('data-vo-native-options') || '{}');
+            nativeOptions = JSON.parse(
+                this.el.getAttribute('data-vo-native-options') || '{}'
+            );
         } catch {
             nativeOptions = {};
         }
@@ -40,7 +44,9 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
         }
         // facade: replace the poster button with the player in place.
         this.facade.remove();
-        this.el.appendChild(this._buildPlayer(playerMode, embedUrl, nativeOptions, true));
+        this.el.appendChild(
+            this._buildPlayer(playerMode, embedUrl, nativeOptions, true)
+        );
     }
 
     _buildPlayer(playerMode, embedUrl, nativeOptions, autoplay) {
@@ -53,11 +59,21 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
             url.searchParams.set('autoplay', '1');
             url.searchParams.set('muted', '1');
             iframe.src = url.toString();
-            iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture');
+            iframe.setAttribute(
+                'allow',
+                'autoplay; fullscreen; picture-in-picture'
+            );
             iframe.setAttribute('allowfullscreen', '');
-            iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-presentation');
-            iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
-            iframe.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0';
+            iframe.setAttribute(
+                'sandbox',
+                'allow-scripts allow-same-origin allow-popups allow-presentation'
+            );
+            iframe.setAttribute(
+                'referrerpolicy',
+                'strict-origin-when-cross-origin'
+            );
+            iframe.style.cssText =
+                'position:absolute;inset:0;width:100%;height:100%;border:0';
             return iframe;
         }
         const wrap = document.createElement('div');
@@ -65,14 +81,17 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
         wrap.style.cssText = 'position:absolute;inset:0;width:100%;height:100%';
         const video = document.createElement('video');
         video.className = 'scalecommerce-vo-video__player';
-        video.style.cssText = 'width:100%;height:100%;object-fit:contain;background:#000';
+        video.style.cssText =
+            'width:100%;height:100%;object-fit:contain;background:#000';
         video.setAttribute('playsinline', '');
         video.controls = nativeOptions.controls !== false;
         video.loop = !!nativeOptions.loop;
         video.muted = !!nativeOptions.muted;
         // The facade/lightbox click is a user gesture, so playback is allowed with the
         // configured muted setting; _attachNative kicks it off once the source is ready.
-        if (autoplay) { video.autoplay = true; }
+        if (autoplay) {
+            video.autoplay = true;
+        }
         wrap.appendChild(video);
         this._attachNative(video, nativeOptions, autoplay);
         return wrap;
@@ -87,11 +106,20 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
             // Keep the instance reachable from the element itself so it can be destroyed
             // later without the plugin having to track every dynamically built player.
             video.__scvoHls = player;
-            if (autoplay) { player.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {})); }
+            if (autoplay) {
+                player.on(Hls.Events.MANIFEST_PARSED, () =>
+                    video.play().catch(() => {})
+                );
+            }
             return;
         }
-        if (hls && video.canPlayType('application/vnd.apple.mpegurl')) { video.src = hls; return; }
-        if (mp4) { video.src = mp4; }
+        if (hls && video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = hls;
+            return;
+        }
+        if (mp4) {
+            video.src = mp4;
+        }
     }
 
     _destroyVideo(video) {
@@ -110,7 +138,8 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
         }
         lightboxOpen = true;
 
-        const closeLabel = this.el.getAttribute('data-vo-label-close') || 'Close';
+        const closeLabel =
+            this.el.getAttribute('data-vo-label-close') || 'Close';
         const overlay = document.createElement('div');
         overlay.className = 'scalecommerce-vo-lightbox';
         overlay.setAttribute('role', 'dialog');
@@ -122,23 +151,36 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
         close.className = 'scalecommerce-vo-lightbox__close';
         close.setAttribute('aria-label', closeLabel);
         close.innerHTML = '&times;';
-        const player = this._buildPlayer(playerMode, embedUrl, nativeOptions, true);
+        const player = this._buildPlayer(
+            playerMode,
+            embedUrl,
+            nativeOptions,
+            true
+        );
         stage.appendChild(player);
         overlay.appendChild(close);
         overlay.appendChild(stage);
 
         const dismiss = (event) => {
             if (event.target === overlay || event.currentTarget === close) {
-                stage.querySelectorAll('video').forEach((video) => this._destroyVideo(video));
+                stage
+                    .querySelectorAll('video')
+                    .forEach((video) => this._destroyVideo(video));
                 overlay.remove();
                 document.removeEventListener('keydown', onKey);
-                document.body.classList.remove('scalecommerce-vo-lightbox-open');
+                document.body.classList.remove(
+                    'scalecommerce-vo-lightbox-open'
+                );
                 lightboxOpen = false;
                 this._closeLightbox = null;
                 this.facade.focus();
             }
         };
-        const onKey = (event) => { if (event.key === 'Escape') { dismiss({ currentTarget: close }); } };
+        const onKey = (event) => {
+            if (event.key === 'Escape') {
+                dismiss({ currentTarget: close });
+            }
+        };
         overlay.addEventListener('click', dismiss);
         close.addEventListener('click', dismiss);
         document.addEventListener('keydown', onKey);

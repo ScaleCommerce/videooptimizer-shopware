@@ -1,75 +1,112 @@
 const { ApiService } = Shopware.Classes;
 
 export default class VideoOptimizerApiService extends ApiService {
-    constructor(httpClient, loginService, apiEndpoint = '_action/scalecommerce-vo') {
+    constructor(
+        httpClient,
+        loginService,
+        apiEndpoint = '_action/scalecommerce-vo'
+    ) {
         super(httpClient, loginService, apiEndpoint);
         this.name = 'scalecommerceVoApiService';
     }
 
     getLibraries() {
         return this.httpClient
-            .get(`${this.getApiBasePath()}/libraries`, { headers: this.getBasicHeaders() })
+            .get(`${this.getApiBasePath()}/libraries`, {
+                headers: this.getBasicHeaders(),
+            })
             .then((response) => ApiService.handleResponse(response));
     }
 
     getEncodings() {
         return this.httpClient
-            .get(`${this.getApiBasePath()}/encodings`, { headers: this.getBasicHeaders() })
+            .get(`${this.getApiBasePath()}/encodings`, {
+                headers: this.getBasicHeaders(),
+            })
             .then((response) => ApiService.handleResponse(response));
     }
 
     createLibrary(payload) {
         return this.httpClient
-            .post(`${this.getApiBasePath()}/libraries`, payload, { headers: this.getBasicHeaders() })
+            .post(`${this.getApiBasePath()}/libraries`, payload, {
+                headers: this.getBasicHeaders(),
+            })
             .then((response) => ApiService.handleResponse(response));
     }
 
     updateLibrary(id, payload) {
         return this.httpClient
-            .patch(`${this.getApiBasePath()}/libraries/${encodeURIComponent(id)}`, payload, { headers: this.getBasicHeaders() })
+            .patch(
+                `${this.getApiBasePath()}/libraries/${encodeURIComponent(id)}`,
+                payload,
+                { headers: this.getBasicHeaders() }
+            )
             .then((response) => ApiService.handleResponse(response));
     }
 
     deleteLibrary(id) {
         return this.httpClient
-            .delete(`${this.getApiBasePath()}/libraries/${encodeURIComponent(id)}`, { headers: this.getBasicHeaders() })
+            .delete(
+                `${this.getApiBasePath()}/libraries/${encodeURIComponent(id)}`,
+                { headers: this.getBasicHeaders() }
+            )
             .then((response) => ApiService.handleResponse(response));
     }
 
     reprocessLibrary(id) {
         return this.httpClient
-            .post(`${this.getApiBasePath()}/libraries/${encodeURIComponent(id)}/reprocess`, {}, { headers: this.getBasicHeaders() })
+            .post(
+                `${this.getApiBasePath()}/libraries/${encodeURIComponent(id)}/reprocess`,
+                {},
+                { headers: this.getBasicHeaders() }
+            )
             .then((response) => ApiService.handleResponse(response));
     }
 
     getVideos(libraryId) {
         return this.httpClient
-            .get(`${this.getApiBasePath()}/libraries/${encodeURIComponent(libraryId)}/videos`, { headers: this.getBasicHeaders() })
+            .get(
+                `${this.getApiBasePath()}/libraries/${encodeURIComponent(libraryId)}/videos`,
+                { headers: this.getBasicHeaders() }
+            )
             .then((response) => ApiService.handleResponse(response));
     }
 
     getVideo(uuid) {
         return this.httpClient
-            .get(`${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}`, { headers: this.getBasicHeaders() })
+            .get(
+                `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}`,
+                { headers: this.getBasicHeaders() }
+            )
             .then((response) => ApiService.handleResponse(response));
     }
 
     getPlayback(uuid) {
         return this.httpClient
-            .get(`${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/playback`, { headers: this.getBasicHeaders() })
+            .get(
+                `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/playback`,
+                { headers: this.getBasicHeaders() }
+            )
             .then((response) => ApiService.handleResponse(response));
     }
 
     getAllVideos(libraryId) {
-        const query = libraryId ? `?libraryId=${encodeURIComponent(libraryId)}` : '';
+        const query = libraryId
+            ? `?libraryId=${encodeURIComponent(libraryId)}`
+            : '';
         return this.httpClient
-            .get(`${this.getApiBasePath()}/videos${query}`, { headers: this.getBasicHeaders() })
+            .get(`${this.getApiBasePath()}/videos${query}`, {
+                headers: this.getBasicHeaders(),
+            })
             .then((response) => ApiService.handleResponse(response));
     }
 
     getThumbnails(uuid) {
         return this.httpClient
-            .get(`${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/thumbnails`, { headers: this.getBasicHeaders() })
+            .get(
+                `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/thumbnails`,
+                { headers: this.getBasicHeaders() }
+            )
             .then((response) => ApiService.handleResponse(response));
     }
 
@@ -78,28 +115,43 @@ export default class VideoOptimizerApiService extends ApiService {
     // callers create an object URL for the <img>.
     getThumbnailImage(uuid, index) {
         return this.httpClient
-            .get(`${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/thumbnails/${encodeURIComponent(index)}`, {
-                headers: this.getBasicHeaders(),
-                responseType: 'blob',
-            })
+            .get(
+                `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/thumbnails/${encodeURIComponent(index)}`,
+                {
+                    headers: this.getBasicHeaders(),
+                    responseType: 'blob',
+                }
+            )
             .then((response) => response.data);
     }
 
     selectThumbnail(uuid, index) {
         return this.httpClient
-            .post(`${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/thumbnail`, { thumbnailIndex: index }, { headers: this.getBasicHeaders() })
+            .post(
+                `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/thumbnail`,
+                { thumbnailIndex: index },
+                { headers: this.getBasicHeaders() }
+            )
             .then((response) => ApiService.handleResponse(response));
     }
 
     initiatePosterUpload(uuid, payload) {
         return this.httpClient
-            .post(`${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/poster/initiate`, payload, { headers: this.getBasicHeaders() })
+            .post(
+                `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/poster/initiate`,
+                payload,
+                { headers: this.getBasicHeaders() }
+            )
             .then((response) => ApiService.handleResponse(response));
     }
 
     // Single presigned PUT straight to storage (poster is not multipart). No auth header.
     uploadPoster(uploadUrl, blob) {
-        return fetch(uploadUrl, { method: 'PUT', body: blob, headers: { 'Content-Type': blob.type } }).then((response) => {
+        return fetch(uploadUrl, {
+            method: 'PUT',
+            body: blob,
+            headers: { 'Content-Type': blob.type },
+        }).then((response) => {
             if (!response.ok) {
                 throw new Error(`Poster upload failed (${response.status})`);
             }
@@ -108,37 +160,54 @@ export default class VideoOptimizerApiService extends ApiService {
 
     completePosterUpload(uuid, key) {
         return this.httpClient
-            .post(`${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/poster/complete`, { key }, { headers: this.getBasicHeaders() })
+            .post(
+                `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/poster/complete`,
+                { key },
+                { headers: this.getBasicHeaders() }
+            )
             .then((response) => ApiService.handleResponse(response));
     }
 
     selectPoster(uuid, payload) {
         return this.httpClient
-            .post(`${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/poster/select`, payload, { headers: this.getBasicHeaders() })
+            .post(
+                `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/poster/select`,
+                payload,
+                { headers: this.getBasicHeaders() }
+            )
             .then((response) => ApiService.handleResponse(response));
     }
 
     deletePoster(uuid) {
         return this.httpClient
-            .delete(`${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/poster`, { headers: this.getBasicHeaders() })
+            .delete(
+                `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/poster`,
+                { headers: this.getBasicHeaders() }
+            )
             .then((response) => ApiService.handleResponse(response));
     }
 
     initiateUpload(payload) {
         return this.httpClient
-            .post(`${this.getApiBasePath()}/videos/upload/initiate`, payload, { headers: this.getBasicHeaders() })
+            .post(`${this.getApiBasePath()}/videos/upload/initiate`, payload, {
+                headers: this.getBasicHeaders(),
+            })
             .then((response) => ApiService.handleResponse(response));
     }
 
     completeUpload(payload) {
         return this.httpClient
-            .post(`${this.getApiBasePath()}/videos/upload/complete`, payload, { headers: this.getBasicHeaders() })
+            .post(`${this.getApiBasePath()}/videos/upload/complete`, payload, {
+                headers: this.getBasicHeaders(),
+            })
             .then((response) => ApiService.handleResponse(response));
     }
 
     ingestVideoUrl(payload) {
         return this.httpClient
-            .post(`${this.getApiBasePath()}/videos/ingest`, payload, { headers: this.getBasicHeaders() })
+            .post(`${this.getApiBasePath()}/videos/ingest`, payload, {
+                headers: this.getBasicHeaders(),
+            })
             .then((response) => ApiService.handleResponse(response));
     }
 
@@ -146,34 +215,48 @@ export default class VideoOptimizerApiService extends ApiService {
     // complete step needs. Cross-origin, so no auth header; the bucket must expose ETag via CORS.
     uploadParts(file, parts, partSize) {
         return parts.reduce(
-            (chain, part) => chain.then((etags) => {
-                const start = (part.partNumber - 1) * partSize;
-                const blob = file.slice(start, start + partSize);
-                return fetch(part.url, { method: 'PUT', body: blob }).then((response) => {
-                    if (!response.ok) {
-                        throw new Error(`Part upload failed (${response.status})`);
-                    }
-                    const etag = response.headers.get('ETag');
-                    if (!etag) {
-                        throw new Error('Missing ETag on uploaded part - check bucket CORS (expose ETag).');
-                    }
-                    etags.push({ partNumber: part.partNumber, etag });
-                    return etags;
-                });
-            }),
-            Promise.resolve([]),
+            (chain, part) =>
+                chain.then((etags) => {
+                    const start = (part.partNumber - 1) * partSize;
+                    const blob = file.slice(start, start + partSize);
+                    return fetch(part.url, { method: 'PUT', body: blob }).then(
+                        (response) => {
+                            if (!response.ok) {
+                                throw new Error(
+                                    `Part upload failed (${response.status})`
+                                );
+                            }
+                            const etag = response.headers.get('ETag');
+                            if (!etag) {
+                                throw new Error(
+                                    'Missing ETag on uploaded part - check bucket CORS (expose ETag).'
+                                );
+                            }
+                            etags.push({ partNumber: part.partNumber, etag });
+                            return etags;
+                        }
+                    );
+                }),
+            Promise.resolve([])
         );
     }
 
     updateVideo(uuid, payload) {
         return this.httpClient
-            .patch(`${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}`, payload, { headers: this.getBasicHeaders() })
+            .patch(
+                `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}`,
+                payload,
+                { headers: this.getBasicHeaders() }
+            )
             .then((response) => ApiService.handleResponse(response));
     }
 
     deleteVideo(uuid) {
         return this.httpClient
-            .delete(`${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}`, { headers: this.getBasicHeaders() })
+            .delete(
+                `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}`,
+                { headers: this.getBasicHeaders() }
+            )
             .then((response) => ApiService.handleResponse(response));
     }
 }

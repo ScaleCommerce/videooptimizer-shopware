@@ -44,7 +44,9 @@ export default class ScalecommerceVoPlayer extends window.PluginBaseClass {
             // With hls.js the media is fed via MSE; the autoplay attribute alone is unreliable,
             // so kick off playback once the manifest is ready (already muted when autoplay is on).
             if (this.options.autoplay) {
-                this.hls.on(Hls.Events.MANIFEST_PARSED, () => this.video.play().catch(() => {}));
+                this.hls.on(Hls.Events.MANIFEST_PARSED, () =>
+                    this.video.play().catch(() => {})
+                );
             }
             return;
         }

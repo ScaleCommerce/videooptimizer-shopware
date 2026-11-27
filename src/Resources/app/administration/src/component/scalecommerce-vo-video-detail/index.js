@@ -1,6 +1,10 @@
 import template from './scalecommerce-vo-video-detail.html.twig';
 import './scalecommerce-vo-video-detail.scss';
-import { parseResolution, formatDuration, orientationKey } from '../../helper/video-meta';
+import {
+    parseResolution,
+    formatDuration,
+    orientationKey,
+} from '../../helper/video-meta';
 
 const { Component, Mixin } = Shopware;
 
@@ -36,10 +40,17 @@ Component.register('scalecommerce-vo-video-detail', {
             if (!url) {
                 return null;
             }
-            return url + (url.indexOf('?') === -1 ? '?' : '&') + `_=${this.cacheBust}`;
+            return (
+                url +
+                (url.indexOf('?') === -1 ? '?' : '&') +
+                `_=${this.cacheBust}`
+            );
         },
         canPlay() {
-            return !!(this.playback && (this.playback.hls || this.playback.mp4));
+            return !!(
+                this.playback &&
+                (this.playback.hls || this.playback.mp4)
+            );
         },
         hasCustomPoster() {
             return this.video?.poster?.source === 'custom';
@@ -53,12 +64,17 @@ Component.register('scalecommerce-vo-video-detail', {
             if (res) {
                 parts.push(`${res.width}×${res.height}`);
             }
-            if (this.video.duration !== null && this.video.duration !== undefined) {
+            if (
+                this.video.duration !== null &&
+                this.video.duration !== undefined
+            ) {
                 parts.push(formatDuration(this.video.duration));
             }
             const key = orientationKey(this.video.resolution);
             if (key) {
-                parts.push(this.$tc(`scalecommerce-vo.detail.orientation_${key}`));
+                parts.push(
+                    this.$tc(`scalecommerce-vo.detail.orientation_${key}`)
+                );
             }
             if (this.video.status) {
                 parts.push(this.video.status);
@@ -74,21 +90,30 @@ Component.register('scalecommerce-vo-video-detail', {
     beforeUnmount() {
         this._unmounted = true;
         this._destroyPlayer();
-        Object.values(this.frameSrcById).forEach((src) => URL.revokeObjectURL(src));
+        Object.values(this.frameSrcById).forEach((src) =>
+            URL.revokeObjectURL(src)
+        );
     },
 
     methods: {
         async _load() {
             try {
-                const videoResponse = await this.scalecommerceVoApiService.getVideo(this.uuid);
+                const videoResponse =
+                    await this.scalecommerceVoApiService.getVideo(this.uuid);
                 this.video = videoResponse.data ?? videoResponse;
                 this._loadPlayback();
-                const thumbsResponse = await this.scalecommerceVoApiService.getThumbnails(this.uuid);
-                const thumbs = (thumbsResponse.data ?? thumbsResponse).thumbnails ?? [];
+                const thumbsResponse =
+                    await this.scalecommerceVoApiService.getThumbnails(
+                        this.uuid
+                    );
+                const thumbs =
+                    (thumbsResponse.data ?? thumbsResponse).thumbnails ?? [];
                 this.thumbnails = thumbs;
                 thumbs.forEach((thumb) => this._loadFrame(thumb.index));
             } catch (error) {
-                this.createNotificationError({ message: this._errorText(error) });
+                this.createNotificationError({
+                    message: this._errorText(error),
+                });
             }
         },
 
@@ -97,7 +122,8 @@ Component.register('scalecommerce-vo-video-detail', {
                 return;
             }
             try {
-                const response = await this.scalecommerceVoApiService.getPlayback(this.uuid);
+                const response =
+                    await this.scalecommerceVoApiService.getPlayback(this.uuid);
                 if (this._unmounted) {
                     return;
                 }
@@ -106,7 +132,10 @@ Component.register('scalecommerce-vo-video-detail', {
                 await this._attachPlayer();
             } catch (error) {
                 // Playback is a convenience on top of the poster; keep showing the poster.
-                console.warn('[VideoOptimizer] failed to load playback sources', error);
+                console.warn(
+                    '[VideoOptimizer] failed to load playback sources',
+                    error
+                );
             }
         },
 
@@ -119,7 +148,8 @@ Component.register('scalecommerce-vo-video-detail', {
             }
             const { hls, mp4 } = this.playback;
             if (hls) {
-                const { default: Hls } = await import('hls.js/dist/hls.light.mjs');
+                const { default: Hls } =
+                    await import('hls.js/dist/hls.light.mjs');
                 if (this._unmounted) {
                     return;
                 }
@@ -154,7 +184,11 @@ Component.register('scalecommerce-vo-video-detail', {
 
         async _loadFrame(index) {
             try {
-                const blob = await this.scalecommerceVoApiService.getThumbnailImage(this.uuid, index);
+                const blob =
+                    await this.scalecommerceVoApiService.getThumbnailImage(
+                        this.uuid,
+                        index
+                    );
                 const url = URL.createObjectURL(blob);
                 if (this._unmounted) {
                     URL.revokeObjectURL(url);
@@ -163,7 +197,11 @@ Component.register('scalecommerce-vo-video-detail', {
                 this.frameSrcById = { ...this.frameSrcById, [index]: url };
             } catch (error) {
                 // A single frame failing is non-fatal; leave a placeholder.
-                console.warn('[VideoOptimizer] failed to load thumbnail frame', index, error);
+                console.warn(
+                    '[VideoOptimizer] failed to load thumbnail frame',
+                    index,
+                    error
+                );
             }
         },
 
@@ -174,7 +212,9 @@ Component.register('scalecommerce-vo-video-detail', {
                 return Promise.resolve();
             }
             if (attempt > 40) {
-                return Promise.reject(new Error(this.$tc('scalecommerce-vo.detail.posterTimeout')));
+                return Promise.reject(
+                    new Error(this.$tc('scalecommerce-vo.detail.posterTimeout'))
+                );
             }
             return new Promise((resolve) => {
                 window.setTimeout(async () => {
@@ -183,7 +223,10 @@ Component.register('scalecommerce-vo-video-detail', {
                         return;
                     }
                     try {
-                        const response = await this.scalecommerceVoApiService.getVideo(this.uuid);
+                        const response =
+                            await this.scalecommerceVoApiService.getVideo(
+                                this.uuid
+                            );
                         const video = response.data ?? response;
                         if (this._unmounted) {
                             resolve();
@@ -196,7 +239,10 @@ Component.register('scalecommerce-vo-video-detail', {
                             return;
                         }
                     } catch (error) {
-                        console.warn('[VideoOptimizer] poster poll failed, retrying', error);
+                        console.warn(
+                            '[VideoOptimizer] poster poll failed, retrying',
+                            error
+                        );
                     }
                     resolve(this._pollPoster(predicate, attempt + 1));
                 }, 2000);
@@ -210,11 +256,18 @@ Component.register('scalecommerce-vo-video-detail', {
             this.busy = true;
             this.statusText = this.$tc('scalecommerce-vo.detail.applying');
             try {
-                await this.scalecommerceVoApiService.selectThumbnail(this.uuid, index);
-                await this._pollPoster((video) => video.poster?.source === 'thumbnail');
+                await this.scalecommerceVoApiService.selectThumbnail(
+                    this.uuid,
+                    index
+                );
+                await this._pollPoster(
+                    (video) => video.poster?.source === 'thumbnail'
+                );
                 this.$emit('updated');
             } catch (error) {
-                this.createNotificationError({ message: this._errorText(error) });
+                this.createNotificationError({
+                    message: this._errorText(error),
+                });
             } finally {
                 this.busy = false;
                 this.statusText = '';
@@ -232,24 +285,48 @@ Component.register('scalecommerce-vo-video-detail', {
             this.busy = true;
             this.statusText = this.$tc('scalecommerce-vo.detail.uploading');
             try {
-                const initResponse = await this.scalecommerceVoApiService.initiatePosterUpload(this.uuid, {
-                    contentType: blob.type,
-                    fileSize: blob.size,
-                });
+                const initResponse =
+                    await this.scalecommerceVoApiService.initiatePosterUpload(
+                        this.uuid,
+                        {
+                            contentType: blob.type,
+                            fileSize: blob.size,
+                        }
+                    );
                 const init = initResponse.data ?? initResponse;
-                await this.scalecommerceVoApiService.uploadPoster(init.uploadUrl, blob);
-                await this.scalecommerceVoApiService.completePosterUpload(this.uuid, init.key);
-                this.statusText = this.$tc('scalecommerce-vo.detail.processing');
-                await this._pollPoster((video) => ['ready', 'failed'].includes(video.poster?.custom_status));
+                await this.scalecommerceVoApiService.uploadPoster(
+                    init.uploadUrl,
+                    blob
+                );
+                await this.scalecommerceVoApiService.completePosterUpload(
+                    this.uuid,
+                    init.key
+                );
+                this.statusText = this.$tc(
+                    'scalecommerce-vo.detail.processing'
+                );
+                await this._pollPoster((video) =>
+                    ['ready', 'failed'].includes(video.poster?.custom_status)
+                );
                 if (this.video.poster?.custom_status === 'failed') {
-                    throw new Error(this.$tc('scalecommerce-vo.detail.posterFailed'));
+                    throw new Error(
+                        this.$tc('scalecommerce-vo.detail.posterFailed')
+                    );
                 }
-                await this.scalecommerceVoApiService.selectPoster(this.uuid, { source: 'custom' });
-                await this._pollPoster((video) => video.poster?.source === 'custom');
-                this.createNotificationSuccess({ message: this.$tc('scalecommerce-vo.detail.posterUpdated') });
+                await this.scalecommerceVoApiService.selectPoster(this.uuid, {
+                    source: 'custom',
+                });
+                await this._pollPoster(
+                    (video) => video.poster?.source === 'custom'
+                );
+                this.createNotificationSuccess({
+                    message: this.$tc('scalecommerce-vo.detail.posterUpdated'),
+                });
                 this.$emit('updated');
             } catch (error) {
-                this.createNotificationError({ message: this._errorText(error) });
+                this.createNotificationError({
+                    message: this._errorText(error),
+                });
             } finally {
                 this.busy = false;
                 this.statusText = '';
@@ -261,10 +338,14 @@ Component.register('scalecommerce-vo-video-detail', {
             this.statusText = this.$tc('scalecommerce-vo.detail.applying');
             try {
                 await this.scalecommerceVoApiService.deletePoster(this.uuid);
-                await this._pollPoster((video) => video.poster?.source !== 'custom');
+                await this._pollPoster(
+                    (video) => video.poster?.source !== 'custom'
+                );
                 this.$emit('updated');
             } catch (error) {
-                this.createNotificationError({ message: this._errorText(error) });
+                this.createNotificationError({
+                    message: this._errorText(error),
+                });
             } finally {
                 this.busy = false;
                 this.statusText = '';
@@ -283,10 +364,14 @@ Component.register('scalecommerce-vo-video-detail', {
                 return;
             }
             try {
-                const blob = await fetch(url).then((response) => response.blob());
+                const blob = await fetch(url).then((response) =>
+                    response.blob()
+                );
                 await this._uploadPoster(blob);
             } catch (error) {
-                this.createNotificationError({ message: this._errorText(error) });
+                this.createNotificationError({
+                    message: this._errorText(error),
+                });
             }
         },
 
@@ -295,9 +380,11 @@ Component.register('scalecommerce-vo-video-detail', {
         },
 
         _errorText(error) {
-            return error?.response?.data?.errors?.[0]?.detail
-                ?? error?.message
-                ?? this.$tc('scalecommerce-vo.detail.genericError');
+            return (
+                error?.response?.data?.errors?.[0]?.detail ??
+                error?.message ??
+                this.$tc('scalecommerce-vo.detail.genericError')
+            );
         },
     },
 });

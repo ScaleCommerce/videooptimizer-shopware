@@ -2,12 +2,12 @@
 
 namespace ScaleCommerce\VideoOptimizer\Service;
 
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidRequestException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
@@ -201,13 +201,6 @@ class VideoOptimizerClient
         $this->cache->delete($this->embedCacheKey($uuid));
     }
 
-    private function embedCacheKey(string $uuid): string
-    {
-        // The UUID comes from CMS slot config; rawurlencode() it so it can never smuggle a PSR-6
-        // reserved character ("{}()/\@:") into the cache key.
-        return 'scalecommerce_vo_embed_' . rawurlencode($uuid);
-    }
-
     public function listThumbnails(string $uuid): array
     {
         return $this->requestData('GET', '/videos/' . $this->pathId($uuid) . '/thumbnails');
@@ -287,6 +280,25 @@ class VideoOptimizerClient
     }
 
     /**
+     * Public host that serves the hosted embed player, used to build storefront iframe/link URLs.
+     */
+    public function embedBaseUrl(): string
+    {
+        $base = $this->systemConfig->getString('ScaleVideoOptimizer.config.embedBaseUrl');
+        $url = rtrim($base !== '' ? $base : self::DEFAULT_EMBED_BASE_URL, '/');
+        $this->assertHttpsUrl($url, 'The VideoOptimizer embed base URL must be an absolute https URL.');
+
+        return $url;
+    }
+
+    private function embedCacheKey(string $uuid): string
+    {
+        // The UUID comes from CMS slot config; rawurlencode() it so it can never smuggle a PSR-6
+        // reserved character ("{}()/\@:") into the cache key.
+        return 'scalecommerce_vo_embed_' . rawurlencode($uuid);
+    }
+
+    /**
      * Fetches every page of a cursor-paginated list endpoint and returns the merged items.
      */
     private function requestAllPages(string $path, array $extraQuery = []): array
@@ -344,7 +356,7 @@ class VideoOptimizerClient
         $url = $this->baseUrl() . $path;
 
         try {
-            for ($attempt = 0; ; ++$attempt) {
+            for ($attempt = 0;; ++$attempt) {
                 $response = $this->httpClient->request($method, $url, $options);
                 $status = $response->getStatusCode();
 
@@ -405,7 +417,7 @@ class VideoOptimizerClient
 
     /**
      * @return list<string> "Name: Value" header lines, the shape Symfony's HttpClient and our
-     *                       own request()/getThumbnailImage() calls agree on.
+     *                      own request()/getThumbnailImage() calls agree on.
      */
     private function buildHeaders(bool $withToken, string $accept): array
     {
@@ -443,18 +455,6 @@ class VideoOptimizerClient
         $base = $this->systemConfig->getString('ScaleVideoOptimizer.config.apiBaseUrl');
         $url = rtrim($base !== '' ? $base : self::DEFAULT_BASE_URL, '/');
         $this->assertHttpsUrl($url, 'The VideoOptimizer API base URL must be an absolute https URL.');
-
-        return $url;
-    }
-
-    /**
-     * Public host that serves the hosted embed player, used to build storefront iframe/link URLs.
-     */
-    public function embedBaseUrl(): string
-    {
-        $base = $this->systemConfig->getString('ScaleVideoOptimizer.config.embedBaseUrl');
-        $url = rtrim($base !== '' ? $base : self::DEFAULT_EMBED_BASE_URL, '/');
-        $this->assertHttpsUrl($url, 'The VideoOptimizer embed base URL must be an absolute https URL.');
 
         return $url;
     }

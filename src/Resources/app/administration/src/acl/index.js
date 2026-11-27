@@ -13,7 +13,10 @@ Shopware.Service('privileges').addPrivilegeMappingEntry({
         },
         creator: {
             privileges: ['scalecommerce_vo:create'],
-            dependencies: ['scalecommerce_vo.viewer', 'scalecommerce_vo.editor'],
+            dependencies: [
+                'scalecommerce_vo.viewer',
+                'scalecommerce_vo.editor',
+            ],
         },
         deleter: {
             privileges: ['scalecommerce_vo:delete'],

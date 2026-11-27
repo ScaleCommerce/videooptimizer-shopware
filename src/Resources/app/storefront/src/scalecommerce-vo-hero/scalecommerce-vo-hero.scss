@@ -10,9 +10,15 @@
     // (e.g. the upstream embed fetch failed); the video, when present, covers it.
     background-color: #0f172a;
 
-    &--full { min-height: 100vh; }
-    &--large { min-height: 72vh; }
-    &--medium { min-height: 52vh; }
+    &--full {
+        min-height: 100vh;
+    }
+    &--large {
+        min-height: 72vh;
+    }
+    &--medium {
+        min-height: 52vh;
+    }
 
     &__video {
         position: absolute;
@@ -29,7 +35,11 @@
         z-index: -1;
     }
     &--overlay-gradient &__overlay {
-        background: linear-gradient(180deg, rgba(2, 6, 23, 0.15) 0%, rgba(2, 6, 23, 0.65) 100%);
+        background: linear-gradient(
+            180deg,
+            rgba(2, 6, 23, 0.15) 0%,
+            rgba(2, 6, 23, 0.65) 100%
+        );
     }
     &--overlay-dark &__overlay {
         background: rgba(2, 6, 23, 0.55);

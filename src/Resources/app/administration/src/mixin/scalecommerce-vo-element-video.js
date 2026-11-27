@@ -38,10 +38,15 @@ export default {
                 return;
             }
             try {
-                const response = await this.scalecommerceVoApiService.getVideo(this.videoUuid);
+                const response = await this.scalecommerceVoApiService.getVideo(
+                    this.videoUuid
+                );
                 this.video = response.data ?? response;
             } catch (error) {
-                console.warn('[VideoOptimizer] failed to load video for preview', error);
+                console.warn(
+                    '[VideoOptimizer] failed to load video for preview',
+                    error
+                );
                 this.video = null;
             }
         },

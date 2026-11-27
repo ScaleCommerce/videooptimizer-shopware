@@ -14,7 +14,9 @@ export default class ScalecommerceVoHero extends window.PluginBaseClass {
             this.hls = new Hls();
             this.hls.loadSource(hlsUrl);
             this.hls.attachMedia(this.el);
-            this.hls.on(Hls.Events.MANIFEST_PARSED, () => this.el.play().catch(() => {}));
+            this.hls.on(Hls.Events.MANIFEST_PARSED, () =>
+                this.el.play().catch(() => {})
+            );
             return;
         }
         if (this.el.canPlayType('application/vnd.apple.mpegurl')) {
