@@ -12,12 +12,14 @@ Nothing to do for a standard installation: configuration, CMS element data and t
   - routes with `{id}`/`{uuid}` only match UUIDs and answer 404 for anything else (#5);
   - an upstream 401/403 is answered with 502 and the error `code` `SCALECOMMERCE_VO__API_TOKEN_REJECTED` or `SCALECOMMERCE_VO__API_TOKEN_FORBIDDEN` instead of being passed through (#2);
   - an unreachable or timed-out API is answered with 502 instead of an unhandled 500, and a success response that is not JSON with 502 instead of an empty result (#1).
-- **Decorators or subclasses of `VideoOptimizerClient`:** the constructor has a new optional fourth argument (`LoggerInterface`). Existing service definitions keep working.
+- **Decorators or subclasses of `VideoOptimizerClient`:** the constructor has two new optional arguments (`LoggerInterface`, `EmbedAvailability`). Existing service definitions keep working.
 - **Videos without playable sources** (processing failed or not finished yet) are now hidden in the storefront like deleted videos; video grid tiles for them are dropped. Before, an empty or black player was shown. Their embed data is cached for 60 seconds instead of one hour, so they appear shortly after processing has finished. (#9)
+- **HTTP cache / reverse proxy:** a page rendered while a video lookup failed, or with a video that has no playable sources, is now cached for at most 60 seconds instead of the full page TTL. Other pages are not affected. (#3)
 - **Theme overrides of the plugin's storefront templates:** the player options in `_scalecommerce-vo-surface.html.twig` and `cms-element-scalecommerce-vo-video.html.twig` gained `unavailableLabel`, and the background hero `<video>` gained `data-scalecommerce-vo-hero-mp4`. Without them, overridden templates keep working, but show an English notice and the hero has no MP4 fallback. (#9)
 - **Extensions of the storefront JS plugins:** `ScalecommerceVoPlayer` and `ScalecommerceVoHero` no longer keep the hls.js instance in `this.hls`; it is stored on the `<video>` element (`__scvoHls`). (#9)
 
 ### Fixed
+- A page rendered during a short API outage, or before a video finished processing, no longer stays in the HTTP cache without its video for the full page TTL: its cache lifetime is capped at 60 seconds, matching the negative cache of the embed lookup. Invalidating cached pages after a video is changed in the administration follows in 1.1.0. (#3)
 - Library page: without any library (new account, or after deleting the last one) the page switches to the "new library" form, so saving creates a library instead of sending `PATCH …/libraries/null`. (#12)
 - Video gallery: switching libraries clears the old list right away, and a slower response for a previously selected library can no longer overwrite the current one. (#12)
 - Custom poster upload: waiting for the new poster no longer ends early when an earlier custom poster still reports `ready`. Images from the media library are checked (HTTP status, JPEG/PNG/WebP) before the upload, with a clear message if they can't be loaded; the media picker only offers these image types, and selecting the same file again works. (#12)

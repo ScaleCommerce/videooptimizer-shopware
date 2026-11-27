@@ -31,6 +31,7 @@ class VideoOptimizerClient
         private readonly SystemConfigService $systemConfig,
         private readonly CacheInterface $cache,
         private readonly LoggerInterface $logger = new NullLogger(),
+        private readonly EmbedAvailability $availability = new EmbedAvailability(),
     ) {
     }
 
@@ -185,11 +186,20 @@ class VideoOptimizerClient
         );
 
         if ($freshFailure !== null) {
+            $this->availability->markDegraded();
+
             throw $freshFailure;
         }
 
         if (($result['__scvo_failed'] ?? false) === true) {
+            $this->availability->markDegraded();
+
             throw new VideoOptimizerApiException(503, 'VideoOptimizer embed temporarily unavailable (cached failure).');
+        }
+
+        $sources = is_array($result['sources'] ?? null) ? $result['sources'] : [];
+        if (EmbedSources::hls($sources) === null && EmbedSources::mp4($sources) === null) {
+            $this->availability->markDegraded();
         }
 
         return $result;

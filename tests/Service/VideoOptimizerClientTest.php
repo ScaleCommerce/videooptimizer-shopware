@@ -5,10 +5,12 @@ namespace ScaleCommerce\VideoOptimizer\Tests\Service;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidRequestException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
+use ScaleCommerce\VideoOptimizer\Service\EmbedAvailability;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -837,5 +839,42 @@ class VideoOptimizerClientTest extends TestCase
 
         $http = new MockHttpClient(new MockResponse(json_encode(['data' => $payload])));
         $this->client($http, null, $cache)->getEmbed('v1');
+    }
+
+    /**
+     * @return iterable<string, array{list<MockResponse>, int, bool}>
+     */
+    public static function embedAvailabilityCases(): iterable
+    {
+        $playable = new MockResponse(json_encode(['data' => ['sources' => [['src' => 'https://cdn/v.mp4', 'type' => 'video/mp4', 'size' => 1]]]]));
+        yield 'playable' => [[$playable], 1, false];
+        yield 'no playable sources' => [[new MockResponse(json_encode(['data' => ['sources' => []]]))], 1, true];
+        yield 'fresh failure' => [[new MockResponse('{}', ['http_code' => 500])], 1, true];
+        yield 'cached failure' => [[new MockResponse('{}', ['http_code' => 500])], 2, true];
+    }
+
+    /**
+     * A page rendered while an embed lookup failed (or returned no playable sources) must not stay
+     * in the HTTP cache for the full page TTL (issue #3); getEmbed() flags it for the response.
+     *
+     * @param list<MockResponse> $responses
+     */
+    #[DataProvider('embedAvailabilityCases')]
+    public function testGetEmbedFlagsDegradedEmbeds(array $responses, int $calls, bool $degraded): void
+    {
+        $availability = new EmbedAvailability();
+        $client = new VideoOptimizerClient(new MockHttpClient($responses), $this->config(), new ArrayAdapter(), new NullLogger(), $availability);
+
+        for ($i = 0; $i < $calls; ++$i) {
+            if ($i === $calls - 1) {
+                $availability->reset();
+            }
+            try {
+                $client->getEmbed('v1');
+            } catch (VideoOptimizerApiException) {
+            }
+        }
+
+        static::assertSame($degraded, $availability->isDegraded());
     }
 }
