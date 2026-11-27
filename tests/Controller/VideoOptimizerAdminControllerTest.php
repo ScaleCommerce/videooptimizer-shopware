@@ -22,7 +22,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
 
     public function testListLibrariesReturnsClientData(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('listLibraries')->willReturn([['id' => 'lib-1']]);
 
         $controller = new VideoOptimizerAdminController($client);
@@ -34,7 +34,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
 
     public function testApiExceptionBecomesErrorJson(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('listLibraries')->willThrowException(new VideoOptimizerApiException(429, 'Too Many Requests'));
 
         $controller = new VideoOptimizerAdminController($client);
@@ -47,7 +47,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
 
     public function testMissingTokenReturns400(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('listLibraries')->willThrowException(new MissingApiTokenException());
 
         $controller = new VideoOptimizerAdminController($client);
@@ -73,7 +73,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
     public function testListAllVideosReturnsClientData(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
-        $client->method('listAllVideos')->with(null)->willReturn([['uuid' => 'v1']]);
+        $client->expects(static::once())->method('listAllVideos')->with(null)->willReturn([['uuid' => 'v1']]);
 
         $controller = new VideoOptimizerAdminController($client);
         $response = $controller->listAllVideos(new Request());
@@ -125,7 +125,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
 
     public function testListEncodingsReturnsClientData(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('listEncodings')->willReturn(['codecs' => [['key' => 'h264']], 'resolutions' => []]);
 
         $controller = new VideoOptimizerAdminController($client);
@@ -141,7 +141,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
     public function testListThumbnailsReturnsClientData(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
-        $client->method('listThumbnails')->with('v1')->willReturn(['thumbnails' => [['index' => 0]]]);
+        $client->expects(static::once())->method('listThumbnails')->with('v1')->willReturn(['thumbnails' => [['index' => 0]]]);
         $controller = new VideoOptimizerAdminController($client);
         $response = $controller->listThumbnails('v1');
         static::assertSame(200, $response->getStatusCode());
@@ -151,7 +151,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
     public function testGetThumbnailImageStreamsBytes(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
-        $client->method('getThumbnailImage')->with('v1', 2)->willReturn(['content' => 'IMG', 'contentType' => 'image/jpeg']);
+        $client->expects(static::once())->method('getThumbnailImage')->with('v1', 2)->willReturn(['content' => 'IMG', 'contentType' => 'image/jpeg']);
         $controller = new VideoOptimizerAdminController($client);
         $response = $controller->getThumbnailImage('v1', '2');
         static::assertSame(200, $response->getStatusCode());
@@ -163,7 +163,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
 
     public function testGetThumbnailImageAllowsWebpAndGif(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getThumbnailImage')->willReturnMap([
             ['v1', 2, ['content' => 'WEBP', 'contentType' => 'image/webp']],
             ['v1', 3, ['content' => 'GIF', 'contentType' => 'image/gif; charset=binary']],
@@ -181,7 +181,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
     public function testGetThumbnailImageRewritesDisallowedContentTypeToOctetStream(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
-        $client->method('getThumbnailImage')->with('v1', 2)->willReturn(['content' => '<script>evil()</script>', 'contentType' => 'text/html']);
+        $client->expects(static::once())->method('getThumbnailImage')->with('v1', 2)->willReturn(['content' => '<script>evil()</script>', 'contentType' => 'text/html']);
         $controller = new VideoOptimizerAdminController($client);
         $response = $controller->getThumbnailImage('v1', '2');
 
@@ -193,7 +193,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
     public function testGetThumbnailImageContentTypeComparisonIsCaseInsensitive(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
-        $client->method('getThumbnailImage')->with('v1', 2)->willReturn(['content' => 'IMG', 'contentType' => 'IMAGE/JPEG']);
+        $client->expects(static::once())->method('getThumbnailImage')->with('v1', 2)->willReturn(['content' => 'IMG', 'contentType' => 'IMAGE/JPEG']);
         $controller = new VideoOptimizerAdminController($client);
         $response = $controller->getThumbnailImage('v1', '2');
 
@@ -587,7 +587,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
 
     public function testPlaybackWithoutSourcesReturnsNulls(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getEmbed')->willReturn(['sources' => 'garbage']);
 
         $response = (new VideoOptimizerAdminController($client))->getPlayback('vid-1');
@@ -597,7 +597,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
 
     public function testPlaybackPropagatesUpstreamErrors(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getEmbed')->willThrowException(new VideoOptimizerApiException(404, 'Video not found'));
 
         $response = (new VideoOptimizerAdminController($client))->getPlayback('vid-1');
@@ -632,7 +632,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
     #[DataProvider('upstreamAuthErrors')]
     public function testUpstreamAuthErrorBecomesBadGatewayWithOwnCode(int $upstreamStatus, string $code): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('listLibraries')->willThrowException(new VideoOptimizerApiException($upstreamStatus, 'Unauthorized'));
 
         $response = (new VideoOptimizerAdminController($client))->listLibraries();
@@ -648,7 +648,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
     #[DataProvider('upstreamAuthErrors')]
     public function testUpstreamAuthErrorOnThumbnailBecomesBadGateway(int $upstreamStatus, string $code): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getThumbnailImage')->willThrowException(new VideoOptimizerApiException($upstreamStatus, 'Unauthorized'));
 
         $response = (new VideoOptimizerAdminController($client))->getThumbnailImage(self::UUID, '1');
@@ -659,7 +659,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
 
     public function testInvalidRequestOnThumbnailReturns400(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getThumbnailImage')->willThrowException(new InvalidRequestException('Invalid VideoOptimizer ID.'));
 
         $response = (new VideoOptimizerAdminController($client))->getThumbnailImage(self::UUID, '1');

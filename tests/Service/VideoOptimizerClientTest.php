@@ -26,7 +26,7 @@ class VideoOptimizerClientTest extends TestCase
         string $baseUrl = 'https://api.videooptimizer.eu/api/v1',
         string $embedBaseUrl = 'https://videooptimizer.eu',
     ): SystemConfigService {
-        $config = $this->createMock(SystemConfigService::class);
+        $config = $this->createStub(SystemConfigService::class);
         $config->method('getString')->willReturnMap([
             ['ScaleVideoOptimizer.config.apiToken', null, $token],
             ['ScaleVideoOptimizer.config.apiBaseUrl', null, $baseUrl],

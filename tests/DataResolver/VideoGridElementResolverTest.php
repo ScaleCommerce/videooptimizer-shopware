@@ -19,13 +19,13 @@ class VideoGridElementResolverTest extends TestCase
 {
     public function testTypeIsVideoGrid(): void
     {
-        $resolver = $this->resolver($this->createMock(VideoOptimizerClient::class));
+        $resolver = $this->resolver($this->createStub(VideoOptimizerClient::class));
         static::assertSame('scalecommerce-vo-video-grid', $resolver->getType());
     }
 
     public function testEnrichResolvesItemsAndGridFields(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getEmbed')->willReturnCallback(fn (string $uuid) => [
             'sources' => [['src' => "https://cdn/$uuid.m3u8", 'type' => 'application/vnd.apple.mpegurl', 'codec' => 'hls']],
             'poster' => "https://cdn/$uuid.jpg",
@@ -44,7 +44,7 @@ class VideoGridElementResolverTest extends TestCase
             ],
         ]);
         $resolver = $this->resolver($client);
-        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+        $resolver->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
         static::assertInstanceOf(VideoGridStruct::class, $data);
@@ -63,7 +63,7 @@ class VideoGridElementResolverTest extends TestCase
 
     public function testItemsThatFailToResolveAreDropped(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getEmbed')->willReturnCallback(function (string $uuid) {
             if ($uuid === 'uuid-gone') {
                 throw new \RuntimeException('video gone');
@@ -86,7 +86,7 @@ class VideoGridElementResolverTest extends TestCase
             ],
         ]);
         $resolver = $this->resolver($client);
-        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+        $resolver->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
 
         $items = $slot->getData()->getItems();
         // The grid must not keep a slot with headline/intro but zero renderable tiles - an item
@@ -97,7 +97,7 @@ class VideoGridElementResolverTest extends TestCase
 
     public function testPresentationDefaultsToLightboxAndSkipsEmptyItems(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getEmbed')->willReturn(['sources' => [], 'poster' => 'https://cdn/p.jpg', 'resolution' => null]);
 
         $slot = $this->slot([
@@ -109,7 +109,7 @@ class VideoGridElementResolverTest extends TestCase
             ],
         ]);
         $resolver = $this->resolver($client);
-        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+        $resolver->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
         static::assertSame('lightbox', $data->getPresentation());
@@ -125,13 +125,13 @@ class VideoGridElementResolverTest extends TestCase
         $client->expects(static::never())->method('getEmbed');
         $slot = $this->slot(['headline' => 'x']); // items missing entirely
         $resolver = $this->resolver($client);
-        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+        $resolver->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
         static::assertSame([], $slot->getData()->getItems());
     }
 
     public function testItemThatFailsToResolveLogsAWarning(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getEmbed')->willThrowException(new \RuntimeException('video gone'));
 
         $logger = $this->createMock(LoggerInterface::class);
@@ -142,12 +142,12 @@ class VideoGridElementResolverTest extends TestCase
 
         $slot = $this->slot(['items' => [['video' => 'uuid-gone', 'label' => 'Dropped']]]);
         $resolver = $this->resolver($client, $logger);
-        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+        $resolver->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
     }
 
     public function testInvalidEmbedBaseUrlLogsAWarning(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('embedBaseUrl')->willThrowException(new InvalidApiBaseUrlException('bad url'));
 
         $logger = $this->createMock(LoggerInterface::class);
@@ -158,7 +158,7 @@ class VideoGridElementResolverTest extends TestCase
 
         $slot = $this->slot(['items' => [['video' => 'uuid-x', 'label' => 'x']]]);
         $resolver = $this->resolver($client, $logger);
-        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+        $resolver->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
     }
 
     private function resolver(VideoOptimizerClient $client, ?LoggerInterface $logger = null): VideoGridElementResolver

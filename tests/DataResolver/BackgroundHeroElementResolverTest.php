@@ -19,14 +19,14 @@ class BackgroundHeroElementResolverTest extends TestCase
 {
     public function testTypeIsBackgroundHero(): void
     {
-        $resolver = $this->resolver($this->createMock(VideoOptimizerClient::class));
+        $resolver = $this->resolver($this->createStub(VideoOptimizerClient::class));
         static::assertSame('scalecommerce-vo-background-hero', $resolver->getType());
     }
 
     public function testEnrichResolvesVideoAndFields(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
-        $client->method('getEmbed')->with('uuid-1')->willReturn([
+        $client->expects(static::once())->method('getEmbed')->with('uuid-1')->willReturn([
             'sources' => [['src' => 'https://cdn/master.m3u8', 'type' => 'application/vnd.apple.mpegurl', 'codec' => 'hls']],
             'poster' => 'https://cdn/p.jpg',
             'resolution' => '1920x1080',
@@ -39,7 +39,7 @@ class BackgroundHeroElementResolverTest extends TestCase
             'headlineColor' => '#ff0000', 'textColor' => '#abc', 'priority' => true,
         ]);
         $resolver = $this->resolver($client);
-        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+        $resolver->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
         static::assertInstanceOf(BackgroundHeroStruct::class, $data);
@@ -58,7 +58,7 @@ class BackgroundHeroElementResolverTest extends TestCase
 
     public function testInvalidOverlayHeightAndColorsFallBack(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getEmbed')->willReturn(['sources' => [], 'poster' => null, 'resolution' => null]);
 
         $slot = $this->slot([
@@ -66,7 +66,7 @@ class BackgroundHeroElementResolverTest extends TestCase
             'headlineColor' => 'red', 'textColor' => 'javascript:alert(1)',
         ]);
         $resolver = $this->resolver($client);
-        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+        $resolver->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
         static::assertSame('gradient', $data->getOverlay());
@@ -78,14 +78,14 @@ class BackgroundHeroElementResolverTest extends TestCase
 
     public function testAlphaHexColorsAreAccepted(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getEmbed')->willReturn(['sources' => [], 'poster' => null, 'resolution' => null]);
 
         $slot = $this->slot([
             'video' => 'uuid-a', 'headlineColor' => '#ff000080', 'textColor' => '#abcd',
         ]);
         $resolver = $this->resolver($client);
-        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+        $resolver->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
         static::assertSame('#ff000080', $data->getHeadlineColor());
@@ -98,17 +98,17 @@ class BackgroundHeroElementResolverTest extends TestCase
         $client->expects(static::never())->method('getEmbed');
         $slot = $this->slot(['headline' => 'x']);
         $resolver = $this->resolver($client);
-        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+        $resolver->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
         static::assertNull($slot->getData()->getVideoUuid());
     }
 
     public function testEmbedFetchFailureSetsError(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getEmbed')->willThrowException(new \RuntimeException('down'));
         $slot = $this->slot(['video' => 'uuid-2']);
         $resolver = $this->resolver($client);
-        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+        $resolver->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
         static::assertSame('uuid-2', $data->getVideoUuid());
@@ -119,10 +119,10 @@ class BackgroundHeroElementResolverTest extends TestCase
     #[DataProvider('ctaUrlProvider')]
     public function testCtaUrlSchemeAllowlist(?string $input, ?string $expected): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $slot = $this->slot(['ctaUrl' => $input]);
         $resolver = $this->resolver($client);
-        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+        $resolver->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
 
         static::assertSame($expected, $slot->getData()->getCtaUrl());
     }
@@ -140,7 +140,7 @@ class BackgroundHeroElementResolverTest extends TestCase
 
     public function testEmbedFetchFailureLogsAWarning(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getEmbed')->willThrowException(new \RuntimeException('down'));
 
         $logger = $this->createMock(LoggerInterface::class);
@@ -151,7 +151,7 @@ class BackgroundHeroElementResolverTest extends TestCase
 
         $slot = $this->slot(['video' => 'uuid-2']);
         $resolver = $this->resolver($client, $logger);
-        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+        $resolver->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
     }
 
     private function resolver(VideoOptimizerClient $client, ?LoggerInterface $logger = null): BackgroundHeroElementResolver

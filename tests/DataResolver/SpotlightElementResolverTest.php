@@ -19,14 +19,14 @@ class SpotlightElementResolverTest extends TestCase
 {
     public function testTypeIsSpotlight(): void
     {
-        $resolver = $this->resolver($this->createMock(VideoOptimizerClient::class));
+        $resolver = $this->resolver($this->createStub(VideoOptimizerClient::class));
         static::assertSame('scalecommerce-vo-spotlight', $resolver->getType());
     }
 
     public function testEnrichResolvesVideoAndFields(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
-        $client->method('getEmbed')->with('uuid-1')->willReturn([
+        $client->expects(static::once())->method('getEmbed')->with('uuid-1')->willReturn([
             'sources' => [['src' => 'https://cdn/master.m3u8', 'type' => 'application/vnd.apple.mpegurl', 'codec' => 'hls']],
             'poster' => 'https://cdn/p.jpg',
             'resolution' => '1920x1080',
@@ -38,7 +38,7 @@ class SpotlightElementResolverTest extends TestCase
             'eyebrow' => 'Neu', 'headline' => 'Titel', 'caption' => 'Kurze Bildunterschrift',
         ]);
         $resolver = $this->resolver($client);
-        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+        $resolver->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
         static::assertInstanceOf(SpotlightStruct::class, $data);
@@ -53,13 +53,13 @@ class SpotlightElementResolverTest extends TestCase
 
     public function testPresentationDefaultsToLightbox(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getEmbed')->willReturn(['sources' => [], 'poster' => 'https://cdn/p.jpg', 'resolution' => null]);
 
         // no presentation configured, embed player -> facade/lightbox needs the poster fetched
         $slot = $this->slot(['video' => 'uuid-2', 'playerMode' => 'embed']);
         $resolver = $this->resolver($client);
-        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+        $resolver->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
 
         $data = $slot->getData();
         static::assertSame('lightbox', $data->getPresentation());
@@ -69,11 +69,11 @@ class SpotlightElementResolverTest extends TestCase
 
     public function testInvalidPresentationFallsBackToLightbox(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getEmbed')->willReturn(['sources' => [], 'poster' => null, 'resolution' => null]);
         $slot = $this->slot(['video' => 'uuid-3', 'presentation' => 'sideways', 'playerMode' => 'embed']);
         $resolver = $this->resolver($client);
-        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+        $resolver->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
         static::assertSame('lightbox', $slot->getData()->getPresentation());
     }
 
@@ -83,13 +83,13 @@ class SpotlightElementResolverTest extends TestCase
         $client->expects(static::never())->method('getEmbed');
         $slot = $this->slot(['headline' => 'x']);
         $resolver = $this->resolver($client);
-        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+        $resolver->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
         static::assertNull($slot->getData()->getVideoUuid());
     }
 
     public function testInvalidEmbedBaseUrlLogsAWarning(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('embedBaseUrl')->willThrowException(new InvalidApiBaseUrlException('bad url'));
 
         $logger = $this->createMock(LoggerInterface::class);
@@ -100,12 +100,12 @@ class SpotlightElementResolverTest extends TestCase
 
         $slot = $this->slot(['video' => 'uuid-4']);
         $resolver = $this->resolver($client, $logger);
-        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+        $resolver->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
     }
 
     public function testEmbedLookupFailureLogsAWarning(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getEmbed')->willThrowException(new \RuntimeException('video gone'));
 
         $logger = $this->createMock(LoggerInterface::class);
@@ -116,7 +116,7 @@ class SpotlightElementResolverTest extends TestCase
 
         $slot = $this->slot(['video' => 'uuid-5']);
         $resolver = $this->resolver($client, $logger);
-        $resolver->enrich($slot, $this->createMock(ResolverContext::class), new ElementDataCollection());
+        $resolver->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
     }
 
     private function resolver(VideoOptimizerClient $client, ?LoggerInterface $logger = null): SpotlightElementResolver
