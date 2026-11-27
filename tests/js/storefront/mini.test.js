@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { markExpectedPlayback } from '../../../src/Resources/app/storefront/src/helper/attach-video-source.js';
 import { installObserver, installPluginBase, stubMedia } from './support.js';
 
 installPluginBase();
-// The visitor presses play: a gesture on the element, then play().
+// The visitor presses play, e.g. on the native control bar: nothing the plugins mark as their own.
 async function userPlay(video) {
-    video.closest('[data-scalecommerce-vo-mini]').dispatchEvent(new Event('click', { bubbles: true }));
     await video.play();
 }
 
@@ -185,26 +185,52 @@ describe('floating mini player (#49)', () => {
         expect(box.classList.contains('is-pinned')).toBe(false);
     });
 
-    it('does not pin a video that autoplays or plays while scrolling', async () => {
-        const { box, video, observer } = setup();
+    it('does not pin a video that autoplays or plays while scrolling (marked by the plugins)', async () => {
+        const { box, el, video, observer } = setup();
+        markExpectedPlayback(video);
         await video.play();
+        video.dispatchEvent(new Event('volumechange'));
+        video.dispatchEvent(new Event('seeking'));
 
         observer.show(false);
 
         expect(box.classList.contains('is-pinned')).toBe(false);
+        expect(el.__scvoMiniStarted).toBeUndefined();
     });
 
-    it('does not count a play long after the last gesture as started by the visitor', async () => {
+    it('counts unmuting an autoplaying video on the native controls as started', async () => {
         const { box, el, video, observer } = setup();
-        el.dispatchEvent(new Event('click', { bubbles: true }));
-        const now = Date.now();
-        const spy = vi.spyOn(Date, 'now').mockReturnValue(now + 5000);
+        markExpectedPlayback(video);
         await video.play();
-        spy.mockRestore();
+        // Later, no mark any more: the visitor.
+        video.__scvoExpectedUntil = 0;
+        video.dispatchEvent(new Event('volumechange'));
+
+        expect(el.__scvoMiniStarted).toBe(true);
+        observer.show(false);
+        expect(box.classList.contains('is-pinned')).toBe(true);
+    });
+
+    it('counts seeking or pause-then-play of an autoplaying video as started', async () => {
+        const { box, video, observer } = setup();
+        markExpectedPlayback(video);
+        await video.play();
+        video.__scvoExpectedUntil = 0;
+        video.dispatchEvent(new Event('seeking'));
 
         observer.show(false);
 
-        expect(box.classList.contains('is-pinned')).toBe(false);
+        expect(box.classList.contains('is-pinned')).toBe(true);
+    });
+
+    it('pins a click-started video although the editor set it muted', async () => {
+        const { box, video, observer } = setup();
+        video.muted = true;
+        await userPlay(video);
+
+        observer.show(false);
+
+        expect(box.classList.contains('is-pinned')).toBe(true);
     });
 
     it('counts a click on a scene of hosted chapters as started', () => {

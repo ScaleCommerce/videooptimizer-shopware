@@ -5,6 +5,7 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 ## [Unreleased]
 
 ### Upgrade
+- The native player no longer starts "Autoplay" (play while visible) for visitors with `prefers-reduced-motion` or the browser's data saver: the poster and the controls stay ([#45](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/45)).
 - New storefront snippets (`scalecommerce-vo.storefront.*`: scenes, video list, not found) and styles for the new elements; compile the theme (`theme:compile`) after the update ([#45](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/45)).
 - A hosted embed (`playerMode` embed) of the single video element is sized to the video's own ratio instead of always 16:9 (portrait videos no longer sit in a landscape box); set the new format option to 16:9 to keep the old look ([#47](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/47)).
 - Scene previews load `<api base URL>/videos/{uuid}/thumbnails/{0-9}` (public, redirects to the VideoOptimizer CDN); a Content-Security-Policy `img-src` has to allow the API host and `*.cdn.videooptimizer.eu`. The player plugin sets `__scvoReady` on its element ([#46](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/46)).

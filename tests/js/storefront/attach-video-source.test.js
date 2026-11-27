@@ -314,3 +314,32 @@ describe('markUnavailable', () => {
         expect(wrapper.getAttribute('data-vo-unavailable')).toBe('Video kann nicht abgespielt werden');
     });
 });
+
+describe('expected playback (#49)', () => {
+    it('clears the mark at once when the own play() is rejected (autoplay blocked)', async () => {
+        const { markExpectedPlayback, isExpectedPlayback } = await import(
+            '../../../src/Resources/app/storefront/src/helper/attach-video-source.js'
+        );
+        const video = document.createElement('video');
+        video.play = () => Promise.reject(new Error('NotAllowedError'));
+        let visible;
+        window.IntersectionObserver = class {
+            constructor(callback) {
+                visible = (value) => callback([{ isIntersecting: value }]);
+            }
+
+            observe() {}
+
+            disconnect() {}
+        };
+        autoplayWhileVisible(video);
+
+        visible(true);
+        expect(isExpectedPlayback(video)).toBe(true);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(isExpectedPlayback(video)).toBe(false);
+        delete window.IntersectionObserver;
+        expect(markExpectedPlayback).toBeTypeOf('function');
+    });
+});

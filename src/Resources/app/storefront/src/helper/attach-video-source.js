@@ -25,6 +25,28 @@ function loadHls() {
  * The hls.js instance is kept on the element (`video.__scvoHls`) so callers can destroy it
  * via destroyVideoSource() without tracking it themselves.
  */
+// Playback the plugins start themselves (autoplay, play-while-visible, attaching a source, the
+// initial mute) is marked, so the floating mini player can tell it from the visitor's: the events a
+// marked action causes arrive within a moment; every other play/volumechange/seeking is the visitor's.
+const EXPECTED_MS = 1500;
+
+export function markExpectedPlayback(video) {
+    video.__scvoExpectedUntil = Date.now() + EXPECTED_MS;
+}
+
+// Starts playback as the plugin's own action; a rejected play() (autoplay blocked) leaves nothing to
+// expect, so the mark is cleared at once and a later visitor action is not mistaken for it.
+function playMarked(video) {
+    markExpectedPlayback(video);
+    video.play().catch(() => {
+        video.__scvoExpectedUntil = 0;
+    });
+}
+
+export function isExpectedPlayback(video) {
+    return Date.now() < (video.__scvoExpectedUntil ?? 0);
+}
+
 export async function attachVideoSource(
     video,
     { hls = null, mp4 = null },
@@ -37,7 +59,7 @@ export async function attachVideoSource(
 ) {
     const play = () => {
         if (autoplay || shouldPlay()) {
-            video.play().catch(() => {});
+            playMarked(video);
         }
     };
     const failOnError = () =>
@@ -70,6 +92,7 @@ export async function attachVideoSource(
 
     // Set by destroyVideoSource(); the element may be torn down while hls.js is still loading.
     video.__scvoDestroyed = false;
+    markExpectedPlayback(video);
 
     // hls.js needs Media Source Extensions. Without them (e.g. older iOS) it is not loaded at all,
     // and native HLS / MP4 are attached synchronously - still within the click that started
@@ -173,10 +196,15 @@ export function observeVisibility(element, onChange) {
 
 /**
  * Plays a muted, autoplaying video only while it is visible and pauses it when it scrolls out
- * of view. Once the visitor pauses it themselves, it is not resumed automatically.
+ * of view. Once the visitor pauses it themselves, it is not resumed automatically. `keepPlaying`
+ * tells that the visitor took over, so leaving the view no longer pauses it.
  * Returns a function that stops observing.
  */
-export function autoplayWhileVisible(video, observed = video) {
+export function autoplayWhileVisible(
+    video,
+    observed = video,
+    { keepPlaying = () => false } = {}
+) {
     let pausedForViewport = false;
     let pausedByUser = false;
     const onPause = () => {
@@ -196,8 +224,9 @@ export function autoplayWhileVisible(video, observed = video) {
     const stop = observeVisibility(observed, (visible) => {
         // A finished non-looping video is not restarted when it scrolls back into view.
         if (visible && video.paused && !pausedByUser && !video.ended) {
-            video.play().catch(() => {});
-        } else if (!visible && !video.paused) {
+            playMarked(video);
+        } else if (!visible && !video.paused && !keepPlaying()) {
+            // keepPlaying: the visitor took over (mini player), so scrolling away must not pause it.
             pausedForViewport = true;
             video.pause();
         }
@@ -207,6 +236,16 @@ export function autoplayWhileVisible(video, observed = video) {
         video.removeEventListener('pause', onPause);
         video.removeEventListener('play', onPlay);
     };
+}
+
+/**
+ * True when nothing may start playing by itself: the visitor asked for reduced motion or turned on
+ * the browser's data saver.
+ */
+export function motionReduced() {
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+
+    return !!reduce || window.navigator.connection?.saveData === true;
 }
 
 export function destroyVideoSource(video) {

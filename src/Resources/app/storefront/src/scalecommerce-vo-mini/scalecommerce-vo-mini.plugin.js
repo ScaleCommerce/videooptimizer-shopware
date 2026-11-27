@@ -4,11 +4,12 @@
 // height, so the page does not jump. Scrolling back unpins; the close button unpins and stops
 // playback; Escape inside the mini player unpins. Not used below 600px viewport width or while the
 // lightbox is open.
+import { isExpectedPlayback } from '../helper/attach-video-source';
+
 const BOX_SELECTOR = '.scalecommerce-vo-video--sized, .scalecommerce-vo-surface';
 const MIN_WIDTH = '(min-width: 600px)';
 const PINNED = 'is-pinned';
-// A play() within this time after a gesture counts as started by the visitor.
-const GESTURE_WINDOW = 1500;
+const INTERACTIONS = ['play', 'volumechange', 'seeking'];
 
 export default class ScalecommerceVoMini extends window.PluginBaseClass {
     init() {
@@ -22,11 +23,11 @@ export default class ScalecommerceVoMini extends window.PluginBaseClass {
         this.pinned = false;
         this.dismissed = false;
         this.visible = true;
-        // "Started" means started by the visitor: a gesture (click, key) on the player or, for
-        // chapters, on a scene shortly before playback begins. Autoplay, play-while-scrolling and
-        // `autoplay=1` of a hosted player at load never count. A hosted player cannot report
-        // playback, so it counts as started once the visitor clicks into it or a scene.
-        this.lastGesture = 0;
+        // "Started" means started by the visitor. The native control bar sends no pointer or key
+        // events into the page, so instead of watching gestures the plugins mark what they do
+        // themselves (autoplay, play-while-visible, the initial mute, source attachment): any other
+        // play, volumechange or seeking is the visitor's. A scene click counts too, and a hosted
+        // player (which cannot report playback) counts once the visitor clicks into it or a scene.
         this.started = false;
         this.hostedStarted = false;
 
@@ -47,24 +48,24 @@ export default class ScalecommerceVoMini extends window.PluginBaseClass {
     }
 
     _bind() {
-        this._onGesture = (event) => {
-            this.lastGesture = Date.now();
-            if (this.frame && event.target?.closest?.('[data-vo-scene]')) {
-                this.hostedStarted = true;
+        // The scene buttons of a chapters element sit outside the player box, inside its root.
+        this._onSceneClick = (event) => {
+            if (event.target?.closest?.('[data-vo-scene]')) {
+                this.hostedStarted = !!this.frame;
             }
         };
-        // The scene buttons of a chapters element sit outside the player box, inside its root.
-        this.gestureRoot = this.el.closest('[data-scalecommerce-vo-chapters]') || this.el;
-        for (const type of ['pointerdown', 'click', 'keydown']) {
-            this.gestureRoot.addEventListener(type, this._onGesture, true);
-        }
+        this.sceneRoot = this.el.closest('[data-scalecommerce-vo-chapters]');
+        this.sceneRoot?.addEventListener('click', this._onSceneClick, true);
         if (this.video) {
-            this._onPlay = () => {
-                if (Date.now() - this.lastGesture < GESTURE_WINDOW) {
+            this._onInteraction = () => {
+                if (!isExpectedPlayback(this.video)) {
                     this.started = true;
+                    this.el.__scvoMiniStarted = true;
                 }
             };
-            this.video.addEventListener('play', this._onPlay);
+            for (const type of INTERACTIONS) {
+                this.video.addEventListener(type, this._onInteraction);
+            }
         }
 
         // Opening a lightbox takes over: the mini player goes away (and stops).
@@ -194,10 +195,11 @@ export default class ScalecommerceVoMini extends window.PluginBaseClass {
     }
 
     destroy() {
-        for (const type of ['pointerdown', 'click', 'keydown']) {
-            this.gestureRoot?.removeEventListener(type, this._onGesture, true);
+        this.sceneRoot?.removeEventListener('click', this._onSceneClick, true);
+        for (const type of INTERACTIONS) {
+            this.video?.removeEventListener(type, this._onInteraction);
         }
-        this.video?.removeEventListener('play', this._onPlay);
+        delete this.el.__scvoMiniStarted;
         this._lightboxObserver?.disconnect();
         this.observer?.disconnect();
         this.close?.removeEventListener('click', this._onClose);
