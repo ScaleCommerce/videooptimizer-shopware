@@ -40,16 +40,24 @@ Shopware.Component.register('scalecommerce-vo-preview-surface', {
             return 'pending';
         },
         emptyText() {
-            return this.emptyLabel || this.$tc('scalecommerce-vo.cms.selectVideo');
+            return (
+                this.emptyLabel || this.$tc('scalecommerce-vo.cms.selectVideo')
+            );
         },
         showPlay() {
-            return this.hasVideo && (this.presentation === 'facade' || this.presentation === 'lightbox');
+            return (
+                this.hasVideo &&
+                (this.presentation === 'facade' ||
+                    this.presentation === 'lightbox')
+            );
         },
         showControlsBar() {
-            return this.hasVideo
-                && this.presentation === 'direct'
-                && this.playerMode === 'native'
-                && this.controls;
+            return (
+                this.hasVideo &&
+                this.presentation === 'direct' &&
+                this.playerMode === 'native' &&
+                this.controls
+            );
         },
         showExpand() {
             return this.hasVideo && this.presentation === 'lightbox';

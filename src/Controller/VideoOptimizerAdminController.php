@@ -33,6 +33,12 @@ class VideoOptimizerAdminController
 
     private const INGEST_PAYLOAD_KEYS = ['library_id', 'source_url', 'title'];
 
+    /**
+     * Route requirement for {id}/{uuid}: libraries and videos are UUIDs upstream. Without it, "%2E%2E"
+     * reaches the client as ".." and HttpClient's dot-segment removal re-targets the upstream request.
+     */
+    private const UUID_PATTERN = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
+
     public function __construct(private readonly VideoOptimizerClient $client)
     {
     }
@@ -49,28 +55,29 @@ class VideoOptimizerAdminController
         return $this->wrap(fn () => $this->client->createLibrary($this->only($this->payload($request), self::LIBRARY_PAYLOAD_KEYS)));
     }
 
-    #[Route(path: '/api/_action/scalecommerce-vo/libraries/{id}', name: 'api.action.scalecommerce-vo.libraries.update', methods: ['PATCH'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/libraries/{id}', name: 'api.action.scalecommerce-vo.libraries.update', methods: ['PATCH'], requirements: ['id' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:update']])]
     public function updateLibrary(string $id, Request $request): JsonResponse
     {
         return $this->wrap(fn () => $this->client->updateLibrary($id, $this->only($this->payload($request), self::LIBRARY_PAYLOAD_KEYS)));
     }
 
-    #[Route(path: '/api/_action/scalecommerce-vo/libraries/{id}', name: 'api.action.scalecommerce-vo.libraries.delete', methods: ['DELETE'], defaults: ['_acl' => ['scalecommerce_vo:delete']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/libraries/{id}', name: 'api.action.scalecommerce-vo.libraries.delete', methods: ['DELETE'], requirements: ['id' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:delete']])]
     public function deleteLibrary(string $id): JsonResponse
     {
         return $this->wrap(function () use ($id): array {
             $this->client->deleteLibrary($id);
+
             return [];
         }, Response::HTTP_NO_CONTENT);
     }
 
-    #[Route(path: '/api/_action/scalecommerce-vo/libraries/{id}/reprocess', name: 'api.action.scalecommerce-vo.libraries.reprocess', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/libraries/{id}/reprocess', name: 'api.action.scalecommerce-vo.libraries.reprocess', methods: ['POST'], requirements: ['id' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:update']])]
     public function reprocessLibrary(string $id): JsonResponse
     {
         return $this->wrap(fn () => $this->client->reprocessLibrary($id));
     }
 
-    #[Route(path: '/api/_action/scalecommerce-vo/libraries/{id}/videos', name: 'api.action.scalecommerce-vo.videos.list', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/libraries/{id}/videos', name: 'api.action.scalecommerce-vo.videos.list', methods: ['GET'], requirements: ['id' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:read']])]
     public function listVideos(string $id): JsonResponse
     {
         return $this->wrap(fn () => $this->client->listVideos($id));
@@ -80,6 +87,7 @@ class VideoOptimizerAdminController
     public function listAllVideos(Request $request): JsonResponse
     {
         $libraryId = $request->query->get('libraryId');
+
         return $this->wrap(fn () => $this->client->listAllVideos($libraryId !== null ? (string) $libraryId : null));
     }
 
@@ -116,23 +124,24 @@ class VideoOptimizerAdminController
         });
     }
 
-    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}', name: 'api.action.scalecommerce-vo.videos.get', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}', name: 'api.action.scalecommerce-vo.videos.get', methods: ['GET'], requirements: ['uuid' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:read']])]
     public function getVideo(string $uuid): JsonResponse
     {
         return $this->wrap(fn () => $this->client->getVideo($uuid));
     }
 
-    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}', name: 'api.action.scalecommerce-vo.videos.update', methods: ['PATCH'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}', name: 'api.action.scalecommerce-vo.videos.update', methods: ['PATCH'], requirements: ['uuid' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:update']])]
     public function updateVideo(string $uuid, Request $request): JsonResponse
     {
         return $this->wrap(fn () => $this->client->updateVideo($uuid, $this->only($this->payload($request), ['title'])));
     }
 
-    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}', name: 'api.action.scalecommerce-vo.videos.delete', methods: ['DELETE'], defaults: ['_acl' => ['scalecommerce_vo:delete']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}', name: 'api.action.scalecommerce-vo.videos.delete', methods: ['DELETE'], requirements: ['uuid' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:delete']])]
     public function deleteVideo(string $uuid): JsonResponse
     {
         return $this->wrap(function () use ($uuid): array {
             $this->client->deleteVideo($uuid);
+
             return [];
         }, Response::HTTP_NO_CONTENT);
     }
@@ -142,7 +151,7 @@ class VideoOptimizerAdminController
      * the API, which redirects to the CDN without CORS headers, so browsers can't load it via XHR;
      * the embed payload carries the CDN URLs themselves.
      */
-    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/playback', name: 'api.action.scalecommerce-vo.videos.playback', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/playback', name: 'api.action.scalecommerce-vo.videos.playback', methods: ['GET'], requirements: ['uuid' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:read']])]
     public function getPlayback(string $uuid): JsonResponse
     {
         return $this->wrap(function () use ($uuid): array {
@@ -156,41 +165,43 @@ class VideoOptimizerAdminController
         });
     }
 
-    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/thumbnails', name: 'api.action.scalecommerce-vo.thumbnails.list', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/thumbnails', name: 'api.action.scalecommerce-vo.thumbnails.list', methods: ['GET'], requirements: ['uuid' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:read']])]
     public function listThumbnails(string $uuid): JsonResponse
     {
         return $this->wrap(fn () => $this->client->listThumbnails($uuid));
     }
 
-    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/thumbnails/{index}', name: 'api.action.scalecommerce-vo.thumbnails.image', methods: ['GET'], requirements: ['index' => '\d+'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/thumbnails/{index}', name: 'api.action.scalecommerce-vo.thumbnails.image', methods: ['GET'], requirements: ['uuid' => self::UUID_PATTERN, 'index' => '\d+'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
     public function getThumbnailImage(string $uuid, string $index): Response
     {
         try {
             $image = $this->client->getThumbnailImage($uuid, (int) $index);
+
             return new Response($image['content'], Response::HTTP_OK, [
                 'Content-Type' => $this->safeThumbnailContentType($image['contentType']),
                 'X-Content-Type-Options' => 'nosniff',
                 'Content-Disposition' => 'inline',
             ]);
-        } catch (MissingApiTokenException|InvalidApiBaseUrlException $e) {
+        } catch (MissingApiTokenException|InvalidApiBaseUrlException|InvalidRequestException $e) {
             return new JsonResponse(['errors' => [['status' => '400', 'detail' => $e->getMessage()]]], 400);
         } catch (VideoOptimizerApiException $e) {
-            return new JsonResponse(['errors' => [['status' => (string) $e->getStatusCode(), 'detail' => $e->getMessage()]]], $e->getStatusCode());
+            return $this->apiError($e);
         }
     }
 
-    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/thumbnail', name: 'api.action.scalecommerce-vo.thumbnail.select', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/thumbnail', name: 'api.action.scalecommerce-vo.thumbnail.select', methods: ['POST'], requirements: ['uuid' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:update']])]
     public function selectThumbnail(string $uuid, Request $request): JsonResponse
     {
         // payload() must run inside the wrap() closure so malformed JSON is caught there instead
         // of throwing an uncaught JsonException before wrap() is even called.
         return $this->wrap(function () use ($uuid, $request): array {
             $index = (int) ($this->payload($request)['thumbnailIndex'] ?? 0);
+
             return $this->client->selectThumbnail($uuid, $index);
         });
     }
 
-    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/poster/initiate', name: 'api.action.scalecommerce-vo.poster.initiate', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/poster/initiate', name: 'api.action.scalecommerce-vo.poster.initiate', methods: ['POST'], requirements: ['uuid' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:update']])]
     public function initiatePosterUpload(string $uuid, Request $request): JsonResponse
     {
         return $this->wrap(function () use ($uuid, $request): array {
@@ -201,27 +212,29 @@ class VideoOptimizerAdminController
         });
     }
 
-    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/poster/complete', name: 'api.action.scalecommerce-vo.poster.complete', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/poster/complete', name: 'api.action.scalecommerce-vo.poster.complete', methods: ['POST'], requirements: ['uuid' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:update']])]
     public function completePosterUpload(string $uuid, Request $request): JsonResponse
     {
         // payload() must run inside the wrap() closure - see selectThumbnail() above.
         return $this->wrap(function () use ($uuid, $request): array {
             $key = (string) ($this->payload($request)['key'] ?? '');
+
             return $this->client->completePosterUpload($uuid, $key);
         });
     }
 
-    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/poster/select', name: 'api.action.scalecommerce-vo.poster.select', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/poster/select', name: 'api.action.scalecommerce-vo.poster.select', methods: ['POST'], requirements: ['uuid' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:update']])]
     public function selectPoster(string $uuid, Request $request): JsonResponse
     {
         return $this->wrap(fn () => $this->client->selectPoster($uuid, $this->only($this->payload($request), ['source', 'thumbnailIndex'])));
     }
 
-    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/poster', name: 'api.action.scalecommerce-vo.poster.delete', methods: ['DELETE'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/poster', name: 'api.action.scalecommerce-vo.poster.delete', methods: ['DELETE'], requirements: ['uuid' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:update']])]
     public function deletePoster(string $uuid): JsonResponse
     {
         return $this->wrap(function () use ($uuid): array {
             $this->client->deletePoster($uuid);
+
             return [];
         }, Response::HTTP_NO_CONTENT);
     }
@@ -291,6 +304,7 @@ class VideoOptimizerAdminController
 
         // Malformed JSON must fail loudly instead of silently becoming an empty payload.
         $decoded = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
+
         return is_array($decoded) ? $decoded : [];
     }
 
@@ -305,13 +319,46 @@ class VideoOptimizerAdminController
 
                 return $response;
             }
+
             return new JsonResponse(['data' => $data], $successStatus);
         } catch (MissingApiTokenException|InvalidApiBaseUrlException|InvalidRequestException $e) {
             return new JsonResponse(['errors' => [['status' => '400', 'detail' => $e->getMessage()]]], 400);
         } catch (VideoOptimizerApiException $e) {
-            return new JsonResponse(['errors' => [['status' => (string) $e->getStatusCode(), 'detail' => $e->getMessage()]]], $e->getStatusCode());
+            return $this->apiError($e);
         } catch (\JsonException) {
             return new JsonResponse(['errors' => [['status' => '400', 'detail' => 'Invalid JSON body.']]], 400);
         }
+    }
+
+    /**
+     * Upstream auth errors are not passed through as 401/403: the administration's HTTP client
+     * treats every 401 as an expired admin session (token refresh + retry), and 403 would read as
+     * a missing Shopware privilege. Both become 502 with an own error code and an actionable text.
+     */
+    private function apiError(VideoOptimizerApiException $e): JsonResponse
+    {
+        $status = $e->getStatusCode();
+        $error = ['status' => (string) $status, 'detail' => $e->getMessage()];
+
+        if ($status === Response::HTTP_UNAUTHORIZED || $status === Response::HTTP_FORBIDDEN) {
+            $status = Response::HTTP_BAD_GATEWAY;
+            $error = $e->getStatusCode() === Response::HTTP_UNAUTHORIZED
+                ? [
+                    'status' => (string) $status,
+                    'code' => 'SCALECOMMERCE_VO__API_TOKEN_REJECTED',
+                    'detail' => 'The VideoOptimizer API rejected the API token. Check the token in the plugin configuration.',
+                ]
+                : [
+                    'status' => (string) $status,
+                    'code' => 'SCALECOMMERCE_VO__API_TOKEN_FORBIDDEN',
+                    // 403 also covers plan limits, trial restrictions and suspended organisations;
+                    // their upstream message (already plain text) says more than a generic hint.
+                    'detail' => $e->getMessage() !== VideoOptimizerApiException::genericMessage(Response::HTTP_FORBIDDEN)
+                        ? $e->getMessage()
+                        : 'The VideoOptimizer API token is not permitted to perform this action. Check the token permissions in VideoOptimizer.',
+                ];
+        }
+
+        return new JsonResponse(['errors' => [$error]], $status);
     }
 }

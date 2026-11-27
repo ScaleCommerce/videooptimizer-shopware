@@ -41,8 +41,10 @@ Shopware.Component.register('scalecommerce-vo-background-hero-component', {
         },
         contentStyle() {
             return {
-                '--scvo-hero-heading': this.element.config?.headlineColor?.value || null,
-                '--scvo-hero-text': this.element.config?.textColor?.value || null,
+                '--scvo-hero-heading':
+                    this.element.config?.headlineColor?.value || null,
+                '--scvo-hero-text':
+                    this.element.config?.textColor?.value || null,
             };
         },
     },

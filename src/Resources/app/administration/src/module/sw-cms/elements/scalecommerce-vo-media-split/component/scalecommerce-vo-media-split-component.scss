@@ -7,8 +7,12 @@
     align-items: center;
 
     &.is-reversed {
-        .scalecommerce-vo-media-split-component__media { order: 2; }
-        .scalecommerce-vo-media-split-component__text { order: 1; }
+        .scalecommerce-vo-media-split-component__media {
+            order: 2;
+        }
+        .scalecommerce-vo-media-split-component__text {
+            order: 1;
+        }
     }
 
     &__text {
@@ -41,6 +45,8 @@
         line-height: 1.5;
         color: #4a545b;
 
-        p { margin: 0 0 4px; }
+        p {
+            margin: 0 0 4px;
+        }
     }
 }

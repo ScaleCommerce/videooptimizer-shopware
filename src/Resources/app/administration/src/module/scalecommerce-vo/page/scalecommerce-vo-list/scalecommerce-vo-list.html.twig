@@ -9,7 +9,10 @@
 
     {% block scalecommerce_vo_list_smart_bar_actions %}
     <template #smart-bar-actions>
-        <mt-button variant="secondary" @click="mode === 'create' ? onCancelCreate() : onNewLibrary()">
+        <mt-button
+            v-if="mode !== 'create' || selectedLibraryId"
+            variant="secondary"
+            @click="mode === 'create' ? onCancelCreate() : onNewLibrary()">
             {{ mode === 'create' ? $tc('scalecommerce-vo.library.cancel') : $tc('scalecommerce-vo.library.new') }}
         </mt-button>
         <mt-button variant="primary" :is-loading="isSaving" :disabled="!canSave" @click="onSave">

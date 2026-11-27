@@ -5,6 +5,42 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-11-27
+
+Fixes from an independent QA review (#1, #2, #3, #5, #9, #12, #14).
+
+### Upgrade notes
+Nothing to do for a standard installation: configuration, CMS element data and the bundled administration keep working. Check the following if they apply to you:
+- **Custom API or embed base URL:** values with userinfo, a query or a fragment, pointing to `localhost`, to an IP address outside the global range (private, loopback, link-local, reserved, shared/CGNAT) or using a numeric/hex host form (e.g. `127.1`, `0x7f000001`) are now rejected. The administration module then shows a configuration error and video elements are hidden in the storefront. The defaults (`https://api.videooptimizer.eu/api/v1`, `https://player.videooptimizer.eu`) are not affected. (#5)
+- **Own code calling the admin proxy** (`/api/_action/scalecommerce-vo/…`) directly:
+  - routes with `{id}`/`{uuid}` only match UUIDs and answer 404 for anything else (#5);
+  - an upstream 401/403 is answered with 502 and the error `code` `SCALECOMMERCE_VO__API_TOKEN_REJECTED` or `SCALECOMMERCE_VO__API_TOKEN_FORBIDDEN` instead of being passed through; for 403 the API's own message (e.g. a plan limit) stays the `detail` (#2);
+  - an unreachable or timed-out API is answered with 502 instead of an unhandled 500, and a success response that is not JSON with 502 instead of an empty result (#1).
+- **Decorators or subclasses of `VideoOptimizerClient`:** the constructor has two new optional arguments (`LoggerInterface`, `EmbedAvailability`). Existing service definitions keep working.
+- **Videos without playable sources** (processing failed or not finished yet) are now hidden in the storefront like deleted videos; video grid tiles for them are dropped. Before, an empty or black player was shown. Their embed data is cached for 60 seconds instead of one hour, so they appear shortly after processing has finished. (#9)
+- **HTTP cache / reverse proxy and route cache:** a page rendered while a video lookup failed, or with a video that has no playable sources, is now cached for at most 60 seconds instead of the full page TTL; on Shopware 6.6 its Store API route cache entry is invalidated as well. Other pages are not affected. Note: a page that still references a **deleted** video counts as degraded on every render, so it is re-rendered (and the API asked) about once a minute; remove such videos from the CMS element. (#3)
+- **Theme overrides of the plugin's storefront templates:** the player options in `_scalecommerce-vo-surface.html.twig` and `cms-element-scalecommerce-vo-video.html.twig` gained `unavailableLabel`, and the background hero `<video>` gained `data-scalecommerce-vo-hero-mp4`. Without them, overridden templates keep working, but show an English notice and the hero has no MP4 fallback. (#9)
+- **Extensions of the storefront JS plugins:** `ScalecommerceVoPlayer` and `ScalecommerceVoHero` no longer keep the hls.js instance in `this.hls`; it is stored on the `<video>` element (`__scvoHls`). (#9)
+
+### Fixed
+- A page rendered during a short API outage, or before a video finished processing, no longer stays in the HTTP cache without its video for the full page TTL: its cache lifetime is capped at 60 seconds, matching the negative cache of the embed lookup, and on Shopware 6.6 the cached Store API route (category, landing page, product) is invalidated as well. Invalidating cached pages after a video is changed in the administration follows in 1.1.0. (#3)
+- Library page: without any library (new account, or after deleting the last one) the page switches to the "new library" form, so saving creates a library instead of sending `PATCH …/libraries/null`. (#12)
+- Video gallery: switching libraries clears the old list right away, and a slower response for a previously selected library can no longer overwrite the current one. (#12)
+- Custom poster upload: when an earlier custom poster still reports `ready`, the dialog now waits for the new upload to be processed (or for a few polls) instead of taking the old status on the first poll. Images from the media library are checked (HTTP status, JPEG/PNG/WebP) before the upload, with a clear message otherwise; uploads inside the media picker are limited to these types, and selecting the same file again works. (#12)
+- Players no longer stay black or empty when a video cannot be played. A fatal hls.js error falls back to the MP4 rendition (also for the background hero, which now receives both sources); without a fallback, the poster stays visible with a short notice ("Video cannot be played"). The admin video detail dialog behaves the same and says why there is no player instead of only logging to the console. (#9)
+- An unreachable VideoOptimizer API (DNS, TLS, connection reset) or a timeout no longer surfaces as an unhandled HTTP 500 with the raw transport error, which contained the full upstream URL. The administration shows a neutral message, and the details are logged as a warning. This also applies to the thumbnail and playback proxies and to embed lookups during storefront rendering. (#1)
+- A success response from the API that is not JSON (for example a maintenance page served with 200) is reported as an error instead of being treated as an empty, successful result. (#1)
+- A rejected VideoOptimizer API token (401) or a refused action (403) no longer makes the administration refresh its own session and repeat the request. A rejected token is reported as such; for a refused action the API's reason (e.g. a plan limit) is shown. (#2)
+- Error messages from the API are passed to the administration as short plain text (max. 200 characters, markup removed), as admin notifications render HTML. (#2)
+
+### Changed
+- Source maps are no longer shipped: the two `.map` files of the administration bundle are removed (about 1.5 MB less in the package), along with the `sourceMappingURL` comments that pointed to them. `*.map` is excluded from Composer dist archives as well. (#14)
+- The test suite runs on PHPUnit 12 and later (`isType('string')` replaced by `isString()`). (#14)
+
+### Security
+- Admin API routes accept only UUIDs for `{id}`/`{uuid}`, and the client rejects any ID that is not a plain path segment before sending a request. Previously `%2E%2E` reached the client as `..`, and the dot-segment removal of the HTTP client re-targeted the upstream request one level up (for example `DELETE …/videos/%2E%2E/poster` → `DELETE /api/v1/poster`). (#5)
+- The API and embed base URLs must not contain userinfo, a query or a fragment, and must not point to `localhost` or an IP address outside the global range, including numeric/hex host forms. Host names are not resolved, so this is defence in depth for whoever can change the plugin configuration. (#5)
+
 ## [1.0.1] - 2026-11-26
 
 ### Fixed

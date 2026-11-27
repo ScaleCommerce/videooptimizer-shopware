@@ -10,8 +10,11 @@ function formatBytes(bytes) {
         return '0 B';
     }
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const exponent = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
-    const scaled = value / (1024 ** exponent);
+    const exponent = Math.min(
+        Math.floor(Math.log(value) / Math.log(1024)),
+        units.length - 1
+    );
+    const scaled = value / 1024 ** exponent;
     return `${exponent === 0 ? scaled : scaled.toFixed(1)} ${units[exponent]}`;
 }
 
@@ -42,23 +45,38 @@ Component.register('scalecommerce-vo-list', {
 
     computed: {
         libraryOptions() {
-            return this.libraries.map((library) => ({ value: library.id, label: library.name }));
+            return this.libraries.map((library) => ({
+                value: library.id,
+                label: library.name,
+            }));
         },
         activeLibrary() {
             if (this.mode === 'create' || !this.selectedLibraryId) {
                 return null;
             }
-            return this.libraries.find((library) => library.id === this.selectedLibraryId) || null;
+            return (
+                this.libraries.find(
+                    (library) => library.id === this.selectedLibraryId
+                ) || null
+            );
         },
         mediaManaged() {
             const library = this.activeLibrary;
             return !library || library.media_managed !== false;
         },
         canSave() {
-            return !!this.formName.trim() && !this.isSaving;
+            // In edit mode there must be a library to save to (none exist, or the last one was
+            // just deleted); create mode is entered automatically in that case, see loadLibraries().
+            return (
+                !!this.formName.trim() &&
+                !this.isSaving &&
+                (this.mode === 'create' || !!this.selectedLibraryId)
+            );
         },
         storageLabel() {
-            return this.activeLibrary ? formatBytes(this.activeLibrary.storage_usage) : null;
+            return this.activeLibrary
+                ? formatBytes(this.activeLibrary.storage_usage)
+                : null;
         },
         createdLabel() {
             const library = this.activeLibrary;
@@ -66,7 +84,9 @@ Component.register('scalecommerce-vo-list', {
                 return null;
             }
             const date = new Date(library.created_at);
-            return Number.isNaN(date.getTime()) ? library.created_at : date.toLocaleDateString();
+            return Number.isNaN(date.getTime())
+                ? library.created_at
+                : date.toLocaleDateString();
         },
         // Rendered as the "Bibliothek" card's mt-card subtitle; null hides the subtitle (create mode).
         libraryMeta() {
@@ -74,9 +94,14 @@ Component.register('scalecommerce-vo-list', {
             if (!library) {
                 return null;
             }
-            const parts = [`${library.video_count} ${this.$tc('scalecommerce-vo.library.videoCount')}`, this.storageLabel];
+            const parts = [
+                `${library.video_count} ${this.$tc('scalecommerce-vo.library.videoCount')}`,
+                this.storageLabel,
+            ];
             if (this.createdLabel) {
-                parts.push(`${this.$tc('scalecommerce-vo.library.since')} ${this.createdLabel}`);
+                parts.push(
+                    `${this.$tc('scalecommerce-vo.library.since')} ${this.createdLabel}`
+                );
             }
             return parts.join(' · ');
         },
@@ -93,9 +118,18 @@ Component.register('scalecommerce-vo-list', {
                 return false;
             }
             const codec = this._ladderValue('codecs', this.selectedCodecs);
-            const resolutions = this._ladderValue('resolutions', this.selectedResolutions);
-            const storedCodec = this._ladderValue('codecs', this._splitKeys(library.codec));
-            const storedResolutions = this._ladderValue('resolutions', this._splitKeys(library.resolutions));
+            const resolutions = this._ladderValue(
+                'resolutions',
+                this.selectedResolutions
+            );
+            const storedCodec = this._ladderValue(
+                'codecs',
+                this._splitKeys(library.codec)
+            );
+            const storedResolutions = this._ladderValue(
+                'resolutions',
+                this._splitKeys(library.resolutions)
+            );
             return codec !== storedCodec || resolutions !== storedResolutions;
         },
     },
@@ -114,13 +148,23 @@ Component.register('scalecommerce-vo-list', {
         async loadLibraries() {
             this.isLoading = true;
             try {
-                const response = await this.scalecommerceVoApiService.getLibraries();
+                const response =
+                    await this.scalecommerceVoApiService.getLibraries();
                 this.libraries = response.data ?? response;
-                if (this.libraries.length && !this.selectedLibraryId) {
-                    this.selectedLibraryId = this.libraries[0].id;
+                const selectedExists = this.libraries.some(
+                    (library) => library.id === this.selectedLibraryId
+                );
+                if (!selectedExists) {
+                    this.selectedLibraryId = this.libraries[0]?.id ?? null;
+                }
+                // Without any library there is nothing to edit: offer the "new library" form.
+                if (!this.selectedLibraryId) {
+                    this.mode = 'create';
                 }
             } catch (error) {
-                this.createNotificationError({ message: this._errorText(error) });
+                this.createNotificationError({
+                    message: this._errorText(error),
+                });
             } finally {
                 this.isLoading = false;
             }
@@ -128,17 +172,27 @@ Component.register('scalecommerce-vo-list', {
 
         async loadEncodings() {
             try {
-                const response = await this.scalecommerceVoApiService.getEncodings();
+                const response =
+                    await this.scalecommerceVoApiService.getEncodings();
                 const data = response.data ?? response;
-                this.encodings = { codecs: data.codecs ?? [], resolutions: data.resolutions ?? [] };
+                this.encodings = {
+                    codecs: data.codecs ?? [],
+                    resolutions: data.resolutions ?? [],
+                };
             } catch (error) {
                 // Best effort: the pickers still work from the stored keys.
-                console.warn('[VideoOptimizer] failed to load encodings', error);
+                console.warn(
+                    '[VideoOptimizer] failed to load encodings',
+                    error
+                );
             }
         },
 
         _splitKeys(value) {
-            return (value || '').split(',').map((key) => key.trim()).filter(Boolean);
+            return (value || '')
+                .split(',')
+                .map((key) => key.trim())
+                .filter(Boolean);
         },
 
         _loadForm() {
@@ -171,6 +225,10 @@ Component.register('scalecommerce-vo-list', {
         },
 
         onCancelCreate() {
+            if (!this.selectedLibraryId) {
+                // Nothing to go back to while no library exists.
+                return;
+            }
             this.mode = 'edit';
             this._loadForm();
         },
@@ -192,7 +250,13 @@ Component.register('scalecommerce-vo-list', {
         // falls back to the org-wide `available` flag from /encodings.
         _optionSelectable(option, group) {
             const library = this.activeLibrary;
-            const allowlist = library ? library[group === 'codecs' ? 'available_codecs' : 'available_resolutions'] : null;
+            const allowlist = library
+                ? library[
+                      group === 'codecs'
+                          ? 'available_codecs'
+                          : 'available_resolutions'
+                  ]
+                : null;
             if (Array.isArray(allowlist) && allowlist.length > 0) {
                 return allowlist.includes(option.key);
             }
@@ -203,7 +267,10 @@ Component.register('scalecommerce-vo-list', {
             if (!this.mediaManaged) {
                 return true;
             }
-            const selected = group === 'codecs' ? this.selectedCodecs : this.selectedResolutions;
+            const selected =
+                group === 'codecs'
+                    ? this.selectedCodecs
+                    : this.selectedResolutions;
             // Already-selected keys stay enabled even if they fell out of the allowlist, so the
             // user can still deselect them.
             if (selected.includes(option.key)) {
@@ -219,7 +286,9 @@ Component.register('scalecommerce-vo-list', {
 
         // Joins selected keys in the canonical /encodings order; unknown stored keys are appended.
         _ladderValue(group, selected) {
-            const order = (this.encodings[group] || []).map((option) => option.key);
+            const order = (this.encodings[group] || []).map(
+                (option) => option.key
+            );
             const inOrder = order.filter((key) => selected.includes(key));
             const extras = selected.filter((key) => !order.includes(key));
             return [...inOrder, ...extras].join(',');
@@ -233,7 +302,10 @@ Component.register('scalecommerce-vo-list', {
             this.isSaving = true;
             try {
                 const codec = this._ladderValue('codecs', this.selectedCodecs);
-                const resolutions = this._ladderValue('resolutions', this.selectedResolutions);
+                const resolutions = this._ladderValue(
+                    'resolutions',
+                    this.selectedResolutions
+                );
 
                 if (this.mode === 'create') {
                     const payload = { name };
@@ -246,7 +318,10 @@ Component.register('scalecommerce-vo-list', {
                     if (resolutions) {
                         payload.resolutions = resolutions;
                     }
-                    const response = await this.scalecommerceVoApiService.createLibrary(payload);
+                    const response =
+                        await this.scalecommerceVoApiService.createLibrary(
+                            payload
+                        );
                     const created = response.data ?? response;
                     this.mode = 'edit';
                     await this.loadLibraries();
@@ -254,20 +329,29 @@ Component.register('scalecommerce-vo-list', {
                         this.selectedLibraryId = created.id;
                     }
                     this._loadForm();
-                    this.createNotificationSuccess({ message: this.$tc('scalecommerce-vo.library.created') });
-                } else {
-                    await this.scalecommerceVoApiService.updateLibrary(this.selectedLibraryId, {
-                        name,
-                        description: this.formDescription.trim(),
-                        codec,
-                        resolutions,
+                    this.createNotificationSuccess({
+                        message: this.$tc('scalecommerce-vo.library.created'),
                     });
+                } else {
+                    await this.scalecommerceVoApiService.updateLibrary(
+                        this.selectedLibraryId,
+                        {
+                            name,
+                            description: this.formDescription.trim(),
+                            codec,
+                            resolutions,
+                        }
+                    );
                     await this.loadLibraries();
                     this._loadForm();
-                    this.createNotificationSuccess({ message: this.$tc('scalecommerce-vo.library.saved') });
+                    this.createNotificationSuccess({
+                        message: this.$tc('scalecommerce-vo.library.saved'),
+                    });
                 }
             } catch (error) {
-                this.createNotificationError({ message: this._errorText(error) });
+                this.createNotificationError({
+                    message: this._errorText(error),
+                });
             } finally {
                 this.isSaving = false;
             }
@@ -283,13 +367,17 @@ Component.register('scalecommerce-vo-list', {
                 return;
             }
             try {
-                await this.scalecommerceVoApiService.deleteLibrary(this.selectedLibraryId);
+                await this.scalecommerceVoApiService.deleteLibrary(
+                    this.selectedLibraryId
+                );
                 this.selectedLibraryId = null;
                 this.mode = 'edit';
                 await this.loadLibraries();
                 this._loadForm();
             } catch (error) {
-                this.createNotificationError({ message: this._errorText(error) });
+                this.createNotificationError({
+                    message: this._errorText(error),
+                });
             }
         },
 
@@ -304,21 +392,32 @@ Component.register('scalecommerce-vo-list', {
             }
             this.isReprocessing = true;
             try {
-                const response = await this.scalecommerceVoApiService.reprocessLibrary(this.selectedLibraryId);
+                const response =
+                    await this.scalecommerceVoApiService.reprocessLibrary(
+                        this.selectedLibraryId
+                    );
                 const data = response.data ?? response;
                 // Fallback to 0 so a malformed/omitted `queued` field can't render "undefined videos ...".
                 this.createNotificationSuccess({
-                    message: this.$t('scalecommerce-vo.library.reprocessQueued', { count: data.queued ?? 0 }),
+                    message: this.$t(
+                        'scalecommerce-vo.library.reprocessQueued',
+                        { count: data.queued ?? 0 }
+                    ),
                 });
             } catch (error) {
-                this.createNotificationError({ message: this._errorText(error) });
+                this.createNotificationError({
+                    message: this._errorText(error),
+                });
             } finally {
                 this.isReprocessing = false;
             }
         },
 
         _errorText(error) {
-            return error?.response?.data?.errors?.[0]?.detail ?? this.$tc('scalecommerce-vo.list.genericError');
+            return (
+                error?.response?.data?.errors?.[0]?.detail ??
+                this.$tc('scalecommerce-vo.list.genericError')
+            );
         },
     },
 });

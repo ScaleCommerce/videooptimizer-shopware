@@ -13,7 +13,10 @@ Shopware.Component.register('scalecommerce-vo-background-hero-config', {
 
     computed: {
         libraryOptions() {
-            return this.libraries.map((library) => ({ value: library.id, label: library.name }));
+            return this.libraries.map((library) => ({
+                value: library.id,
+                label: library.name,
+            }));
         },
         selectedLibraryId() {
             return this.element.config.libraryId.value;
@@ -23,16 +26,46 @@ Shopware.Component.register('scalecommerce-vo-background-hero-config', {
         },
         overlayOptions() {
             return [
-                { value: 'gradient', label: this.$tc('scalecommerce-vo.backgroundHero.overlayGradient') },
-                { value: 'dark', label: this.$tc('scalecommerce-vo.backgroundHero.overlayDark') },
-                { value: 'none', label: this.$tc('scalecommerce-vo.backgroundHero.overlayNone') },
+                {
+                    value: 'gradient',
+                    label: this.$tc(
+                        'scalecommerce-vo.backgroundHero.overlayGradient'
+                    ),
+                },
+                {
+                    value: 'dark',
+                    label: this.$tc(
+                        'scalecommerce-vo.backgroundHero.overlayDark'
+                    ),
+                },
+                {
+                    value: 'none',
+                    label: this.$tc(
+                        'scalecommerce-vo.backgroundHero.overlayNone'
+                    ),
+                },
             ];
         },
         heightOptions() {
             return [
-                { value: 'full', label: this.$tc('scalecommerce-vo.backgroundHero.heightFull') },
-                { value: 'large', label: this.$tc('scalecommerce-vo.backgroundHero.heightLarge') },
-                { value: 'medium', label: this.$tc('scalecommerce-vo.backgroundHero.heightMedium') },
+                {
+                    value: 'full',
+                    label: this.$tc(
+                        'scalecommerce-vo.backgroundHero.heightFull'
+                    ),
+                },
+                {
+                    value: 'large',
+                    label: this.$tc(
+                        'scalecommerce-vo.backgroundHero.heightLarge'
+                    ),
+                },
+                {
+                    value: 'medium',
+                    label: this.$tc(
+                        'scalecommerce-vo.backgroundHero.heightMedium'
+                    ),
+                },
             ];
         },
     },
@@ -45,7 +78,8 @@ Shopware.Component.register('scalecommerce-vo-background-hero-config', {
     methods: {
         async loadLibraries() {
             try {
-                const response = await this.scalecommerceVoApiService.getLibraries();
+                const response =
+                    await this.scalecommerceVoApiService.getLibraries();
                 this.libraries = response.data ?? response;
             } catch {
                 this.libraries = [];

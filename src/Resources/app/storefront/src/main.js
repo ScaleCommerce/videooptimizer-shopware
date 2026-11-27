@@ -5,6 +5,18 @@ import ScalecommerceVoHero from './scalecommerce-vo-hero/scalecommerce-vo-hero.p
 // (importing .scss from JS only works in webpack hot mode, not production builds).
 
 const PluginManager = window.PluginManager;
-PluginManager.register('ScalecommerceVoPlayer', ScalecommerceVoPlayer, '[data-scalecommerce-vo-player]');
-PluginManager.register('ScalecommerceVoBlocks', ScalecommerceVoBlocks, '[data-scalecommerce-vo-block]');
-PluginManager.register('ScalecommerceVoHero', ScalecommerceVoHero, '[data-scalecommerce-vo-hero-hls]');
+PluginManager.register(
+    'ScalecommerceVoPlayer',
+    ScalecommerceVoPlayer,
+    '[data-scalecommerce-vo-player]'
+);
+PluginManager.register(
+    'ScalecommerceVoBlocks',
+    ScalecommerceVoBlocks,
+    '[data-scalecommerce-vo-block]'
+);
+PluginManager.register(
+    'ScalecommerceVoHero',
+    ScalecommerceVoHero,
+    '[data-scalecommerce-vo-hero-hls]'
+);

@@ -13,7 +13,10 @@ Shopware.Component.register('scalecommerce-vo-spotlight-config', {
 
     computed: {
         libraryOptions() {
-            return this.libraries.map((library) => ({ value: library.id, label: library.name }));
+            return this.libraries.map((library) => ({
+                value: library.id,
+                label: library.name,
+            }));
         },
         selectedLibraryId() {
             return this.element.config.libraryId.value;
@@ -23,15 +26,36 @@ Shopware.Component.register('scalecommerce-vo-spotlight-config', {
         },
         presentationOptions() {
             return [
-                { value: 'facade', label: this.$tc('scalecommerce-vo.spotlight.presentationFacade') },
-                { value: 'lightbox', label: this.$tc('scalecommerce-vo.spotlight.presentationLightbox') },
-                { value: 'direct', label: this.$tc('scalecommerce-vo.spotlight.presentationDirect') },
+                {
+                    value: 'facade',
+                    label: this.$tc(
+                        'scalecommerce-vo.spotlight.presentationFacade'
+                    ),
+                },
+                {
+                    value: 'lightbox',
+                    label: this.$tc(
+                        'scalecommerce-vo.spotlight.presentationLightbox'
+                    ),
+                },
+                {
+                    value: 'direct',
+                    label: this.$tc(
+                        'scalecommerce-vo.spotlight.presentationDirect'
+                    ),
+                },
             ];
         },
         playerModeOptions() {
             return [
-                { value: 'native', label: this.$tc('scalecommerce-vo.spotlight.playerNative') },
-                { value: 'embed', label: this.$tc('scalecommerce-vo.spotlight.playerEmbed') },
+                {
+                    value: 'native',
+                    label: this.$tc('scalecommerce-vo.spotlight.playerNative'),
+                },
+                {
+                    value: 'embed',
+                    label: this.$tc('scalecommerce-vo.spotlight.playerEmbed'),
+                },
             ];
         },
     },
@@ -44,7 +68,8 @@ Shopware.Component.register('scalecommerce-vo-spotlight-config', {
     methods: {
         async loadLibraries() {
             try {
-                const response = await this.scalecommerceVoApiService.getLibraries();
+                const response =
+                    await this.scalecommerceVoApiService.getLibraries();
                 this.libraries = response.data ?? response;
             } catch {
                 this.libraries = [];

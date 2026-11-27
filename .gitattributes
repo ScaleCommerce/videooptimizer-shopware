@@ -7,3 +7,4 @@
 /.gitattributes export-ignore
 /.phpunit.result.cache export-ignore
 /src/Resources/app/storefront/node_modules export-ignore
+*.map export-ignore

@@ -13,7 +13,10 @@ Shopware.Component.register('scalecommerce-vo-cms-element-config', {
 
     computed: {
         libraryOptions() {
-            return this.libraries.map((library) => ({ value: library.id, label: library.name }));
+            return this.libraries.map((library) => ({
+                value: library.id,
+                label: library.name,
+            }));
         },
         selectedLibraryId() {
             return this.element.config.libraryId.value;
@@ -23,8 +26,14 @@ Shopware.Component.register('scalecommerce-vo-cms-element-config', {
         },
         playerModeOptions() {
             return [
-                { value: 'native', label: this.$tc('scalecommerce-vo.cms.playerModeNative') },
-                { value: 'embed', label: this.$tc('scalecommerce-vo.cms.playerModeEmbed') },
+                {
+                    value: 'native',
+                    label: this.$tc('scalecommerce-vo.cms.playerModeNative'),
+                },
+                {
+                    value: 'embed',
+                    label: this.$tc('scalecommerce-vo.cms.playerModeEmbed'),
+                },
             ];
         },
     },
@@ -37,7 +46,8 @@ Shopware.Component.register('scalecommerce-vo-cms-element-config', {
     methods: {
         async loadLibraries() {
             try {
-                const response = await this.scalecommerceVoApiService.getLibraries();
+                const response =
+                    await this.scalecommerceVoApiService.getLibraries();
                 this.libraries = response.data ?? response;
             } catch {
                 this.libraries = [];

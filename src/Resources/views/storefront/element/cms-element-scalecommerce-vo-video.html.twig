@@ -25,7 +25,8 @@
                          controls: config.showControls.value ?? true,
                          autoplay: config.autoplay.value ?? false,
                          muted: config.muted.value ?? false,
-                         loop: config.loop.value ?? false
+                         loop: config.loop.value ?? false,
+                         unavailableLabel: 'scalecommerce-vo.storefront.unavailable'|trans
                      }|json_encode }}'
                      style="position:relative;width:100%;aspect-ratio:{{ aspectRatio }}">
                     <video class="scalecommerce-vo-video__player"

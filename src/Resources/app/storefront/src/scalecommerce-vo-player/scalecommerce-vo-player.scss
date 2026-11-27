@@ -1,0 +1,17 @@
+// Notice for a player whose video cannot be played (fatal HLS error, no MP4 fallback). The poster
+// stays visible underneath.
+.scalecommerce-vo-video--unavailable::after {
+    content: attr(data-vo-unavailable);
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    max-width: calc(100% - 2rem);
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    font-size: 0.875rem;
+    text-align: center;
+    pointer-events: none;
+}

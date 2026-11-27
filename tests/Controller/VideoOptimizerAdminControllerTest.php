@@ -5,19 +5,24 @@ namespace ScaleCommerce\VideoOptimizer\Tests\Controller;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ScaleCommerce\VideoOptimizer\Controller\VideoOptimizerAdminController;
+use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidRequestException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Symfony\Bundle\FrameworkBundle\Routing\AttributeRouteControllerLoader;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Routing\Exception\MethodNotAllowedException;
+use Symfony\Component\Routing\Exception\ResourceNotFoundException;
 use Symfony\Component\Routing\Matcher\UrlMatcher;
 use Symfony\Component\Routing\RequestContext;
 
 class VideoOptimizerAdminControllerTest extends TestCase
 {
+    private const UUID = 'e7ab89b1-b74f-42fd-b2a9-53bfe1d492a8';
+
     public function testListLibrariesReturnsClientData(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('listLibraries')->willReturn([['id' => 'lib-1']]);
 
         $controller = new VideoOptimizerAdminController($client);
@@ -29,7 +34,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
 
     public function testApiExceptionBecomesErrorJson(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('listLibraries')->willThrowException(new VideoOptimizerApiException(429, 'Too Many Requests'));
 
         $controller = new VideoOptimizerAdminController($client);
@@ -42,7 +47,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
 
     public function testMissingTokenReturns400(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('listLibraries')->willThrowException(new MissingApiTokenException());
 
         $controller = new VideoOptimizerAdminController($client);
@@ -68,7 +73,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
     public function testListAllVideosReturnsClientData(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
-        $client->method('listAllVideos')->with(null)->willReturn([['uuid' => 'v1']]);
+        $client->expects(static::once())->method('listAllVideos')->with(null)->willReturn([['uuid' => 'v1']]);
 
         $controller = new VideoOptimizerAdminController($client);
         $response = $controller->listAllVideos(new Request());
@@ -120,7 +125,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
 
     public function testListEncodingsReturnsClientData(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('listEncodings')->willReturn(['codecs' => [['key' => 'h264']], 'resolutions' => []]);
 
         $controller = new VideoOptimizerAdminController($client);
@@ -136,7 +141,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
     public function testListThumbnailsReturnsClientData(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
-        $client->method('listThumbnails')->with('v1')->willReturn(['thumbnails' => [['index' => 0]]]);
+        $client->expects(static::once())->method('listThumbnails')->with('v1')->willReturn(['thumbnails' => [['index' => 0]]]);
         $controller = new VideoOptimizerAdminController($client);
         $response = $controller->listThumbnails('v1');
         static::assertSame(200, $response->getStatusCode());
@@ -146,7 +151,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
     public function testGetThumbnailImageStreamsBytes(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
-        $client->method('getThumbnailImage')->with('v1', 2)->willReturn(['content' => 'IMG', 'contentType' => 'image/jpeg']);
+        $client->expects(static::once())->method('getThumbnailImage')->with('v1', 2)->willReturn(['content' => 'IMG', 'contentType' => 'image/jpeg']);
         $controller = new VideoOptimizerAdminController($client);
         $response = $controller->getThumbnailImage('v1', '2');
         static::assertSame(200, $response->getStatusCode());
@@ -158,7 +163,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
 
     public function testGetThumbnailImageAllowsWebpAndGif(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getThumbnailImage')->willReturnMap([
             ['v1', 2, ['content' => 'WEBP', 'contentType' => 'image/webp']],
             ['v1', 3, ['content' => 'GIF', 'contentType' => 'image/gif; charset=binary']],
@@ -176,7 +181,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
     public function testGetThumbnailImageRewritesDisallowedContentTypeToOctetStream(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
-        $client->method('getThumbnailImage')->with('v1', 2)->willReturn(['content' => '<script>evil()</script>', 'contentType' => 'text/html']);
+        $client->expects(static::once())->method('getThumbnailImage')->with('v1', 2)->willReturn(['content' => '<script>evil()</script>', 'contentType' => 'text/html']);
         $controller = new VideoOptimizerAdminController($client);
         $response = $controller->getThumbnailImage('v1', '2');
 
@@ -188,7 +193,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
     public function testGetThumbnailImageContentTypeComparisonIsCaseInsensitive(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
-        $client->method('getThumbnailImage')->with('v1', 2)->willReturn(['content' => 'IMG', 'contentType' => 'IMAGE/JPEG']);
+        $client->expects(static::once())->method('getThumbnailImage')->with('v1', 2)->willReturn(['content' => 'IMG', 'contentType' => 'IMAGE/JPEG']);
         $controller = new VideoOptimizerAdminController($client);
         $response = $controller->getThumbnailImage('v1', '2');
 
@@ -491,11 +496,9 @@ class VideoOptimizerAdminControllerTest extends TestCase
     }
 
     /**
-     * `POST /videos/ingest` and `GET|PATCH|DELETE /videos/{uuid}` share the same path shape, so
-     * this loads the real route attributes and asserts Symfony's matcher resolves POST to the new
-     * ingest action while GET/PATCH/DELETE on the same literal path still resolve to the
-     * uuid-based actions (Symfony filters candidate routes by method, so no requirements pattern
-     * is needed on {uuid}).
+     * `POST /videos/ingest` and `GET|PATCH|DELETE /videos/{uuid}` share the same path shape. POST
+     * must resolve to the ingest action; on the other methods "ingest" is not a UUID, so the
+     * uuid-based routes must not match it.
      */
     public function testIngestRouteDoesNotCollideWithUuidRoutes(): void
     {
@@ -509,9 +512,57 @@ class VideoOptimizerAdminControllerTest extends TestCase
 
         $getContext = new RequestContext();
         $getContext->setMethod('GET');
-        $getMatch = (new UrlMatcher($routes, $getContext))->match($path);
-        static::assertSame('api.action.scalecommerce-vo.videos.get', $getMatch['_route']);
-        static::assertSame('ingest', $getMatch['uuid']);
+        $this->expectException(MethodNotAllowedException::class);
+        (new UrlMatcher($routes, $getContext))->match($path);
+    }
+
+    /**
+     * Every {id}/{uuid} route must only match a UUID. Otherwise "%2E%2E" reaches the client as
+     * "..", and HttpClient's dot-segment removal re-targets the upstream request (issue #5).
+     */
+    public function testEveryIdRouteRequiresAUuid(): void
+    {
+        $routes = (new AttributeRouteControllerLoader())->load(VideoOptimizerAdminController::class, 'attribute');
+        $checked = 0;
+        foreach ($routes as $name => $route) {
+            foreach (['id', 'uuid'] as $param) {
+                if (!str_contains($route->getPath(), '{' . $param . '}')) {
+                    continue;
+                }
+                $requirement = $route->getRequirement($param);
+                static::assertNotNull($requirement, sprintf('Route %s has no requirement for {%s}.', $name, $param));
+                static::assertMatchesRegularExpression('#^(?:' . $requirement . ')$#', self::UUID, $name);
+                static::assertDoesNotMatchRegularExpression('#^(?:' . $requirement . ')$#', '..', $name);
+                ++$checked;
+            }
+        }
+        static::assertGreaterThan(10, $checked);
+    }
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function traversalRequests(): iterable
+    {
+        yield 'poster delete' => ['DELETE', '/api/_action/scalecommerce-vo/videos/../poster'];
+        yield 'library update' => ['PATCH', '/api/_action/scalecommerce-vo/libraries/..'];
+        yield 'video get' => ['GET', '/api/_action/scalecommerce-vo/videos/..'];
+        yield 'library videos' => ['GET', '/api/_action/scalecommerce-vo/libraries/../videos'];
+    }
+
+    #[DataProvider('traversalRequests')]
+    public function testDotSegmentIdsDoNotMatchAnyRoute(string $method, string $path): void
+    {
+        $routes = (new AttributeRouteControllerLoader())->load(VideoOptimizerAdminController::class, 'attribute');
+        $context = new RequestContext();
+        $context->setMethod($method);
+
+        try {
+            $match = (new UrlMatcher($routes, $context))->match($path);
+            static::fail(sprintf('%s %s unexpectedly matched %s.', $method, $path, $match['_route']));
+        } catch (ResourceNotFoundException|MethodNotAllowedException) {
+            $this->addToAssertionCount(1);
+        }
     }
 
     public function testPlaybackReturnsCdnSourcesFromEmbed(): void
@@ -536,7 +587,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
 
     public function testPlaybackWithoutSourcesReturnsNulls(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getEmbed')->willReturn(['sources' => 'garbage']);
 
         $response = (new VideoOptimizerAdminController($client))->getPlayback('vid-1');
@@ -546,7 +597,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
 
     public function testPlaybackPropagatesUpstreamErrors(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getEmbed')->willThrowException(new VideoOptimizerApiException(404, 'Video not found'));
 
         $response = (new VideoOptimizerAdminController($client))->getPlayback('vid-1');
@@ -559,9 +610,77 @@ class VideoOptimizerAdminControllerTest extends TestCase
         $routes = (new AttributeRouteControllerLoader())->load(VideoOptimizerAdminController::class, 'attribute');
         $context = new RequestContext();
         $context->setMethod('GET');
-        $match = (new UrlMatcher($routes, $context))->match('/api/_action/scalecommerce-vo/videos/abc/playback');
+        $match = (new UrlMatcher($routes, $context))->match('/api/_action/scalecommerce-vo/videos/' . self::UUID . '/playback');
 
         static::assertSame('api.action.scalecommerce-vo.videos.playback', $match['_route']);
         static::assertSame(['scalecommerce_vo:read'], $match['_acl']);
+    }
+
+    /**
+     * @return iterable<string, array{int, string}>
+     */
+    public static function upstreamAuthErrors(): iterable
+    {
+        yield 'token rejected' => [401, 'SCALECOMMERCE_VO__API_TOKEN_REJECTED'];
+        yield 'token not permitted' => [403, 'SCALECOMMERCE_VO__API_TOKEN_FORBIDDEN'];
+    }
+
+    /**
+     * The administration's HTTP client treats every 401 as an expired admin session (token
+     * refresh + retry), so an upstream auth error must not be passed through as-is (issue #2).
+     */
+    #[DataProvider('upstreamAuthErrors')]
+    public function testUpstreamAuthErrorBecomesBadGatewayWithOwnCode(int $upstreamStatus, string $code): void
+    {
+        $client = $this->createStub(VideoOptimizerClient::class);
+        $client->method('listLibraries')->willThrowException(VideoOptimizerApiException::fromResponse($upstreamStatus, ''));
+
+        $response = (new VideoOptimizerAdminController($client))->listLibraries();
+
+        static::assertSame(502, $response->getStatusCode());
+        $error = json_decode((string) $response->getContent(), true)['errors'][0];
+        static::assertSame('502', $error['status']);
+        static::assertSame($code, $error['code']);
+        static::assertStringStartsWith('The VideoOptimizer API', $error['detail']);
+        static::assertStringContainsString('token', $error['detail']);
+    }
+
+    #[DataProvider('upstreamAuthErrors')]
+    public function testUpstreamAuthErrorOnThumbnailBecomesBadGateway(int $upstreamStatus, string $code): void
+    {
+        $client = $this->createStub(VideoOptimizerClient::class);
+        $client->method('getThumbnailImage')->willThrowException(new VideoOptimizerApiException($upstreamStatus, 'Unauthorized'));
+
+        $response = (new VideoOptimizerAdminController($client))->getThumbnailImage(self::UUID, '1');
+
+        static::assertSame(502, $response->getStatusCode());
+        static::assertSame($code, json_decode((string) $response->getContent(), true)['errors'][0]['code']);
+    }
+
+    public function testInvalidRequestOnThumbnailReturns400(): void
+    {
+        $client = $this->createStub(VideoOptimizerClient::class);
+        $client->method('getThumbnailImage')->willThrowException(new InvalidRequestException('Invalid VideoOptimizer ID.'));
+
+        $response = (new VideoOptimizerAdminController($client))->getThumbnailImage(self::UUID, '1');
+
+        static::assertSame(400, $response->getStatusCode());
+    }
+
+    /**
+     * 403 also means "plan limit reached", "not available during the trial" etc.; that upstream
+     * message must reach the user instead of a misleading "check the token" hint.
+     */
+    public function testUpstream403KeepsTheUpstreamMessage(): void
+    {
+        $client = $this->createStub(VideoOptimizerClient::class);
+        $client->method('createLibrary')->willThrowException(new VideoOptimizerApiException(403, 'Library limit of the plan reached'));
+
+        $response = (new VideoOptimizerAdminController($client))->createLibrary(new Request([], [], [], [], [], [], '{"name":"x"}'));
+
+        static::assertSame(502, $response->getStatusCode());
+        $error = json_decode((string) $response->getContent(), true)['errors'][0];
+        static::assertSame('SCALECOMMERCE_VO__API_TOKEN_FORBIDDEN', $error['code']);
+        static::assertSame('Library limit of the plan reached', $error['detail']);
     }
 }

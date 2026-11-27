@@ -1,5 +1,6 @@
 .scalecommerce-vo-detail {
     &__poster {
+        position: relative;
         aspect-ratio: 16 / 9;
         background: #000;
         border-radius: 4px;
@@ -7,10 +8,34 @@
         margin-bottom: 8px;
 
         img,
-        video { display: block; width: 100%; height: 100%; object-fit: contain; }
+        video {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
     }
 
-    &__meta { color: #758ca3; margin-bottom: 16px; }
+    // Shown over the poster when the video cannot be played; explicit colour because the
+    // administration's base CSS colours every <p>.
+    &__player-error {
+        position: absolute;
+        left: 50%;
+        bottom: 16px;
+        transform: translateX(-50%);
+        margin: 0;
+        padding: 6px 12px;
+        border-radius: 4px;
+        background: rgba(0, 0, 0, 0.75);
+        color: #fff;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    &__meta {
+        color: #758ca3;
+        margin-bottom: 16px;
+    }
 
     &__frames {
         display: grid;
@@ -28,10 +53,19 @@
         cursor: pointer;
         padding: 0;
 
-        &:hover:not(:disabled) { border-color: #189eff; }
-        &:disabled { cursor: default; opacity: 0.7; }
+        &:hover:not(:disabled) {
+            border-color: #189eff;
+        }
+        &:disabled {
+            cursor: default;
+            opacity: 0.7;
+        }
 
-        img { width: 100%; height: 100%; object-fit: cover; }
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
     }
 
     &__custom {
@@ -47,5 +81,8 @@
         gap: 8px;
     }
 
-    &__status { color: #758ca3; margin-top: 12px; }
+    &__status {
+        color: #758ca3;
+        margin-top: 12px;
+    }
 }

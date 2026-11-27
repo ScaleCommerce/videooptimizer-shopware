@@ -1,6 +1,10 @@
 import template from './scalecommerce-vo-video-gallery.html.twig';
 import './scalecommerce-vo-video-gallery.scss';
-import { parseResolution, formatDuration, orientationKey } from '../../helper/video-meta';
+import {
+    parseResolution,
+    formatDuration,
+    orientationKey,
+} from '../../helper/video-meta';
 
 const { Component, Mixin } = Shopware;
 
@@ -38,21 +42,33 @@ Component.register('scalecommerce-vo-video-gallery', {
 
     watch: {
         libraryId() {
+            // Don't leave the previous library's videos visible and clickable while loading.
+            this.videos = [];
             this.loadVideos();
         },
     },
 
     computed: {
         selectedVideo() {
-            return this.videos.find((video) => video.uuid === this.selectedUuid) ?? null;
+            return (
+                this.videos.find((video) => video.uuid === this.selectedUuid) ??
+                null
+            );
         },
 
         confirmDeleteVideoTitle() {
-            return this.confirmDeleteVideo ? (this.confirmDeleteVideo.title || this.confirmDeleteVideo.uuid) : '';
+            return this.confirmDeleteVideo
+                ? this.confirmDeleteVideo.title || this.confirmDeleteVideo.uuid
+                : '';
         },
 
         canIngest() {
-            return this.ingestUrl.startsWith('https://') && !!this.libraryId && !this.isUploading && !this.isIngesting;
+            return (
+                this.ingestUrl.startsWith('https://') &&
+                !!this.libraryId &&
+                !this.isUploading &&
+                !this.isIngesting
+            );
         },
     },
 
@@ -91,7 +107,11 @@ Component.register('scalecommerce-vo-video-gallery', {
         },
 
         metaLine(video) {
-            return [this.dimensions(video), this.duration(video), this.orientationLabel(video)]
+            return [
+                this.dimensions(video),
+                this.duration(video),
+                this.orientationLabel(video),
+            ]
                 .filter((part) => part !== null)
                 .join(' · ');
         },
@@ -101,14 +121,32 @@ Component.register('scalecommerce-vo-video-gallery', {
                 this.videos = [];
                 return;
             }
+            // Only the latest request may apply its result: with quick library switches an older,
+            // slower response must not overwrite the list of the library selected now.
+            const libraryId = this.libraryId;
+            const request = (this._loadRequest = (this._loadRequest ?? 0) + 1);
             this.isLoading = true;
             try {
-                const response = await this.scalecommerceVoApiService.getVideos(this.libraryId);
+                const response =
+                    await this.scalecommerceVoApiService.getVideos(libraryId);
+                if (
+                    request !== this._loadRequest ||
+                    libraryId !== this.libraryId
+                ) {
+                    return;
+                }
                 this.videos = response.data ?? response;
             } catch (error) {
-                this.createNotificationError({ message: this._errorText(error) });
+                if (request !== this._loadRequest) {
+                    return;
+                }
+                this.createNotificationError({
+                    message: this._errorText(error),
+                });
             } finally {
-                this.isLoading = false;
+                if (request === this._loadRequest) {
+                    this.isLoading = false;
+                }
             }
         },
 
@@ -154,19 +192,27 @@ Component.register('scalecommerce-vo-video-gallery', {
             }
             this.isUploading = true;
             try {
-                const uuid = await this._uploadPresigned(this.libraryId, file, this.uploadTitle);
+                const uuid = await this._uploadPresigned(
+                    this.libraryId,
+                    file,
+                    this.uploadTitle
+                );
                 this.uploadFile = null;
                 this.uploadTitle = '';
                 if (this.$refs.fileInput) {
                     this.$refs.fileInput.value = '';
                 }
-                this.createNotificationSuccess({ message: this.$tc('scalecommerce-vo.gallery.uploadStarted') });
+                this.createNotificationSuccess({
+                    message: this.$tc('scalecommerce-vo.gallery.uploadStarted'),
+                });
                 await this._pollUntilReady(uuid);
                 this.$emit('upload-complete', uuid);
             } catch (error) {
                 // _pollUntilReady already shows its own notification for polling failures.
                 if (!error?.handled) {
-                    this.createNotificationError({ message: this._errorText(error) });
+                    this.createNotificationError({
+                        message: this._errorText(error),
+                    });
                 }
             } finally {
                 this.isUploading = false;
@@ -179,13 +225,21 @@ Component.register('scalecommerce-vo-video-gallery', {
             }
             this.isIngesting = true;
             try {
-                const payload = { library_id: this.libraryId, source_url: this.ingestUrl };
+                const payload = {
+                    library_id: this.libraryId,
+                    source_url: this.ingestUrl,
+                };
                 if (this.ingestTitle) {
                     payload.title = this.ingestTitle;
                 }
-                const response = await this.scalecommerceVoApiService.ingestVideoUrl(payload);
+                const response =
+                    await this.scalecommerceVoApiService.ingestVideoUrl(
+                        payload
+                    );
                 const video = response.data ?? response;
-                this.createNotificationSuccess({ message: this.$tc('scalecommerce-vo.gallery.ingestStarted') });
+                this.createNotificationSuccess({
+                    message: this.$tc('scalecommerce-vo.gallery.ingestStarted'),
+                });
                 this.ingestUrl = '';
                 this.ingestTitle = '';
                 await this._pollUntilReady(video.uuid);
@@ -193,7 +247,9 @@ Component.register('scalecommerce-vo-video-gallery', {
             } catch (error) {
                 // _pollUntilReady already shows its own notification for polling failures.
                 if (!error?.handled) {
-                    this.createNotificationError({ message: this._errorText(error) });
+                    this.createNotificationError({
+                        message: this._errorText(error),
+                    });
                 }
             } finally {
                 this.isIngesting = false;
@@ -202,19 +258,31 @@ Component.register('scalecommerce-vo-video-gallery', {
 
         // initiate (proxy) -> PUT parts straight to storage -> complete (proxy). Returns the video uuid.
         async _uploadPresigned(libraryId, file, title) {
-            const initiateResponse = await this.scalecommerceVoApiService.initiateUpload({
-                libraryId,
-                filename: file.name,
-                contentType: file.type || 'application/octet-stream',
-                fileSize: file.size,
-            });
+            const initiateResponse =
+                await this.scalecommerceVoApiService.initiateUpload({
+                    libraryId,
+                    filename: file.name,
+                    contentType: file.type || 'application/octet-stream',
+                    fileSize: file.size,
+                });
             const init = initiateResponse.data ?? initiateResponse;
-            const parts = await this.scalecommerceVoApiService.uploadParts(file, init.parts, init.partSize);
-            const payload = { libraryId, uuid: init.uuid, key: init.key, uploadId: init.uploadId, parts };
+            const parts = await this.scalecommerceVoApiService.uploadParts(
+                file,
+                init.parts,
+                init.partSize
+            );
+            const payload = {
+                libraryId,
+                uuid: init.uuid,
+                key: init.key,
+                uploadId: init.uploadId,
+                parts,
+            };
             if (title) {
                 payload.title = title;
             }
-            const completeResponse = await this.scalecommerceVoApiService.completeUpload(payload);
+            const completeResponse =
+                await this.scalecommerceVoApiService.completeUpload(payload);
             const completed = completeResponse.data ?? completeResponse;
             return completed.uuid ?? init.uuid;
         },
@@ -230,7 +298,9 @@ Component.register('scalecommerce-vo-video-gallery', {
             }
             if (attempt > 60) {
                 return this.loadVideos().then(() => {
-                    const message = this.$tc('scalecommerce-vo.gallery.processingTimeout');
+                    const message = this.$tc(
+                        'scalecommerce-vo.gallery.processingTimeout'
+                    );
                     this.createNotificationError({ message });
                     const error = new Error(message);
                     error.handled = true;
@@ -244,7 +314,8 @@ Component.register('scalecommerce-vo-video-gallery', {
                         return;
                     }
                     try {
-                        const response = await this.scalecommerceVoApiService.getVideo(uuid);
+                        const response =
+                            await this.scalecommerceVoApiService.getVideo(uuid);
                         const video = response.data ?? response;
                         if (this._unmounted) {
                             resolve();
@@ -257,8 +328,13 @@ Component.register('scalecommerce-vo-video-gallery', {
                         }
                         if (video.status === 'failed') {
                             await this.loadVideos();
-                            let message = this.$tc('scalecommerce-vo.gallery.processingFailed');
-                            if (typeof video.error === 'string' && video.error) {
+                            let message = this.$tc(
+                                'scalecommerce-vo.gallery.processingFailed'
+                            );
+                            if (
+                                typeof video.error === 'string' &&
+                                video.error
+                            ) {
                                 message = `${message} (${video.error})`;
                             }
                             this.createNotificationError({ message });
@@ -268,7 +344,10 @@ Component.register('scalecommerce-vo-video-gallery', {
                             return;
                         }
                     } catch (error) {
-                        console.warn('[VideoOptimizer] polling uploaded video status failed, retrying', error);
+                        console.warn(
+                            '[VideoOptimizer] polling uploaded video status failed, retrying',
+                            error
+                        );
                     }
                     resolve(this._pollUntilReady(uuid, attempt + 1));
                 }, 5000);
@@ -293,11 +372,15 @@ Component.register('scalecommerce-vo-video-gallery', {
             }
             this.onRenameCancel();
             try {
-                await this.scalecommerceVoApiService.updateVideo(video.uuid, { title });
+                await this.scalecommerceVoApiService.updateVideo(video.uuid, {
+                    title,
+                });
                 await this.loadVideos();
                 this.$emit('renamed', video.uuid);
             } catch (error) {
-                this.createNotificationError({ message: this._errorText(error) });
+                this.createNotificationError({
+                    message: this._errorText(error),
+                });
             }
         },
 
@@ -316,12 +399,17 @@ Component.register('scalecommerce-vo-video-gallery', {
                 await this.loadVideos();
                 this.$emit('deleted', video.uuid);
             } catch (error) {
-                this.createNotificationError({ message: this._errorText(error) });
+                this.createNotificationError({
+                    message: this._errorText(error),
+                });
             }
         },
 
         _errorText(error) {
-            return error?.response?.data?.errors?.[0]?.detail ?? this.$tc('scalecommerce-vo.gallery.genericError');
+            return (
+                error?.response?.data?.errors?.[0]?.detail ??
+                this.$tc('scalecommerce-vo.gallery.genericError')
+            );
         },
     },
 });
