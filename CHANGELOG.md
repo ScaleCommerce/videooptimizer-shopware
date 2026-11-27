@@ -1,268 +1,114 @@
 # Changelog
 
-All notable changes to `scalecommerce/videooptimizer-shopware` are documented here.
-This project adheres to [Semantic Versioning](https://semver.org/).
+All notable changes to this package. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
 
 ## [Unreleased]
 
 ## [1.2.0] - 2026-11-27
 
-The storefront loads the player code and hls.js only on pages with video, hls.js 1.7, JavaScript tests, an updated README with the data sent to VideoOptimizer, and cleanup (#17, #18, #19, #20, #21).
-
-### Upgrade notes
-- **Storefront JavaScript:** the player, blocks and hero plugins are registered with a dynamic import (supported since Shopware 6.6.0), and hls.js is loaded as a separate chunk only when an HLS source is attached. Theme overrides of the plugin's templates are not affected. Theme code that extended a plugin class through the registry (e.g. `class X extends PluginManager.getPlugin('ScalecommerceVoPlayer').get('class')`) breaks, because the registry now holds a loader function; use `PluginManager.override(name, MyClass, selector)` with a class that does not depend on the registry. (#17)
-- **Subclasses of the CMS element resolvers:** `VideoSurfaceTrait::buildVideoSurface()` no longer takes the unused fifth argument `$presentation`. Callers that still pass it and overrides with the old signature keep working; an override that used the value now always gets its default `'direct'`. (#21)
-
-### Added
-- Development: JavaScript tests (Vitest with jsdom) for the storefront source helper (hls.js/MP4 fallback, deferred loading, play before hls.js is loaded, browsers without Media Source Extensions, visibility autoplay) and the administration API service (paging, upload retries, cancel, progress), under `tests/js` and not part of the distributed package. (#20)
+### Breaking
+- Theme JS extending a plugin class via `PluginManager.getPlugin(...).get('class')` must use `PluginManager.override()` ([#17](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/17)).
 
 ### Changed
-- Storefront: pages without video load only a 3 KB entry instead of 340 KB; the player plugins and hls.js load on demand, hls.js once per page (on facade and lightbox elements only after the click). Browsers without Media Source Extensions (e.g. older iOS) don't load hls.js at all and play native HLS within the click. If a chunk fails to load, the other storefront plugins keep working and hls.js is retried for the next video. (#17)
-- hls.js updated to 1.7 (storefront and administration). (#19)
-- README: describes the 1.1 behaviour (lazy loading, accessibility, cache tags and invalidation, fail-fast during outages, paging, upload progress, permission-aware administration) and a new section on the data sent to VideoOptimizer, including the `User-Agent` with the shop URL. (#18)
-- Cleanup: the single-video element uses the shared video surface logic of the other elements; `buildVideoSurface()` lost its unused `$presentation` parameter. (#21)
+- Storefront loads player code and hls.js only on pages with video ([#17](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/17)).
+- hls.js 1.7 ([#19](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/19)).
+- README documents current behaviour and the data sent to VideoOptimizer ([#18](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/18)).
 
 ### Deprecated
-- `ScaleCommerce\VideoOptimizer\Service\EmbedAvailability` → use `EmbedRenderState`; `ScaleCommerce\VideoOptimizer\Subscriber\DegradedEmbedCacheSubscriber` → use `EmbedPageCacheSubscriber`. The old names are class aliases of the new classes and their service IDs are aliases of the new services, so type hints, `instanceof` checks, references and decorators keep working. (#21)
+- `EmbedAvailability` → `EmbedRenderState`, `DegradedEmbedCacheSubscriber` → `EmbedPageCacheSubscriber` (aliases kept) ([#21](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/21)).
 
 ### Removed
-- `getAllVideos()` of the administration API service (`scalecommerceVoApiService`), unused by the plugin. The proxy route `GET /api/_action/scalecommerce-vo/videos` stays. (#21)
+- `getAllVideos()` of the admin API service; `buildVideoSurface()` lost its unused `$presentation` argument ([#21](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/21)).
 
 ## [1.1.0] - 2026-11-27
 
-Storefront performance and accessibility, resilient admin upload, permission-aware administration, per-video cache invalidation and Shopware 6.8 preparation (#3, #4, #6, #7, #8, #10, #11, #13, #15, #16). The plugin now identifies itself to the VideoOptimizer API with a User-Agent.
-
-### Upgrade notes
-- **Requests to the VideoOptimizer API** now identify the plugin with a `User-Agent` header, e.g. `VideoOptimizer-Shopware/1.1.0 (Shopware 6.6.10.4; PHP 8.3.14; +https://shop.example.com)`: plugin, Shopware and PHP version plus the shop's `APP_URL` (scheme, host, port and path only; left out when `APP_URL` is not set). VideoOptimizer uses it to show which plugin versions an organization runs. If a proxy or firewall between the shop and the API filters by User-Agent, allow `VideoOptimizer-Shopware/*`.
-- **Background hero markup:** the `<video>` no longer has the `autoplay` attribute (and an MP4-only hero no longer a `src`); the hero plugin starts playback when the hero is visible and motion is not reduced. The video carries `data-scalecommerce-vo-hero` plus `data-scalecommerce-vo-hero-hls`/`-mp4`/`-priority`, and a pause/play button follows it. Theme overrides of `cms-element-scalecommerce-vo-background-hero.html.twig` with the old markup keep playing the video, but without the button, and only HLS heroes in browsers using hls.js honour reduced motion there; adopt the new markup for full support. (#6)
-- **Page cache tags:** pages showing a video are tagged `scalecommerce-vo-video-<uuid>` (HTTP cache; on Shopware 6.6 also the Store API route cache). Changing, re-postering or deleting a video in the administration invalidates these pages, following the shop's cache invalidation settings. Changes made directly in the VideoOptimizer dashboard still show up after the cache lifetime. (#3)
-- **API outages:** after a transport error, timeout, rate limit (429) or a 502/503/504 answer, embed lookups for videos that are not cached fail fast for 60 seconds instead of waiting for a timeout per video; cached videos are still shown, and a 500 for a single video only affects that video. The affected pages are cached briefly as in 1.0.2. (#4)
-- **Own code calling the admin proxy:** configuration errors (400) now carry an error `code`: `SCALECOMMERCE_VO__API_TOKEN_MISSING`, `SCALECOMMERCE_VO__INVALID_BASE_URL` or `SCALECOMMERCE_VO__INVALID_REQUEST`. (#11)
-- **User roles:** the administration hides actions the user's VideoOptimizer role doesn't allow (before, they failed with 403 after the click). CMS editors need the VideoOptimizer **Viewer** role to pick videos. (#11)
-- **Own code calling `GET /api/_action/scalecommerce-vo/libraries/{id}/videos`:** unchanged without parameters (full list). With `limit` (1–100) and optionally `cursor`, it returns one page plus `meta.next_cursor`/`meta.has_more`. (#15)
-- **Storefront markup:** the static inline styles of the video surfaces, players and iframes moved into CSS classes (`scalecommerce-vo-frame`, `scalecommerce-vo-fill`, `scalecommerce-vo-video--sized`, `scalecommerce-vo-surface__poster`, …); only the per-video aspect ratio stays inline as the `--scvo-aspect` custom property. Theme overrides that copied the old markup keep working; theme CSS that overrode the inline styles with `!important` can drop that. (#16)
-- **Service configuration:** `services.xml`/`routes.xml` were replaced by `services.php`/`routes.php` (XML configuration is deprecated for Shopware 6.8). Service IDs are unchanged. New constructor arguments: `VideoOptimizerClient` (see below) and `DegradedEmbedCacheSubscriber` (`event_dispatcher`); decorators of other services are not affected. (#16)
-- **`VideoOptimizerClient`:** new optional constructor arguments `CacheInvalidator` and `PluginUserAgent` (in this order, after `EmbedAvailability`), new public method `queueEmbed()`, and it is reset between requests (`kernel.reset`). (#3, #4)
-- **Autoplaying native players** (single video, media split, spotlight, grid with presentation "direct") start when they scroll into view and pause when they leave it, instead of all starting at page load. A finished non-looping video is not restarted when it scrolls back into view. (#8)
+### Breaking
+- Proxy/firewall filtering by User-Agent: allow `VideoOptimizer-Shopware/*`.
+- Theme overrides of the background hero template: adopt the new markup for the pause button and reduced motion ([#6](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/6)).
+- CMS editors need the VideoOptimizer Viewer role to pick videos ([#11](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/11)).
 
 ### Added
-- Every request to the VideoOptimizer API (with and without API token, including embed lookups and thumbnail images) sends a `User-Agent` with the plugin, Shopware and PHP version and the shop URL. The plugin version comes from Composer when the plugin was installed with Composer, otherwise (ZIP upload) from the plugin's `composer.json`.
-- Administration gallery: videos load in pages of 60 with a "Load more videos" button, instead of all videos of a library in one request. (#15)
-- Administration upload: progress per part ("Part 2 of 4 uploaded") and a cancel button. (#10)
-- Administration: when libraries can't be loaded, the module and every element configuration say why (no or rejected API token, invalid API URL, missing VideoOptimizer permission, API unavailable), with a link to the plugin configuration for users who may change it. (#11)
-- Background hero: a pause/play button for the looping video. With `prefers-reduced-motion` or the browser's data saver, the video doesn't start and nothing is preloaded; the poster stays. (#6)
+- `User-Agent` with plugin, Shopware and PHP version and shop URL on every API request.
+- Admin gallery pages 60 videos at a time ([#15](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/15)).
+- Upload progress, per-part retry and cancel; processing tracked in the background ([#10](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/10)).
+- Admin explains missing/rejected token and missing permissions; actions follow the user's role ([#11](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/11)).
+- Background hero: pause button, honours `prefers-reduced-motion` and data saver ([#6](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/6)).
 
 ### Changed
-- Shopware 6.8 preparation: PHP instead of XML service/route configuration, and the media split text field switches to the Meteor text editor once Shopware enables it (`METEOR_TEXT_EDITOR`), like Shopware's own text element. `shopware-cli extension validate` is down from 17 to 4 warnings; the remaining ones are the per-video inline custom properties and the intentionally empty `alt` of the decorative poster inside the labelled play button. (#16)
-- Lists that are still collected completely on the server (libraries, org-wide video listing) stop after a 20-second budget or 100 pages and log a warning; the administration still receives the partial list. Before, a slow but complete listing could take longer and a truncation was not logged. (#15)
-- Administration upload: each part is retried up to three times with backoff instead of failing the whole upload. The upload form is released as soon as the file is transferred; processing is tracked in the background for about 30 minutes (the new video is selected in the CMS element once it is ready), and a longer processing time is a notice instead of an error. The VideoOptimizer API has no endpoint to abort a multipart upload, so incomplete uploads are still removed by the storage's lifecycle rule. (#10)
-- Administration: create, edit, upload, rename, poster, reprocess and delete actions are only shown to users with the matching VideoOptimizer role. (#11)
-- Native players load video segments only when playback starts; until then only the playlists are fetched. hls.js caps the rendition at the player size, so small tiles no longer pull 4K. The hero option "priority" now means "start buffering right away" (others load once visible). (#8)
+- Native players load segments only on playback and autoplay only while visible ([#8](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/8)).
+- Embed lookups run in parallel; API outages fail fast for 60 s ([#4](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/4)).
+- Pages are cache-tagged per video and invalidated on admin changes ([#3](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/3)).
+- Server-side list collection is time-boxed and logs truncation ([#15](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/15)).
+- Shopware 6.8 preparation: PHP service/route config, inline styles moved to CSS classes ([#16](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/16)).
 
 ### Fixed
-- Administration: a video selected in an element configuration stays visible below the gallery even when it is not on a loaded page. (#15)
-- Administration accessibility and translation: gallery cards no longer nest the context menu inside a button-like card (the title is the button; Enter on the menu no longer opens the video), the grid configuration's thumbnails and icon buttons are keyboard-accessible and labelled, block previews, the "Embed" badge and the video status are translated, low-contrast meta texts are darker, duplicate videos in the grid preview no longer collide, and videos that are not ready (e.g. a failed import) show a placeholder instead of a broken image. (#13)
-- Pages with several videos no longer wait for each embed lookup in turn: the CMS elements announce their videos in the collect phase, and lookups that are not cached run concurrently (up to 8 at a time). (#4)
-- Admin changes to a video (title, poster, thumbnail, deletion) and to a library (deletion, reprocessing) now reach cached storefront pages: the pages are tagged per video and invalidated. (#3)
-- Accessibility: hosted-embed iframes have a `title` (video title or label), the player gets the focus after clicking a facade, and the lightbox is named, keeps the keyboard focus inside and makes the rest of the page inert while open. (#7)
+- Storefront accessibility: iframe titles, focus after facade, lightbox dialog/focus trap ([#7](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/7)).
+- Admin accessibility and missing translations ([#13](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/13)).
 
 ## [1.0.2] - 2026-11-27
 
-Fixes from an independent QA review (#1, #2, #3, #5, #9, #12, #14).
-
-### Upgrade notes
-Nothing to do for a standard installation: configuration, CMS element data and the bundled administration keep working. Check the following if they apply to you:
-- **Custom API or embed base URL:** values with userinfo, a query or a fragment, pointing to `localhost`, to an IP address outside the global range (private, loopback, link-local, reserved, shared/CGNAT) or using a numeric/hex host form (e.g. `127.1`, `0x7f000001`) are now rejected. The administration module then shows a configuration error and video elements are hidden in the storefront. The defaults (`https://api.videooptimizer.eu/api/v1`, `https://player.videooptimizer.eu`) are not affected. (#5)
-- **Own code calling the admin proxy** (`/api/_action/scalecommerce-vo/…`) directly:
-  - routes with `{id}`/`{uuid}` only match UUIDs and answer 404 for anything else (#5);
-  - an upstream 401/403 is answered with 502 and the error `code` `SCALECOMMERCE_VO__API_TOKEN_REJECTED` or `SCALECOMMERCE_VO__API_TOKEN_FORBIDDEN` instead of being passed through; for 403 the API's own message (e.g. a plan limit) stays the `detail` (#2);
-  - an unreachable or timed-out API is answered with 502 instead of an unhandled 500, and a success response that is not JSON with 502 instead of an empty result (#1).
-- **Decorators or subclasses of `VideoOptimizerClient`:** the constructor has two new optional arguments (`LoggerInterface`, `EmbedAvailability`). Existing service definitions keep working.
-- **Videos without playable sources** (processing failed or not finished yet) are now hidden in the storefront like deleted videos; video grid tiles for them are dropped. Before, an empty or black player was shown. Their embed data is cached for 60 seconds instead of one hour, so they appear shortly after processing has finished. (#9)
-- **HTTP cache / reverse proxy and route cache:** a page rendered while a video lookup failed, or with a video that has no playable sources, is now cached for at most 60 seconds instead of the full page TTL; on Shopware 6.6 its Store API route cache entry is invalidated as well. Other pages are not affected. Note: a page that still references a **deleted** video counts as degraded on every render, so it is re-rendered (and the API asked) about once a minute; remove such videos from the CMS element. (#3)
-- **Theme overrides of the plugin's storefront templates:** the player options in `_scalecommerce-vo-surface.html.twig` and `cms-element-scalecommerce-vo-video.html.twig` gained `unavailableLabel`, and the background hero `<video>` gained `data-scalecommerce-vo-hero-mp4`. Without them, overridden templates keep working, but show an English notice and the hero has no MP4 fallback. (#9)
-- **Extensions of the storefront JS plugins:** `ScalecommerceVoPlayer` and `ScalecommerceVoHero` no longer keep the hls.js instance in `this.hls`; it is stored on the `<video>` element (`__scvoHls`). (#9)
+### Breaking
+- API/embed base URLs with userinfo, query, fragment, localhost or non-public IPs are rejected ([#5](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/5)).
+- Admin proxy: non-UUID ids → 404; upstream 401/403 and transport errors → 502 with error code ([#1](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/1), [#2](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/2), [#5](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/5)).
 
 ### Fixed
-- A page rendered during a short API outage, or before a video finished processing, no longer stays in the HTTP cache without its video for the full page TTL: its cache lifetime is capped at 60 seconds, matching the negative cache of the embed lookup, and on Shopware 6.6 the cached Store API route (category, landing page, product) is invalidated as well. Invalidating cached pages after a video is changed in the administration follows in 1.1.0. (#3)
-- Library page: without any library (new account, or after deleting the last one) the page switches to the "new library" form, so saving creates a library instead of sending `PATCH …/libraries/null`. (#12)
-- Video gallery: switching libraries clears the old list right away, and a slower response for a previously selected library can no longer overwrite the current one. (#12)
-- Custom poster upload: when an earlier custom poster still reports `ready`, the dialog now waits for the new upload to be processed (or for a few polls) instead of taking the old status on the first poll. Images from the media library are checked (HTTP status, JPEG/PNG/WebP) before the upload, with a clear message otherwise; uploads inside the media picker are limited to these types, and selecting the same file again works. (#12)
-- Players no longer stay black or empty when a video cannot be played. A fatal hls.js error falls back to the MP4 rendition (also for the background hero, which now receives both sources); without a fallback, the poster stays visible with a short notice ("Video cannot be played"). The admin video detail dialog behaves the same and says why there is no player instead of only logging to the console. (#9)
-- An unreachable VideoOptimizer API (DNS, TLS, connection reset) or a timeout no longer surfaces as an unhandled HTTP 500 with the raw transport error, which contained the full upstream URL. The administration shows a neutral message, and the details are logged as a warning. This also applies to the thumbnail and playback proxies and to embed lookups during storefront rendering. (#1)
-- A success response from the API that is not JSON (for example a maintenance page served with 200) is reported as an error instead of being treated as an empty, successful result. (#1)
-- A rejected VideoOptimizer API token (401) or a refused action (403) no longer makes the administration refresh its own session and repeat the request. A rejected token is reported as such; for a refused action the API's reason (e.g. a plan limit) is shown. (#2)
-- Error messages from the API are passed to the administration as short plain text (max. 200 characters, markup removed), as admin notifications render HTML. (#2)
-
-### Changed
-- Source maps are no longer shipped: the two `.map` files of the administration bundle are removed (about 1.5 MB less in the package), along with the `sourceMappingURL` comments that pointed to them. `*.map` is excluded from Composer dist archives as well. (#14)
-- The test suite runs on PHPUnit 12 and later (`isType('string')` replaced by `isString()`). (#14)
+- Unreachable API or timeouts no longer end in an unhandled 500 ([#1](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/1)).
+- A rejected API token no longer triggers an admin session refresh ([#2](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/2)).
+- Pages rendered with a failed embed are cached for at most 60 s ([#3](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/3)).
+- Videos without playable sources are hidden; fatal HLS errors fall back to MP4 or a notice ([#9](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/9)).
+- Admin: saving without a library, stale gallery after switching, poster polling, media-library posters ([#12](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/12)).
+- Source maps no longer shipped; tests run on PHPUnit 12+ ([#14](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/14)).
 
 ### Security
-- Admin API routes accept only UUIDs for `{id}`/`{uuid}`, and the client rejects any ID that is not a plain path segment before sending a request. Previously `%2E%2E` reached the client as `..`, and the dot-segment removal of the HTTP client re-targeted the upstream request one level up (for example `DELETE …/videos/%2E%2E/poster` → `DELETE /api/v1/poster`). (#5)
-- The API and embed base URLs must not contain userinfo, a query or a fragment, and must not point to `localhost` or an IP address outside the global range, including numeric/hex host forms. Host names are not resolved, so this is defence in depth for whoever can change the plugin configuration. (#5)
+- Path traversal via `..` in admin proxy route parameters ([#5](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/5)).
 
 ## [1.0.1] - 2026-11-26
 
 ### Fixed
-- The video detail dialog in the administration plays the video (adaptive HLS via hls.js, MP4 fallback) instead of only showing its poster. hls.js is loaded on demand when a video is opened, so the rest of the administration does not grow. Sources come from a new read-only proxy endpoint `GET /api/_action/scalecommerce-vo/videos/{uuid}/playback` (ACL `scalecommerce_vo:read`), because the API's `hls_url` redirects to the CDN without CORS headers and can't be loaded by browsers.
+- Admin video detail dialog plays the video instead of only showing the poster.
 
 ## [1.0.0] - 2026-11-26
 
-First stable release. No breaking changes compared to 0.5.x: configuration, CMS element data and routes stay the same.
-
 ### Changed
-- The `embedBaseUrl` default is now `https://player.videooptimizer.eu`, VideoOptimizer's dedicated player host (the apex `videooptimizer.eu` becomes the marketing site). Existing installations keep their stored value; `https://videooptimizer.eu` keeps serving embeds permanently, so nothing breaks — switch the setting to the player host at your convenience and clear the cache.
+- Default `embedBaseUrl` is `https://player.videooptimizer.eu` (stored values are kept).
 
 ### Fixed
-- Hosted-embed `<iframe>`s (direct surface, single-video element, blocks facade/lightbox) now carry `allow="autoplay; fullscreen; picture-in-picture"` plus `allowfullscreen`, matching VideoOptimizer's own snippets — picture-in-picture was not delegated before.
-- Renaming a video in the admin gallery opens a Shopware modal instead of the browser's native `prompt()` dialog.
-- `shopware-cli extension validate` passes without errors: administration snippets are loaded through Shopware's automatic snippet discovery instead of being bundled into the module registration (smaller admin bundle), storefront plugins extend `window.PluginBaseClass`, and leftover lint findings (unused catch bindings, a redundant type check, an internal `#[Package]` attribute) were cleaned up.
+- Embed iframes allow picture-in-picture and fullscreen.
+- Renaming a video uses a modal instead of the browser prompt.
+- `shopware-cli extension validate` passes without errors.
 
 ## [0.5.2] - 2026-09-04
 
 ### Fixed
-- Background-hero headline lines no longer overlap when the headline wraps: the element now sets its own `line-height` instead of inheriting Shopware's fixed `h2` line-height (2.125rem), which is far too small for the hero's scaled font-size.
+- Background hero: wrapped headline lines no longer overlap.
 
 ## [0.5.1] - 2026-09-04
 
 ### Changed
-- The library management page follows Shopware's native layout: smart-bar actions (save / new library), separate cards for library selection, master data and the encoding ladder, context menus for reprocess/delete and per-video actions, banners for hints, and a dedicated "Add video" card (file upload + URL import). Encoding options render as labelled checkbox groups with an "Add-on" badge.
-
-### Documentation
-- README aligned with the Sulu integration (badges, screenshots, guides).
+- Library page uses Shopware's native layout (smart bar, cards, context menus).
 
 ## [0.5.0] - 2026-09-04
 
+First public release.
+
+### Added
+- Library reprocess, URL import, `embedBaseUrl` setting, Shopware 6.6 admin bundle, delete confirmations.
+
+### Changed
+- Embed lookups cached 1 h (failures 60 s), no blocking retry on 429.
+- hls.js light build; lightbox and player teardown fixed.
+
+### Fixed
+- Upload/poster polling stops on failure; storefront cache invalidated after admin changes.
+
 ### Security
-- Sanitized the media-split element's rich text server-side (mirroring Core's `TextCmsElementResolver`) and in the admin editor preview, closing a stored-XSS hole where the editor-authored text was rendered with `|raw` on the storefront.
-- Allowlisted the URL scheme of the media-split and background-hero call-to-action URLs (`http`/`https`/`mailto`/`tel`/relative only), closing a stored-XSS hole via `javascript:`/`data:`/`vbscript:` URLs entered in the CTA URL field.
-- The configured API base URL and the new embed base URL are now required to be `https://`; a non-https value is rejected instead of silently sending the API token or storefront traffic in plaintext.
-- Hardened the admin thumbnail image proxy: only allowlisted image content types (jpeg/png/webp/gif) are passed through, anything else becomes `application/octet-stream`, and responses carry `X-Content-Type-Options: nosniff`.
-- Every admin controller endpoint that forwards a JSON request body upstream now allowlists its keys before forwarding, dropping unexpected fields instead of passing them through unvalidated.
-- Path segments (video UUID, library ID, thumbnail index) are now URL-encoded before being interpolated into admin API service request URLs.
-- Sandboxed the hosted-embed `<iframe>`s (direct surface, single-video element, blocks facade/lightbox) with `sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"`.
-- The admin poster upload proxy now validates `contentType` against an allowlist (`image/jpeg`/`image/png`/`image/webp`) before forwarding it upstream, mirroring the thumbnail proxy's read-path content-type allowlist.
+- Stored XSS in media split rich text and call-to-action URLs.
+- API and embed base URLs must be `https://`; request bodies and content types allowlisted; embed iframes sandboxed.
 
-### Added
-- Library "reprocess": requeue all of a self-hosted/media-managed library's videos for re-encoding with its current encoding ladder, from a confirm-first button in the library editor.
-- Import a video from a public `https://` URL directly in the video gallery, alongside file upload.
-- New `embedBaseUrl` plugin configuration field (default `https://videooptimizer.eu`) so self-hosted VideoOptimizer instances can point the hosted embed player at their own host.
-- Shopware 6.6 administration bundle (webpack) shipped alongside the existing 6.7 (Vite) bundle, plus a `.shopware-extension.yml` declaring the 6.6 build constraint.
-- Storefront snippets (`de-DE`/`en-GB`) for the facade play button and lightbox close button labels, replacing hardcoded German text.
-- Confirmation dialogs before deleting a video or a library.
-- Failed `getEmbed()` lookups are now cached for **60 seconds**, so an unreachable upstream can't be hit again on every single storefront render for the duration of an outage.
-- Storefront rendering failures that were previously swallowed into a per-element error state (an upstream embed lookup failure, or a misconfigured embed base URL) are now logged as `warning`s with the video UUID, the element type and the upstream error message.
+## [0.4.0] – [0.4.7] - 2026-07-18 – 2026-07-27
 
-### Changed
-- `getEmbed()` responses are now cached per video for **1 hour**, and no longer block storefront rendering with a `sleep()` retry on HTTP 429 — a rate limit during rendering now fails fast instead of stalling the response.
-- Embed-mode elements (and the single video/media-split/spotlight/video-grid elements) now verify the video still exists upstream and render nothing if it doesn't, instead of only checking in native player mode; the video grid drops just the unresolvable tile instead of rendering the whole block in an error state.
-- Admin-facing API requests now default to a 30 second timeout when the caller didn't set one (the storefront `getEmbed()` call keeps its existing 3 second cap).
-- Switched the storefront bundle to hls.js's light build and pinned it to `~1.6.16`, shrinking the compiled storefront JS by roughly a third.
-- hls.js instances are now torn down on every lightbox dismiss (close button, backdrop click, Escape): the hls instance is destroyed and the overlay, its event listeners and the body scroll lock are removed. Each storefront plugin also gained an explicit `destroy()` teardown method that tears down its own player instances. Only one lightbox may be open at a time, and it gets `role="dialog"` and focus management.
-- The library editor's encoding ladder now only allows selecting a codec/resolution that is on the active library's allowlist (falling back to the org-wide `available` flag), shows an "ADD-ON" hint driven by the option's `access` field, and surfaces a hint to reprocess once the selection differs from the stored ladder.
+Internal pre-releases: library editor, video detail with poster selection, CMS elements Media split, Background hero, Spotlight and Video grid, layout-accurate editor previews.
 
-### Fixed
-- Upload/poster polling now stops on a `failed` status (with a notification) and on component unmount, and rejects instead of silently resolving when the attempt cap is hit, instead of proceeding as if the upload had finished.
-- The upload file input is reset after a successful upload so the same file can be re-selected.
-- `selectThumbnail()` and `completePosterUpload()` now return the intended 400 response for malformed JSON instead of an uncaught 500.
-- The `getEmbed()` cache is now invalidated whenever an admin action changes what it returns (title/thumbnail/poster change, video deletion), instead of keeping a stale title/poster, or a deleted video, on the storefront for up to the 1 hour cache TTL.
+## [0.2.0] – [0.3.0] - 2026-07-18
 
-## [0.4.7] - 2026-07-27
-
-### Changed
-- The CMS element previews in the Shopping Experiences editor now **mirror their storefront layout** instead of showing one large poster per element: media split renders two reversible columns with its text column, background hero renders the poster with its overlay and centred copy (heights capped for the editor), spotlight renders a centred column, and video grid renders a real tile grid with one tile per video. Editors can tell the layouts apart and judge a page without opening the storefront.
-- Video status and metadata (resolution, duration, orientation) moved from a row underneath the element into unobtrusive overlay badges on the poster — subdued while a video is `ready`, clearly highlighted while it is still processing or failed.
-- The play affordance in the previews now reflects the configured **presentation mode** (poster/facade, lightbox, embedded directly) and **player mode** (native, embed) instead of a generic icon.
-- Empty text fields render labelled placeholders (eyebrow, headline, subline, caption, intro, button, label), so a freshly placed element shows which fields it offers.
-
-### Internal
-- Extracted the video lookup and metadata formatting duplicated across four element previews into a shared mixin and a shared `scalecommerce-vo-preview-surface` component — the editor counterpart to the storefront surface macro.
-
-## [0.4.6] - 2026-07-20
-
-### Changed
-- The video CMS blocks now show a **distinct schematic preview** in the block picker (single video, media split, background hero, spotlight, video grid) instead of the identical VideoOptimizer logo, so editors can tell the layouts apart at a glance.
-
-## [0.4.5] - 2026-07-20
-
-### Fixed
-- Native player: in the video content elements (media split, spotlight, video grid) the per-element **show controls**, **muted** and **loop** options are now applied to the native player as well — previously only the hosted embed player honoured them.
-- Element layouts (media split columns, spotlight centering, video grid columns) are now styled via CSS classes instead of inline styles, so a theme can override them.
-- Background hero: colour-picker values with an alpha channel (e.g. `#rrggbbaa`) are now accepted instead of being dropped, and the hero shows a neutral dark background instead of an empty black area when a background video cannot be loaded.
-- Accessibility: the click-to-play poster button falls back to a descriptive "play video" label when no headline or caption is set.
-- Administration: the video grid item list no longer re-requests videos that have no preview image.
-
-## [0.4.4] - 2026-07-20
-
-### Added
-- New CMS content element and block **"VideoOptimizer Video grid"** for Shopping Experiences: a responsive grid of multiple click-to-play videos, each with an optional caption, under a grid headline and intro. Videos are added, reordered and removed in a per-element list editor (each row picks a video from the gallery). Click-to-play defaults to a lightbox and supports the same presentation modes (poster/facade, lightbox, embedded) and native/embed player options as the other video layouts. Renders nothing when no videos are added. This completes the set of video content layouts (media split, background hero, spotlight, video grid).
-
-### Fixed
-- Placeholder and empty-state icons in the administration (the video, media split, spotlight and background hero elements and the video gallery) rendered blank and logged a console error, because they referenced Meteor icon names that do not exist in the icon kit. Corrected to valid icon names.
-
-## [0.4.3] - 2026-07-19
-
-### Added
-- New CMS content element and block **"VideoOptimizer Spotlight"** for Shopping Experiences: a centered, stacked layout with an eyebrow, headline, a click-to-play video and a caption below it. The video defaults to opening in a **lightbox** on click, and supports the same presentation modes (poster/facade, lightbox, embedded) and native/embed player options as the media split element. Renders nothing when no video is selected.
-
-## [0.4.2] - 2026-07-19
-
-### Added
-- New CMS content element and block **"VideoOptimizer Background hero"** for Shopping Experiences: a full-bleed, autoplaying, muted, looping background video with an overlay scrim and overlaid content (eyebrow, headline, multi-line subline and a call-to-action button). Configurable overlay (gradient / dark / none), section height (full / large / medium), headline and text colours, and an "above the fold" priority flag that preloads the video for a hero at the top of the page. Renders nothing when no video is selected. The background video streams adaptively (HLS) with an MP4/poster fallback.
-
-## [0.4.1] - 2026-07-19
-
-### Added
-- New CMS content element and block **"VideoOptimizer Media split"** for Shopping Experiences: a video paired with editorial text (eyebrow, headline, rich text and a call-to-action button) side by side. The video column can sit on the left or right, and the video can be presented as a click-to-play poster (facade), a poster that opens a full-screen lightbox, or embedded directly. Works with both the native adaptive player and the hosted embed player. This is the first of several planned content layouts built on a shared, reusable video "surface".
-
-### Notes
-- In the media split element, the per-element player options (show controls, muted, loop, and autoplay) are currently applied only to the **hosted embed player**. The **native** player shows controls and plays on click but does not yet honour those switches; this is a tracked follow-up. The default combination (native player, click-to-play poster) behaves as expected.
-
-## [0.4.0] - 2026-07-18
-
-### Added
-- Video detail overlay (opened by clicking a video in the management gallery): choose the video's preview image from the 10 auto-generated frames or upload a custom image (from a file or the Shopware media library), and remove a custom one. Shows a poster preview and the video's dimensions, duration and orientation.
-
-## [0.3.0] - 2026-07-18
-
-### Added
-- Library editor in the admin module: create and edit libraries (name, description) and their encoding ladder (codecs + resolutions) via pickers built from the organization's available encoding options. Add-on/unavailable codecs are shown but disabled; delivery-only libraries (`media_managed`) show a read-only ladder. Each library shows its video count, storage usage and creation date.
-
-## [0.2.2] - 2026-07-18
-
-### Fixed
-- The VideoOptimizer admin module now appears in the sidebar under "Content"; it was previously only reachable via its direct URL because its navigation entry had no parent (which also caused a console error in the admin menu).
-
-## [0.2.1] - 2026-07-18
-
-### Added
-- Video metadata (dimensions, duration, orientation) shown on the gallery cards, in the CMS element preview, and in a detail panel when a video is selected.
-
-### Changed
-- The upload tile now has a clear "Upload a new video" heading, making it obvious the tile uploads a video (the optional title is the video title).
-
-### Fixed
-- The native storefront player now starts muted when autoplay is enabled, so autoplay actually plays (browsers block autoplay with sound). Playback is kicked off once the HLS manifest is ready.
-
-## [0.2.0] - 2026-07-18
-
-First tagged release. Runs on the current VideoOptimizer API and supports Shopware 6.6 and 6.7.
-
-### Added
-- Administration module **VideoOptimizer** to browse libraries and upload, rename and delete videos via the VideoOptimizer API (uploads are transcoded on the platform; the module polls until a video is `ready`).
-- Reusable **video gallery** in the administration: a poster-thumbnail grid with status badges and an inline upload tile, used both to manage a library and to pick a video for a CMS element.
-- CMS content element and block **"VideoOptimizer video"** for Shopping Experiences, with the thumbnail gallery picker. The editor preview shows the selected video's **poster and title** (not a raw ID).
-- Per-element **player choice**: the native adaptive HLS player (hls.js, native HLS fallback on Safari) or the hosted **VideoOptimizer embed** (iframe). Player options (controls, autoplay, muted, loop) apply to both modes; in embed mode they are passed to the hosted player as URL parameters.
-- Plugin configuration for the VideoOptimizer API token; the token is kept server-side and never exposed to storefront visitors.
-- ACL privileges (`scalecommerce_vo`) gating the admin module and API routes.
-
-### Changed
-- Video upload uses the VideoOptimizer **presigned multipart** flow (initiate → direct-to-storage part uploads → complete), replacing the removed direct `POST /videos` upload.
-- The API client resolves **cursor-paginated** list endpoints server-side and retries once on HTTP 429 (`Retry-After`, capped).
-- Added an org-wide `GET /videos` proxy endpoint alongside the per-library listing.
-- Video field mapping aligned to the current API (snake_case; embed `sources` list).
-
-### Notes
-- Requires Shopware **6.6 or 6.7** and a VideoOptimizer account (https://videooptimizer.eu/, API: https://api.videooptimizer.eu/). Shopware 6.6 support rests on the dependency constraints and code review; a 6.6 runtime smoke test is a tracked follow-up.
-- The per-element player choice persists for CMS elements created with this version. A video element placed with a pre-release build (before the player option existed) keeps the native player; re-add the element to switch it to the embed player.
+Internal pre-releases: admin module (libraries, upload, rename, delete), video gallery, CMS element "Video" with native or embed player, ACL.
