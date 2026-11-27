@@ -4,6 +4,8 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-11-27
+
 ### Upgrade
 - Leaving the module or switching the CMS element cancels a running upload in the video gallery; before, it ran on in the background and created the video ([#27](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/27)).
 - `EmbedPageCacheSubscriber` takes the `VideoOptimizerClient` as optional fourth constructor argument; subclasses overriding the constructor must pass it on ([#25](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/25)).
