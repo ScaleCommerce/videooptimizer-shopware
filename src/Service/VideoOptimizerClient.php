@@ -277,6 +277,7 @@ class VideoOptimizerClient implements ResetInterface
         $result = $this->cache->get(
             $this->embedCacheKey($uuid),
             function (ItemInterface $item) use ($uuid, &$freshFailure): array {
+                $this->tagEmbedItem($item, $uuid);
                 try {
                     $inflight = $this->inflightEmbeds[$uuid] ?? null;
                     unset($this->inflightEmbeds[$uuid]);
@@ -359,13 +360,16 @@ class VideoOptimizerClient implements ResetInterface
     }
 
     /**
-     * Announces the library configured on a rendered element, so the page is tagged with it.
+     * Announces the library configured on a rendered element, so the page is tagged with it. With the
+     * video's UUID, the cached embed of that video is tagged with the library as well.
      */
-    public function markLibraryRendered(string $libraryId): void
+    public function markLibraryRendered(string $libraryId, ?string $uuid = null): void
     {
-        if (preg_match('/^[A-Za-z0-9_-]+$/D', $libraryId) === 1) {
-            $this->availability->markLibraryRendered($libraryId);
+        if (preg_match('/^[A-Za-z0-9_-]+$/D', $libraryId) !== 1) {
+            return;
         }
+        $validUuid = $uuid !== null && preg_match('/^[A-Za-z0-9_-]+$/D', $uuid) === 1 ? $uuid : null;
+        $this->availability->markLibraryRendered($libraryId, $validUuid);
     }
 
     public function listThumbnails(string $uuid): array
@@ -485,6 +489,23 @@ class VideoOptimizerClient implements ResetInterface
             array_map(static fn (array $video): mixed => $video['uuid'] ?? null, $videos),
             static fn (mixed $uuid): bool => \is_string($uuid) && preg_match('/^[A-Za-z0-9_-]+$/D', $uuid) === 1,
         ));
+    }
+
+    /**
+     * Tags the cached embed with its video and (if announced) library, so the CacheInvalidator drops
+     * it with the pages. Pools that are not tag-aware refuse tags; the entry then just expires.
+     */
+    private function tagEmbedItem(ItemInterface $item, string $uuid): void
+    {
+        $tags = [EmbedRenderState::cacheTag($uuid)];
+        $library = $this->availability->libraryOf($uuid);
+        if ($library !== null) {
+            $tags[] = EmbedRenderState::libraryCacheTag($library);
+        }
+        try {
+            $item->tag($tags);
+        } catch (\LogicException) {
+        }
     }
 
     private function embedUrl(string $uuid): string

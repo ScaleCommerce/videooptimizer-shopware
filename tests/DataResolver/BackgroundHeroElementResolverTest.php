@@ -60,7 +60,7 @@ class BackgroundHeroElementResolverTest extends TestCase
     {
         $client = $this->createMock(VideoOptimizerClient::class);
         $client->method('getEmbed')->willReturn([]);
-        $client->expects(static::once())->method('markLibraryRendered')->with('lib-1');
+        $client->expects(static::once())->method('markLibraryRendered')->with('lib-1', 'uuid-1');
 
         $this->resolver($client)->enrich($this->slot(['video' => 'uuid-1', 'libraryId' => 'lib-1']), $this->createStub(ResolverContext::class), new ElementDataCollection());
     }

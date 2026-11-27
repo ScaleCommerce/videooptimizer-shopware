@@ -16,6 +16,7 @@ use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Cache\Adapter\TagAwareAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\NoPrivateNetworkHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -1319,12 +1320,77 @@ class VideoOptimizerClientTest extends TestCase
         $client = new VideoOptimizerClient(new MockHttpClient($this->playable('v1')), $this->config(), new ArrayAdapter(), new NullLogger(), $availability);
 
         $client->markLibraryRendered('lib-1');
-        $client->markLibraryRendered('lib-1');
+        $client->markLibraryRendered('lib-1', 'v1');
         $client->markLibraryRendered('lib/../1');
         $client->markLibraryRendered('');
         $client->getEmbed('v1');
 
         static::assertSame(['scalecommerce-vo-video-v1', 'scalecommerce-vo-library-lib-1'], $availability->cacheTags());
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function embedCacheTags(): iterable
+    {
+        yield 'library tag' => ['scalecommerce-vo-library-lib-1'];
+        yield 'video tag' => ['scalecommerce-vo-video-v1'];
+    }
+
+    /**
+     * The cached embed object carries the library (when known) and video tags, so the
+     * CacheInvalidator drops it together with the pages (#29).
+     */
+    #[DataProvider('embedCacheTags')]
+    public function testCachedEmbedIsTaggedAndInvalidatedByTag(string $tag): void
+    {
+        $count = 0;
+        $http = new MockHttpClient(function () use (&$count): MockResponse {
+            ++$count;
+
+            return $this->playable('v1');
+        });
+        $cache = new TagAwareAdapter(new ArrayAdapter());
+        $client = $this->client($http, null, $cache);
+
+        $client->markLibraryRendered('lib-1', 'v1');
+        $client->getEmbed('v1');
+        $client->getEmbed('v1');
+        static::assertSame(1, $count);
+
+        $cache->invalidateTags([$tag]);
+        $client->getEmbed('v1');
+
+        static::assertSame(2, $count);
+    }
+
+    public function testEmbedWithoutKnownLibraryIsOnlyTaggedByVideo(): void
+    {
+        $count = 0;
+        $http = new MockHttpClient(function () use (&$count): MockResponse {
+            ++$count;
+
+            return $this->playable('v1');
+        });
+        $cache = new TagAwareAdapter(new ArrayAdapter());
+        $client = $this->client($http, null, $cache);
+
+        $client->getEmbed('v1');
+        $cache->invalidateTags(['scalecommerce-vo-library-lib-1']);
+        $client->getEmbed('v1');
+
+        static::assertSame(1, $count);
+    }
+
+    public function testMalformedVideoIdsAreNotMappedToALibrary(): void
+    {
+        $availability = new EmbedRenderState();
+        $client = new VideoOptimizerClient(new MockHttpClient(), $this->config(), new ArrayAdapter(), new NullLogger(), $availability);
+
+        $client->markLibraryRendered('lib-1', "v1\n");
+
+        static::assertSame(['scalecommerce-vo-library-lib-1'], $availability->cacheTags());
+        static::assertNull($availability->libraryOf("v1\n"));
     }
 
     public function testGetEmbedRecordsTheRenderedVideo(): void

@@ -28,6 +28,11 @@ class EmbedRenderState implements ResetInterface
      */
     private array $renderedLibraries = [];
 
+    /**
+     * @var array<string, string>
+     */
+    private array $videoLibraries = [];
+
     public static function cacheTag(string $uuid): string
     {
         return 'scalecommerce-vo-video-' . $uuid;
@@ -38,9 +43,23 @@ class EmbedRenderState implements ResetInterface
         return 'scalecommerce-vo-library-' . $libraryId;
     }
 
-    public function markLibraryRendered(string $libraryId): void
+    /**
+     * @param string|null $uuid a video of the library that is rendered, remembered for libraryOf()
+     */
+    public function markLibraryRendered(string $libraryId, ?string $uuid = null): void
     {
         $this->renderedLibraries[$libraryId] = true;
+        if ($uuid !== null) {
+            $this->videoLibraries[$uuid] = $libraryId;
+        }
+    }
+
+    /**
+     * The library a rendered video was announced with (the embed payload carries none).
+     */
+    public function libraryOf(string $uuid): ?string
+    {
+        return $this->videoLibraries[$uuid] ?? null;
     }
 
     public function markRendered(string $uuid): void
@@ -85,6 +104,7 @@ class EmbedRenderState implements ResetInterface
         $this->routeCacheTagged = false;
         $this->rendered = [];
         $this->renderedLibraries = [];
+        $this->videoLibraries = [];
     }
 }
 

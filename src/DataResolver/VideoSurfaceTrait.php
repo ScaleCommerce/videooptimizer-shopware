@@ -20,7 +20,7 @@ trait VideoSurfaceTrait
     protected function buildVideoSurface(FieldConfigCollection $config, string $uuid, VideoOptimizerClient $client, LoggerInterface $logger): array
     {
         $playerMode = $config->get('playerMode')?->getValue() === 'embed' ? 'embed' : 'native';
-        $this->markLibraryRendered($config, $client);
+        $this->markLibraryRendered($config, $client, $uuid);
 
         try {
             $embedUrl = $this->buildEmbedUrl($uuid, $config, $client);
@@ -62,11 +62,11 @@ trait VideoSurfaceTrait
     /**
      * Tags the page with the element's library (if configured), see VideoOptimizerClient::forgetLibrary().
      */
-    protected function markLibraryRendered(FieldConfigCollection $config, VideoOptimizerClient $client): void
+    protected function markLibraryRendered(FieldConfigCollection $config, VideoOptimizerClient $client, ?string $uuid = null): void
     {
         $libraryId = $config->get('libraryId')?->getValue();
         if (is_string($libraryId) && $libraryId !== '') {
-            $client->markLibraryRendered($libraryId);
+            $client->markLibraryRendered($libraryId, $uuid);
         }
     }
 

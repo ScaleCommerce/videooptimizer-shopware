@@ -61,6 +61,31 @@ class VideoGridElementResolverTest extends TestCase
         static::assertSame('uuid-b', $items[1]['videoUuid']);
     }
 
+    /**
+     * Pages are tagged with the library of every item, so library changes invalidate them (#29).
+     */
+    public function testEnrichMarksTheLibraryOfEachItem(): void
+    {
+        $client = $this->createStub(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willReturn([]);
+        $client->method('embedBaseUrl')->willReturn('https://videooptimizer.eu');
+        $marked = [];
+        $client->method('markLibraryRendered')->willReturnCallback(function (string $library, ?string $uuid) use (&$marked): void {
+            $marked[] = [$library, $uuid];
+        });
+
+        $slot = $this->slot(['items' => [
+            ['video' => 'uuid-a', 'libraryId' => 'lib-1'],
+            ['video' => 'uuid-b', 'libraryId' => 'lib-2'],
+            ['video' => 'uuid-c'],
+            ['video' => 'uuid-d', 'libraryId' => ''],
+            ['video' => 'uuid-e', 'libraryId' => 5],
+        ]]);
+        $this->resolver($client)->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
+
+        static::assertSame([['lib-1', 'uuid-a'], ['lib-2', 'uuid-b']], $marked);
+    }
+
     public function testItemsThatFailToResolveAreDropped(): void
     {
         $client = $this->createStub(VideoOptimizerClient::class);

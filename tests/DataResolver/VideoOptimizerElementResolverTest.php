@@ -82,7 +82,7 @@ class VideoOptimizerElementResolverTest extends TestCase
     {
         $client = $this->createMock(VideoOptimizerClient::class);
         $client->method('getEmbed')->willReturn(['sources' => [['src' => 'https://cdn/master.m3u8', 'type' => 'application/vnd.apple.mpegurl', 'codec' => 'hls']]]);
-        $client->expects(static::once())->method('markLibraryRendered')->with('lib-1');
+        $client->expects(static::once())->method('markLibraryRendered')->with('lib-1', 'uuid-1');
 
         $this->resolver($client)->enrich($this->slotWithUuid('uuid-1', ['libraryId' => 'lib-1']), $this->createStub(ResolverContext::class), new ElementDataCollection());
     }
