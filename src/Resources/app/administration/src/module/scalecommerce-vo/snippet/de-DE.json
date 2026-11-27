@@ -251,6 +251,34 @@
             "confirmDeleteTitle": "Untertitelsprache löschen",
             "confirmDeleteText": "Die Sprache \"{language}\" löschen?",
             "inUse": "{count} Video hat noch einen Untertitel in {language}. Lösche diesen Untertitel zuerst. | {count} Videos haben noch einen Untertitel in {language}. Lösche diese Untertitel zuerst."
+        },
+        "tags": {
+            "title": "Tags",
+            "empty": "Keine Tags.",
+            "pick": "Vorhandenen Tag hinzufügen",
+            "pickPlaceholder": "Tag wählen",
+            "new": "Neuer Tag",
+            "add": "Hinzufügen",
+            "save": "Tags und Metadaten speichern",
+            "saved": "Tags und Metadaten gespeichert."
+        },
+        "metadata": {
+            "title": "Metadaten",
+            "hint": "Eigene Schlüssel-Wert-Daten am Video, zum Beispiel die ID des zugehörigen Eintrags. Bis zu 10 Schlüssel.",
+            "key": "Schlüssel",
+            "value": "Wert",
+            "add": "Metadaten hinzufügen",
+            "remove": "Entfernen",
+            "problem_keyInvalid": "Ein Schlüssel hat 1-40 Zeichen aus a-z, 0-9, \"_\", \".\" und \"-\" (Kleinbuchstaben) und beginnt mit einem Buchstaben oder einer Ziffer.",
+            "problem_keyDuplicate": "Jeder Schlüssel darf nur einmal vorkommen.",
+            "problem_valueTooLong": "Ein Wert hat höchstens 64 Zeichen.",
+            "problem_tooMany": "Es sind höchstens 10 Metadaten-Schlüssel möglich."
+        },
+        "filter": {
+            "tags": "Nach Tag filtern",
+            "metadataKey": "Metadaten-Schlüssel",
+            "metadataValue": "Metadaten-Wert (exakt)",
+            "clear": "Filter zurücksetzen"
         }
     },
     "sw-privileges": {

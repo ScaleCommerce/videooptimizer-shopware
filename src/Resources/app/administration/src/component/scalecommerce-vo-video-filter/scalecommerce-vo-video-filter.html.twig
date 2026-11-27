@@ -1,0 +1,24 @@
+{% block scalecommerce_vo_video_filter %}
+<div v-if="visible" class="scalecommerce-vo-video-filter">
+    <scalecommerce-vo-tag-picker
+        :model-value="tags"
+        :available="available"
+        :label="$tc('scalecommerce-vo.filter.tags')"
+        @update:model-value="onTagsChange" />
+    <div class="scalecommerce-vo-video-filter__metadata">
+        <mt-text-field
+            :label="$tc('scalecommerce-vo.filter.metadataKey')"
+            :model-value="metadataKey"
+            maxlength="40"
+            @update:model-value="metadataKey = $event; onMetadataInput()" />
+        <mt-text-field
+            :label="$tc('scalecommerce-vo.filter.metadataValue')"
+            :model-value="metadataValue"
+            maxlength="64"
+            @update:model-value="metadataValue = $event; onMetadataInput()" />
+        <mt-button v-if="active" size="small" variant="secondary" @click="onClear">
+            {{ $tc('scalecommerce-vo.filter.clear') }}
+        </mt-button>
+    </div>
+</div>
+{% endblock %}

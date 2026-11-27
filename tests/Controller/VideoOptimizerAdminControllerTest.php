@@ -1000,4 +1000,101 @@ class VideoOptimizerAdminControllerTest extends TestCase
         static::assertStringStartsWith('attachment;', (string) $response->headers->get('Content-Disposition'));
         static::assertSame('nosniff', $response->headers->get('X-Content-Type-Options'));
     }
+
+    public function testListTagsReturnsClientData(): void
+    {
+        $client = $this->createStub(VideoOptimizerClient::class);
+        $client->method('listTags')->willReturn([['name' => 'promo', 'video_count' => 2]]);
+
+        $response = (new VideoOptimizerAdminController($client))->listTags();
+
+        static::assertSame(['data' => [['name' => 'promo', 'video_count' => 2]]], json_decode((string) $response->getContent(), true));
+    }
+
+    public function testVideoPageIsFilteredByTagsAndMetadata(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('listVideosPage')
+            ->with(self::UUID, null, 60, ['promo', 'Sale'], ['cms_id' => '42'])
+            ->willReturn(['items' => [], 'pagination' => ['next_cursor' => null, 'has_more' => false]]);
+
+        $request = new Request(['limit' => '60', 'tags' => ' promo, Sale,', 'metadata' => ['cms_id' => '42']]);
+        $response = (new VideoOptimizerAdminController($client))->listVideos(self::UUID, $request);
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    /**
+     * @return iterable<string, array{array<string, mixed>}>
+     */
+    public static function invalidFilters(): iterable
+    {
+        yield 'too many tags' => [['tags' => implode(',', range(1, 21))]];
+        yield 'long tag' => [['tags' => str_repeat('a', 51)]];
+        yield 'bad metadata key' => [['metadata' => ['Bad Key' => 'x']]];
+        yield 'empty metadata value' => [['metadata' => ['cms_id' => '']]];
+        yield 'metadata not a map' => [['metadata' => 'cms_id']];
+    }
+
+    #[DataProvider('invalidFilters')]
+    public function testInvalidFiltersAreRejected(array $query): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('listVideosPage');
+
+        $response = (new VideoOptimizerAdminController($client))->listVideos(self::UUID, new Request(['limit' => '10'] + $query));
+
+        static::assertSame(400, $response->getStatusCode());
+        static::assertSame('SCALECOMMERCE_VO__INVALID_REQUEST', json_decode((string) $response->getContent(), true)['errors'][0]['code']);
+    }
+
+    public function testUpdateVideoForwardsTagsAndMetadata(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('updateVideo')
+            ->with(self::UUID, static::callback(static fn (array $payload): bool => $payload['title'] === 'T'
+                && $payload['tags'] === ['promo', 'Sale']
+                && json_encode($payload['metadata']) === '{"cms_id":"42","0":null}'
+                && !isset($payload['foo'])))
+            ->willReturn([]);
+
+        $body = '{"title":"T","tags":[" promo ","Sale"],"metadata":{"cms_id":" 42 ","0":null},"foo":1}';
+        $response = (new VideoOptimizerAdminController($client))->updateVideo(self::UUID, new Request([], [], [], [], [], [], $body));
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testUpdateVideoCanClearTagsAndMetadata(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('updateVideo')->with(self::UUID, ['tags' => [], 'metadata' => null])->willReturn([]);
+
+        (new VideoOptimizerAdminController($client))->updateVideo(self::UUID, new Request([], [], [], [], [], [], '{"tags":[],"metadata":null}'));
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function invalidVideoPayloads(): iterable
+    {
+        yield 'tag with comma' => ['{"tags":["a,b"]}'];
+        yield 'empty tag' => ['{"tags":[" "]}'];
+        yield 'tags as map' => ['{"tags":{"a":"b"}}'];
+        yield 'too many tags' => ['{"tags":' . json_encode(range(1, 21)) . '}'];
+        yield 'metadata key' => ['{"metadata":{"Upper":"x"}}'];
+        yield 'metadata value type' => ['{"metadata":{"a":1}}'];
+        yield 'metadata value length' => ['{"metadata":{"a":"' . str_repeat('x', 65) . '"}}'];
+        yield 'too many metadata keys' => ['{"metadata":' . json_encode(array_fill_keys(array_map(static fn (int $i): string => 'k' . $i, range(1, 11)), 'x')) . '}'];
+    }
+
+    #[DataProvider('invalidVideoPayloads')]
+    public function testUpdateVideoRejectsInvalidTagsAndMetadata(string $body): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('updateVideo');
+
+        $response = (new VideoOptimizerAdminController($client))->updateVideo(self::UUID, new Request([], [], [], [], [], [], $body));
+
+        static::assertSame(400, $response->getStatusCode());
+    }
 }

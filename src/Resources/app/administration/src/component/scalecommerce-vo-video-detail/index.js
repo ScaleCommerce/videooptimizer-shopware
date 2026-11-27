@@ -451,6 +451,12 @@ Component.register('scalecommerce-vo-video-detail', {
             );
         },
 
+        // Tags and metadata were saved: keep the record current and let the list refresh.
+        onTagsSaved(video) {
+            this.video = { ...this.video, ...video };
+            this.$emit('updated');
+        },
+
         onClose() {
             this.$emit('close');
         },

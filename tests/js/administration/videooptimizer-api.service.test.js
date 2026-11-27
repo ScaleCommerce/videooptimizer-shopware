@@ -177,3 +177,16 @@ describe('subtitle calls (#36)', () => {
         expect(httpClient.get.mock.calls[0][1].responseType).toBe('blob');
     });
 });
+
+describe('tag and metadata calls (#37)', () => {
+    it('sends the filters as query parameters', async () => {
+        const httpClient = { get: vi.fn(() => Promise.resolve({ data: { data: [] } })) };
+        const service = new VideoOptimizerApiService(httpClient, {});
+
+        await service.getVideos('lib', { limit: 60, tags: ['a', 'b'], metadata: { cms_id: '42' } });
+        await service.getTags();
+
+        expect(httpClient.get.mock.calls[0][1].params).toEqual({ limit: 60, tags: 'a,b', 'metadata[cms_id]': '42' });
+        expect(httpClient.get.mock.calls[1][0]).toBe('/api/_action/scalecommerce-vo/tags');
+    });
+});

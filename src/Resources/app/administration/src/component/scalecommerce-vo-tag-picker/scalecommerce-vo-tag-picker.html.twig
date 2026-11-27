@@ -1,0 +1,34 @@
+{% block scalecommerce_vo_tag_picker %}
+<div class="scalecommerce-vo-tag-picker">
+    <div v-if="modelValue.length" class="scalecommerce-vo-tag-picker__chips">
+        <sw-label
+            v-for="tag in modelValue"
+            :key="tag"
+            :dismissable="!disabled"
+            size="small"
+            @dismiss="onRemove(tag)">
+            {{ tag }}
+        </sw-label>
+    </div>
+
+    <mt-select
+        v-if="options.length && !disabled"
+        :label="label || $tc('scalecommerce-vo.tags.pick')"
+        :options="options"
+        :model-value="null"
+        :placeholder="$tc('scalecommerce-vo.tags.pickPlaceholder')"
+        @update:model-value="onPick" />
+
+    <div v-if="allowCreate && !disabled" class="scalecommerce-vo-tag-picker__new">
+        <mt-text-field
+            :label="$tc('scalecommerce-vo.tags.new')"
+            :model-value="newTag"
+            maxlength="50"
+            @update:model-value="newTag = $event"
+            @keydown.enter.prevent="onAddNew" />
+        <mt-button size="small" variant="secondary" :disabled="!newTag.trim()" @click="onAddNew">
+            {{ $tc('scalecommerce-vo.tags.add') }}
+        </mt-button>
+    </div>
+</div>
+{% endblock %}

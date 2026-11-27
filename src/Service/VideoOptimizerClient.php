@@ -143,20 +143,27 @@ class VideoOptimizerClient implements ResetInterface
         return $result;
     }
 
-    public function listVideos(string $libraryId): array
+    /**
+     * @param list<string> $tags
+     * @param array<string, string> $metadata
+     */
+    public function listVideos(string $libraryId, array $tags = [], array $metadata = []): array
     {
-        return $this->requestAllPages('/libraries/' . $this->pathId($libraryId) . '/videos');
+        return $this->requestAllPages('/libraries/' . $this->pathId($libraryId) . '/videos', $this->videoFilterQuery($tags, $metadata));
     }
 
     /**
      * One page of a library's videos; the administration pages with the cursor instead of loading
      * every video in one request (issue #15).
      *
+     * @param list<string> $tags only videos carrying all of these tags
+     * @param array<string, string> $metadata only videos whose metadata has exactly these values
+     *
      * @return array{items: list<array<string, mixed>>, pagination: array{next_cursor: ?string, has_more: bool}}
      */
-    public function listVideosPage(string $libraryId, ?string $cursor, int $limit): array
+    public function listVideosPage(string $libraryId, ?string $cursor, int $limit, array $tags = [], array $metadata = []): array
     {
-        $query = ['limit' => max(1, min($limit, self::PAGE_LIMIT))];
+        $query = ['limit' => max(1, min($limit, self::PAGE_LIMIT))] + $this->videoFilterQuery($tags, $metadata);
         if ($cursor !== null && $cursor !== '') {
             $query['cursor'] = $cursor;
         }
@@ -179,9 +186,9 @@ class VideoOptimizerClient implements ResetInterface
      * Lists videos across every library (newest first), optionally filtered to one library.
      * Requires the `library:view` permission on the token.
      */
-    public function listAllVideos(?string $libraryId = null): array
+    public function listAllVideos(?string $libraryId = null, array $tags = [], array $metadata = []): array
     {
-        $query = ($libraryId !== null && $libraryId !== '') ? ['library_id' => $libraryId] : [];
+        $query = (($libraryId !== null && $libraryId !== '') ? ['library_id' => $libraryId] : []) + $this->videoFilterQuery($tags, $metadata);
 
         return $this->requestAllPages('/videos', $query);
     }
@@ -415,6 +422,16 @@ class VideoOptimizerClient implements ResetInterface
      *
      * @return list<array<string, mixed>>
      */
+    /**
+     * The organization's tags with the number of videos carrying each, alphabetically.
+     *
+     * @return list<array{name: string, video_count: int}>
+     */
+    public function listTags(): array
+    {
+        return $this->listOf($this->requestData('GET', '/tags'));
+    }
+
     public function listSubtitleLanguages(): array
     {
         return $this->listOf($this->requestData('GET', '/subtitle-languages'));
@@ -570,6 +587,28 @@ class VideoOptimizerClient implements ResetInterface
      * Language codes are BCP 47 tags (`de`, `en-US`, `de-x-simple`; the API normalizes case and
      * `_`); only those characters can reach a URL path.
      */
+    /**
+     * Query parameters of the video list filters: `tags` (comma separated, all must match) and
+     * `metadata[key]=value` (exact, case-sensitive).
+     *
+     * @param list<string> $tags
+     * @param array<string, string> $metadata
+     *
+     * @return array<string, string>
+     */
+    private function videoFilterQuery(array $tags, array $metadata): array
+    {
+        $query = [];
+        if ($tags !== []) {
+            $query['tags'] = implode(',', $tags);
+        }
+        foreach ($metadata as $key => $value) {
+            $query['metadata[' . $key . ']'] = $value;
+        }
+
+        return $query;
+    }
+
     private function languageCode(string $code): string
     {
         $code = trim($code);

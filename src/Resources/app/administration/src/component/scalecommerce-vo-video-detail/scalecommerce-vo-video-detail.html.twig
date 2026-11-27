@@ -51,6 +51,10 @@
 
         <p v-if="statusText" class="scalecommerce-vo-detail__status">{{ statusText }}</p>
 
+        {% block scalecommerce_vo_video_detail_tags %}
+        <scalecommerce-vo-video-tags :video="video" @saved="onTagsSaved" />
+        {% endblock %}
+
         {% block scalecommerce_vo_video_detail_subtitles %}
         <scalecommerce-vo-subtitles :uuid="uuid" />
         {% endblock %}

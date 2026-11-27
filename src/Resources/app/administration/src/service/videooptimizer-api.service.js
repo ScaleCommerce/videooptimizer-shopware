@@ -18,6 +18,14 @@ export default class VideoOptimizerApiService extends ApiService {
             .then((response) => ApiService.handleResponse(response));
     }
 
+    getTags() {
+        return this.httpClient
+            .get(`${this.getApiBasePath()}/tags`, {
+                headers: this.getBasicHeaders(),
+            })
+            .then((response) => ApiService.handleResponse(response));
+    }
+
     getEncodings() {
         return this.httpClient
             .get(`${this.getApiBasePath()}/encodings`, {
@@ -65,11 +73,18 @@ export default class VideoOptimizerApiService extends ApiService {
     }
 
     /**
+     * `tags` (all must match) and `metadata` ({ key: value }) filter the list.
      * With `limit` (and `cursor`), one page is returned as { data, meta: { next_cursor, has_more } };
      * without, the full list.
      */
-    getVideos(libraryId, { limit, cursor } = {}) {
+    getVideos(libraryId, { limit, cursor, tags, metadata } = {}) {
         const params = {};
+        if (tags?.length) {
+            params.tags = tags.join(',');
+        }
+        Object.entries(metadata ?? {}).forEach(([key, value]) => {
+            params[`metadata[${key}]`] = value;
+        });
         if (limit) {
             params.limit = limit;
         }

@@ -1,0 +1,10 @@
+.scalecommerce-vo-video-filter {
+    margin-bottom: 16px;
+
+    &__metadata {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        align-items: end;
+        gap: 8px;
+    }
+}

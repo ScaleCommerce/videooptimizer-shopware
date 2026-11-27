@@ -1771,4 +1771,48 @@ class VideoOptimizerClientTest extends TestCase
 
         static::assertSame(['GET https://api.videooptimizer.eu/api/v1/videos/vid-1/subtitles/de-CH', 'DELETE https://api.videooptimizer.eu/api/v1/videos/vid-1/subtitles/de-CH'], $urls);
     }
+
+    public function testListTagsUnwrapsData(): void
+    {
+        $http = new MockHttpClient(new MockResponse('{"data":[{"name":"promo","video_count":2}]}'));
+
+        static::assertSame([['name' => 'promo', 'video_count' => 2]], $this->client($http)->listTags());
+    }
+
+    public function testVideoListsCarryTagAndMetadataFilters(): void
+    {
+        $urls = [];
+        $http = new MockHttpClient(function (string $method, string $url) use (&$urls): MockResponse {
+            $urls[] = urldecode($url);
+
+            return new MockResponse('{"data":[],"pagination":{"has_more":false,"next_cursor":null}}');
+        });
+        $client = $this->client($http);
+
+        $client->listVideosPage('lib-1', null, 20, ['promo', 'Sale'], ['cms_id' => '42']);
+        $client->listAllVideos('lib-1', ['promo'], ['a' => 'b']);
+        $client->listVideosPage('lib-1', null, 20);
+
+        static::assertStringContainsString('/libraries/lib-1/videos?limit=20&tags=promo,Sale&metadata[cms_id]=42', $urls[0]);
+        static::assertStringContainsString('/videos?library_id=lib-1&tags=promo&metadata[a]=b&limit=100', $urls[1]);
+        static::assertStringNotContainsString('tags', $urls[2]);
+    }
+
+    public function testUpdateVideoSendsTagsAndMetadataAndForgetsTheEmbed(): void
+    {
+        $body = null;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$body): MockResponse {
+            $body = $options['body'];
+
+            return new MockResponse('{"data":{"uuid":"vid-1","tags":["promo"],"metadata":{"cms_id":"42"}}}');
+        });
+        $cache = new ArrayAdapter();
+        $cache->get('scalecommerce_vo_embed_vid-1', static fn (): array => ['cached' => true]);
+
+        $result = $this->client($http, null, $cache)->updateVideo('vid-1', ['tags' => ['promo'], 'metadata' => (object) ['cms_id' => '42']]);
+
+        static::assertSame(['promo'], $result['tags']);
+        static::assertSame('{"tags":["promo"],"metadata":{"cms_id":"42"}}', $body);
+        static::assertFalse($cache->hasItem('scalecommerce_vo_embed_vid-1'));
+    }
 }

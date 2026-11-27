@@ -47,6 +47,21 @@ class VideoOptimizerAdminController
      */
     private const LANGUAGE_PATTERN = '[A-Za-z0-9][A-Za-z0-9_-]{0,34}';
 
+    private const MAX_TAGS = 20;
+
+    private const MAX_TAG_LENGTH = 50;
+
+    private const MAX_METADATA_KEYS = 10;
+
+    private const MAX_METADATA_FILTERS = 5;
+
+    private const MAX_METADATA_VALUE_LENGTH = 64;
+
+    /**
+     * Metadata keys: 1-40 characters of a-z 0-9 _ . - starting with a letter or digit.
+     */
+    private const METADATA_KEY_PATTERN = '/^[a-z0-9][a-z0-9_.-]{0,39}$/D';
+
     private const SUBTITLE_MAX_BYTES = 2097152;
 
     private const SUBTITLE_KINDS = ['subtitles', 'captions'];
@@ -96,7 +111,7 @@ class VideoOptimizerAdminController
         // With ?limit (and ?cursor) one page plus "meta" is returned; without them, the full list
         // as before, so existing callers keep working.
         if (!$request->query->has('limit') && !$request->query->has('cursor')) {
-            return $this->wrap(fn () => $this->client->listVideos($id));
+            return $this->wrap(fn () => $this->client->listVideos($id, $this->tagFilter($request), $this->metadataFilter($request)));
         }
 
         $limit = (string) $request->query->get('limit', '60');
@@ -106,7 +121,7 @@ class VideoOptimizerAdminController
         }
 
         try {
-            $page = $this->client->listVideosPage($id, is_string($cursor) ? $cursor : null, (int) $limit);
+            $page = $this->client->listVideosPage($id, is_string($cursor) ? $cursor : null, (int) $limit, $this->tagFilter($request), $this->metadataFilter($request));
         } catch (MissingApiTokenException|InvalidApiBaseUrlException|InvalidRequestException $e) {
             return $this->clientError($e);
         } catch (VideoOptimizerApiException $e) {
@@ -121,7 +136,13 @@ class VideoOptimizerAdminController
     {
         $libraryId = $request->query->get('libraryId');
 
-        return $this->wrap(fn () => $this->client->listAllVideos($libraryId !== null ? (string) $libraryId : null));
+        return $this->wrap(fn () => $this->client->listAllVideos($libraryId !== null ? (string) $libraryId : null, $this->tagFilter($request), $this->metadataFilter($request)));
+    }
+
+    #[Route(path: '/api/_action/scalecommerce-vo/tags', name: 'api.action.scalecommerce-vo.tags.list', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
+    public function listTags(): JsonResponse
+    {
+        return $this->wrap(fn () => $this->client->listTags());
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/encodings', name: 'api.action.scalecommerce-vo.encodings.list', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
@@ -166,7 +187,7 @@ class VideoOptimizerAdminController
     #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}', name: 'api.action.scalecommerce-vo.videos.update', methods: ['PATCH'], requirements: ['uuid' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:update']])]
     public function updateVideo(string $uuid, Request $request): JsonResponse
     {
-        return $this->wrap(fn () => $this->client->updateVideo($uuid, $this->only($this->payload($request), ['title'])));
+        return $this->wrap(fn () => $this->client->updateVideo($uuid, $this->videoPayload($request)));
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}', name: 'api.action.scalecommerce-vo.videos.delete', methods: ['DELETE'], requirements: ['uuid' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:delete']])]
@@ -376,6 +397,122 @@ class VideoOptimizerAdminController
 
             return [];
         }, Response::HTTP_NO_CONTENT);
+    }
+
+    /**
+     * PATCH body of a video: `title`, `tags` (replaces the tag set) and `metadata` (merged; an
+     * empty value or null removes a key, `"metadata": null` removes all of them).
+     *
+     * @return array<string, mixed>
+     */
+    private function videoPayload(Request $request): array
+    {
+        $payload = $this->only($this->payload($request), ['title', 'tags', 'metadata']);
+
+        if (\array_key_exists('tags', $payload)) {
+            $payload['tags'] = $this->assertTags($payload['tags']);
+        }
+        if (\array_key_exists('metadata', $payload)) {
+            if ($payload['metadata'] === null) {
+                return $payload;
+            }
+            $metadata = $this->assertMetadata($payload['metadata']);
+            if ($metadata === []) {
+                unset($payload['metadata']);
+            } else {
+                // An object even for numeric keys ("0" would turn the array into a JSON list).
+                $payload['metadata'] = (object) $metadata;
+            }
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function assertTags(mixed $tags): array
+    {
+        if (!is_array($tags) || !array_is_list($tags) || count($tags) > self::MAX_TAGS) {
+            throw new InvalidRequestException(sprintf('tags must be a list of at most %d names.', self::MAX_TAGS));
+        }
+        $result = [];
+        foreach ($tags as $tag) {
+            $name = is_string($tag) ? trim($tag) : '';
+            if ($name === '' || mb_strlen($name) > self::MAX_TAG_LENGTH || str_contains($name, ',')) {
+                throw new InvalidRequestException(sprintf('A tag must have 1-%d characters and must not contain a comma.', self::MAX_TAG_LENGTH));
+            }
+            $result[] = $name;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return array<string, string|null>
+     */
+    private function assertMetadata(mixed $metadata): array
+    {
+        if (!is_array($metadata) || count($metadata) > self::MAX_METADATA_KEYS) {
+            throw new InvalidRequestException(sprintf('metadata must be an object with at most %d keys.', self::MAX_METADATA_KEYS));
+        }
+        $result = [];
+        foreach ($metadata as $key => $value) {
+            $key = (string) $key;
+            if (preg_match(self::METADATA_KEY_PATTERN, $key) !== 1) {
+                throw new InvalidRequestException('A metadata key must have 1-40 characters of a-z, 0-9, "_", "." and "-", starting with a letter or digit.');
+            }
+            if ($value !== null && (!is_string($value) || mb_strlen(trim($value)) > self::MAX_METADATA_VALUE_LENGTH || preg_match('/[\x00-\x1F\x7F]/', $value) === 1)) {
+                throw new InvalidRequestException(sprintf('A metadata value must be a string of at most %d characters without control characters.', self::MAX_METADATA_VALUE_LENGTH));
+            }
+            $result[$key] = $value === null ? null : trim($value);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Video list filter `?tags=a,b`.
+     *
+     * @return list<string>
+     */
+    private function tagFilter(Request $request): array
+    {
+        $raw = $request->query->get('tags');
+        if (!is_string($raw) || trim($raw) === '') {
+            return [];
+        }
+
+        return $this->assertTags(array_values(array_filter(array_map('trim', explode(',', $raw)), static fn (string $tag): bool => $tag !== '')));
+    }
+
+    /**
+     * Video list filter `?metadata[key]=value`.
+     *
+     * @return array<string, string>
+     */
+    private function metadataFilter(Request $request): array
+    {
+        $raw = $request->query->all()['metadata'] ?? [];
+        if ($raw === []) {
+            return [];
+        }
+        if (!is_array($raw)) {
+            throw new InvalidRequestException('Invalid metadata filter.');
+        }
+        if (count($raw) > self::MAX_METADATA_FILTERS) {
+            throw new InvalidRequestException(sprintf('At most %d metadata filters are allowed.', self::MAX_METADATA_FILTERS));
+        }
+        $result = [];
+        foreach ($raw as $key => $value) {
+            $key = (string) $key;
+            if (preg_match(self::METADATA_KEY_PATTERN, $key) !== 1 || !is_string($value) || trim($value) === '' || mb_strlen(trim($value)) > self::MAX_METADATA_VALUE_LENGTH) {
+                throw new InvalidRequestException('Invalid metadata filter.');
+            }
+            $result[$key] = trim($value);
+        }
+
+        return $result;
     }
 
     /**

@@ -251,6 +251,34 @@
             "confirmDeleteTitle": "Delete subtitle language",
             "confirmDeleteText": "Delete the language \"{language}\"?",
             "inUse": "{count} video still has a subtitle in {language}. Delete that subtitle first. | {count} videos still have a subtitle in {language}. Delete those subtitles first."
+        },
+        "tags": {
+            "title": "Tags",
+            "empty": "No tags.",
+            "pick": "Add an existing tag",
+            "pickPlaceholder": "Choose a tag",
+            "new": "New tag",
+            "add": "Add",
+            "save": "Save tags and metadata",
+            "saved": "Tags and metadata saved."
+        },
+        "metadata": {
+            "title": "Metadata",
+            "hint": "Your own key/value data on the video, for example the ID of the entry it belongs to. Up to 10 keys.",
+            "key": "Key",
+            "value": "Value",
+            "add": "Add metadata",
+            "remove": "Remove",
+            "problem_keyInvalid": "A key has 1-40 characters of a-z, 0-9, \"_\", \".\" and \"-\" (lower case) and starts with a letter or digit.",
+            "problem_keyDuplicate": "Each key can only be used once.",
+            "problem_valueTooLong": "A value has at most 64 characters.",
+            "problem_tooMany": "At most 10 metadata keys are possible."
+        },
+        "filter": {
+            "tags": "Filter by tag",
+            "metadataKey": "Metadata key",
+            "metadataValue": "Metadata value (exact)",
+            "clear": "Clear filters"
         }
     },
     "sw-privileges": {
