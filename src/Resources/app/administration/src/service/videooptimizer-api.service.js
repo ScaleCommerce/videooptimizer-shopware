@@ -138,11 +138,15 @@ export default class VideoOptimizerApiService extends ApiService {
             .then((response) => ApiService.handleResponse(response));
     }
 
-    getPlayback(uuid) {
+    // fresh: bypass the cached embed (right after a video became ready it has no sources yet)
+    getPlayback(uuid, { fresh = false } = {}) {
         return this.httpClient
             .get(
                 `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/playback`,
-                { headers: this.getBasicHeaders() }
+                {
+                    headers: this.getBasicHeaders(),
+                    params: fresh ? { fresh: 1 } : {},
+                }
             )
             .then((response) => ApiService.handleResponse(response));
     }
@@ -380,7 +384,14 @@ export default class VideoOptimizerApiService extends ApiService {
             .post(
                 `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/subtitles`,
                 form,
-                { headers: this.getBasicHeaders() }
+                {
+                    // getBasicHeaders() forces JSON; a multipart body needs its own type with the
+                    // boundary, which the browser sets for FormData.
+                    headers: {
+                        ...this.getBasicHeaders(),
+                        'Content-Type': 'multipart/form-data',
+                    },
+                }
             )
             .then((response) => ApiService.handleResponse(response));
     }

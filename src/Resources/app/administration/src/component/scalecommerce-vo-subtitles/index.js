@@ -33,6 +33,7 @@ Component.register('scalecommerce-vo-subtitles', {
             file: null,
             confirmDelete: null,
             loadError: null,
+            uploadError: null,
         };
     },
 
@@ -130,6 +131,7 @@ Component.register('scalecommerce-vo-subtitles', {
                 return;
             }
             this.file = file;
+            this.uploadError = null;
         },
 
         async onUpload() {
@@ -137,6 +139,7 @@ Component.register('scalecommerce-vo-subtitles', {
                 return;
             }
             this.isUploading = true;
+            this.uploadError = null;
             try {
                 const response =
                     await this.scalecommerceVoApiService.uploadSubtitle(
@@ -164,12 +167,13 @@ Component.register('scalecommerce-vo-subtitles', {
                 this.isDefault = false;
                 await this.load();
             } catch (error) {
-                this.createNotificationError({
-                    message: apiErrorText(
-                        error,
-                        this.$tc('scalecommerce-vo.detail.genericError')
-                    ),
-                });
+                // Notification and a message that stays next to the form; the file stays selected
+                // so the upload can be retried.
+                this.uploadError = apiErrorText(
+                    error,
+                    this.$tc('scalecommerce-vo.detail.genericError')
+                );
+                this.createNotificationError({ message: this.uploadError });
             } finally {
                 this.isUploading = false;
             }

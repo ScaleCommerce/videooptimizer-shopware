@@ -600,7 +600,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
             ],
         ]);
 
-        $response = (new VideoOptimizerAdminController($client))->getPlayback('vid-1');
+        $response = (new VideoOptimizerAdminController($client))->getPlayback('vid-1', new Request());
 
         static::assertSame(200, $response->getStatusCode());
         static::assertSame(
@@ -614,7 +614,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
         $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getEmbed')->willReturn(['sources' => 'garbage']);
 
-        $response = (new VideoOptimizerAdminController($client))->getPlayback('vid-1');
+        $response = (new VideoOptimizerAdminController($client))->getPlayback('vid-1', new Request());
 
         static::assertSame(['data' => ['hls' => null, 'mp4' => null]], json_decode((string) $response->getContent(), true));
     }
@@ -624,7 +624,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
         $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getEmbed')->willThrowException(new VideoOptimizerApiException(404, 'Video not found'));
 
-        $response = (new VideoOptimizerAdminController($client))->getPlayback('vid-1');
+        $response = (new VideoOptimizerAdminController($client))->getPlayback('vid-1', new Request());
 
         static::assertSame(404, $response->getStatusCode());
     }
@@ -977,6 +977,39 @@ class VideoOptimizerAdminControllerTest extends TestCase
         yield 'wrong extension' => ['subtitle.txt', ['language' => 'de']];
         yield 'no language' => ['de.vtt', []];
         yield 'unknown kind' => ['de.vtt', ['language' => 'de', 'kind' => 'lyrics']];
+    }
+
+    public function testPlaybackWithFreshDropsTheCachedEmbedFirst(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('forgetEmbed')->with('vid-1');
+        $client->method('getEmbed')->willReturn(['sources' => []]);
+
+        (new VideoOptimizerAdminController($client))->getPlayback('vid-1', new Request(['fresh' => '1']));
+    }
+
+    public function testPlaybackWithoutFreshKeepsTheCache(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('forgetEmbed');
+        $client->method('getEmbed')->willReturn(['sources' => []]);
+
+        (new VideoOptimizerAdminController($client))->getPlayback('vid-1', new Request());
+    }
+
+    /**
+     * The administration posts multipart form data: the file arrives in $request->files and the
+     * fields in $request->request, exactly as PHP parses a real request.
+     */
+    public function testUploadSubtitleReadsAMultipartRequest(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'scvo');
+        file_put_contents($path, "WEBVTT\n");
+        $request = Request::create('/api/_action/scalecommerce-vo/videos/' . self::UUID . '/subtitles', 'POST', ['language' => 'de'], [], ['file' => new UploadedFile($path, 'de.vtt', 'text/vtt', null, true)], ['CONTENT_TYPE' => 'multipart/form-data; boundary=x']);
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('uploadSubtitle')->with(self::UUID, 'de.vtt', "WEBVTT\n", 'de', null, null)->willReturn([]);
+
+        static::assertSame(200, (new VideoOptimizerAdminController($client))->uploadSubtitle(self::UUID, $request)->getStatusCode());
     }
 
     public function testUploadSubtitleOmitsKindAndDefaultWhenNotSent(): void

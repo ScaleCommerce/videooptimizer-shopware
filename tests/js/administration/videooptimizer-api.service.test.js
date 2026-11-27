@@ -171,6 +171,15 @@ describe('subtitle calls (#36)', () => {
         expect(form.get('file').name).toBe('de.vtt');
     });
 
+    it('does not force a JSON Content-Type on the multipart body', async () => {
+        await service.uploadSubtitle('vid', { file: new File(['x'], 'a.vtt'), language: 'de' });
+
+        const [, form, config] = httpClient.post.mock.calls[0];
+        expect(form).toBeInstanceOf(FormData);
+        expect(config.headers['Content-Type']).toBe('multipart/form-data');
+        expect(config.headers['Content-Type']).not.toMatch(/json/);
+    });
+
     it('sends kind and default flag only when set', async () => {
         await service.uploadSubtitle('vid', { file: new File(['x'], 'a.srt'), language: 'de', kind: null, isDefault: null });
 
@@ -219,5 +228,18 @@ describe('webhook info call (#39)', () => {
 
         expect(await service.getWebhookInfo()).toEqual({ data: { url: 'u' } });
         expect(httpClient.get.mock.calls[0][0]).toBe('/api/_action/scalecommerce-vo/webhook');
+    });
+});
+
+describe('playback call', () => {
+    it('asks for a fresh embed only on request', async () => {
+        const httpClient = { get: vi.fn(() => Promise.resolve({ data: { data: {} } })) };
+        const service = new VideoOptimizerApiService(httpClient, {});
+
+        await service.getPlayback('vid');
+        await service.getPlayback('vid', { fresh: true });
+
+        expect(httpClient.get.mock.calls[0][1].params).toEqual({});
+        expect(httpClient.get.mock.calls[1][1].params).toEqual({ fresh: 1 });
     });
 });

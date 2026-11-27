@@ -218,9 +218,13 @@ class VideoOptimizerAdminController
      * the embed payload carries the CDN URLs themselves.
      */
     #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/playback', name: 'api.action.scalecommerce-vo.videos.playback', methods: ['GET'], requirements: ['uuid' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:read']])]
-    public function getPlayback(string $uuid): JsonResponse
+    public function getPlayback(string $uuid, Request $request): JsonResponse
     {
-        return $this->wrap(function () use ($uuid): array {
+        return $this->wrap(function () use ($uuid, $request): array {
+            if ($request->query->getBoolean('fresh')) {
+                // A video that just became ready is cached without sources for a minute.
+                $this->client->forgetEmbed($uuid);
+            }
             $embed = $this->client->getEmbed($uuid);
             $sources = is_array($embed['sources'] ?? null) ? $embed['sources'] : [];
 

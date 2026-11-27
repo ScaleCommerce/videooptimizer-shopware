@@ -14,6 +14,11 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 - Webhook receiver `POST /scalecommerce-vo/webhook` (HMAC-SHA256 signature, replay window, duplicate detection, 1 MiB limit) that drops the cached embed and the cached pages of a video on `video.ready`, `video.failed`, `video.updated` and `video.deleted`; the plugin setting `webhookSecret` and a module card with the URL to enter in VideoOptimizer ([#39](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/39)).
 - The element configuration and the editor preview flag a selected video that no longer exists ([#35](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/35)).
 
+### Fixed
+- Subtitle upload sent the file with a JSON Content-Type and never reached the API; a failed upload now shows its error next to the form and keeps the file ([#36](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/36)).
+- The video detail retries the playback lookup (3 times, 5 s apart) for a video that just became ready before it says the video cannot be played.
+- A new library is created with the resolutions and codecs the form shows (included options preselected).
+
 ### Changed
 - GitHub Actions run PHPUnit and PHPStan (level 5) on Shopware 6.6 and 6.7, Vitest and `shopware-cli extension validate` on every push and pull request ([#40](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/40)).
 - DOM tests (Vitest/jsdom) for the storefront player, the facade and lightbox blocks and the hero lifecycle ([#34](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/34)).

@@ -59,6 +59,7 @@
                     {{ $tc('scalecommerce-vo.subtitles.upload') }}
                 </mt-button>
             </div>
+            <p v-if="uploadError" class="scalecommerce-vo-subtitles__error" role="alert">{{ uploadError }}</p>
             <p v-if="replaces" class="scalecommerce-vo-subtitles__hint">
                 {{ $tc('scalecommerce-vo.subtitles.replaces') }}
             </p>

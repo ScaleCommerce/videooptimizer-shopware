@@ -6,7 +6,7 @@
     "isDynamicEntry": true
   },
   "main.js": {
-    "file": "assets/scale-video-optimizer-BD6XgqJ5.js",
+    "file": "assets/scale-video-optimizer-C5b01ln2.js",
     "name": "scale-video-optimizer",
     "src": "main.js",
     "isEntry": true,
@@ -14,7 +14,7 @@
       "../node_modules/hls.js/dist/hls.light.mjs"
     ],
     "css": [
-      "assets/scale-video-optimizer-CDwTYSIv.css"
+      "assets/scale-video-optimizer-E-8xSHCR.css"
     ]
   }
 }

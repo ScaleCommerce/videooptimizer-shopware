@@ -119,6 +119,8 @@ describe('scalecommerce-vo-subtitles (#36)', () => {
         await ctx.onUpload();
 
         expect(ctx.createNotificationError).toHaveBeenCalledWith({ message: 'No valid cues' });
+        expect(ctx.uploadError).toBe('No valid cues');
+        expect(ctx.file).toEqual({ name: 'a.vtt' });
         expect(ctx.isUploading).toBe(false);
     });
 
