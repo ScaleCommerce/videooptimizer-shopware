@@ -1,0 +1,22 @@
+.scalecommerce-vo-webhook {
+    &__url {
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+
+        .mt-field,
+        .mt-text-field {
+            flex: 1;
+        }
+    }
+
+    &__banner {
+        margin-top: 12px;
+    }
+
+    &__last {
+        margin: 12px 0 0;
+        color: #52667a;
+        font-size: 13px;
+    }
+}

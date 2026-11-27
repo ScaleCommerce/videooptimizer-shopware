@@ -102,6 +102,16 @@ describe('scalecommerce-vo-subtitles (#36)', () => {
         expect(ctx.isUploading).toBe(false);
     });
 
+    it('leaves kind and default flag out unless they were chosen', async () => {
+        const service = { uploadSubtitle: vi.fn().mockResolvedValue({ data: {} }) };
+        const file = { name: 'de.srt', size: 5 };
+        const ctx = context(service, { file, language: 'de', kind: null, isDefault: false, canUpload: true, load: vi.fn() });
+
+        await ctx.onUpload();
+
+        expect(service.uploadSubtitle).toHaveBeenCalledWith('vid-1', { file, language: 'de', kind: null, isDefault: null });
+    });
+
     it('reports a failed upload and re-enables the form', async () => {
         const service = { uploadSubtitle: vi.fn().mockRejectedValue({ response: { data: { errors: [{ detail: 'No valid cues' }] } } }) };
         const ctx = context(service, { file: { name: 'a.vtt' }, language: 'de', canUpload: true, load: vi.fn() });

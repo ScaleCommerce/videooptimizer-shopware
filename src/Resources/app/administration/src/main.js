@@ -9,6 +9,7 @@ import './component/scalecommerce-vo-tag-picker';
 import './component/scalecommerce-vo-video-tags';
 import './component/scalecommerce-vo-video-filter';
 import './component/scalecommerce-vo-savings';
+import './component/scalecommerce-vo-webhook';
 import './component/scalecommerce-vo-subtitles';
 import './component/scalecommerce-vo-subtitle-languages';
 import './module/sw-cms/elements/scalecommerce-vo-video';

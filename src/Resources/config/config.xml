@@ -26,6 +26,13 @@
             <helpText>Public host that serves the hosted player, usually https://player.videooptimizer.eu (https://videooptimizer.eu keeps working for existing installations)</helpText>
             <helpText lang="de-DE">Öffentlicher Host, der den gehosteten Player ausliefert, üblicherweise https://player.videooptimizer.eu (https://videooptimizer.eu funktioniert für bestehende Installationen weiter)</helpText>
         </input-field>
+        <input-field type="password">
+            <name>webhookSecret</name>
+            <label>Webhook secret</label>
+            <label lang="de-DE">Webhook-Secret</label>
+            <helpText>Signing secret of the VideoOptimizer webhook (Integrations, Webhooks). Without it the webhook URL answers 503. The URL to enter in VideoOptimizer is shown in the VideoOptimizer module.</helpText>
+            <helpText lang="de-DE">Signatur-Secret des VideoOptimizer-Webhooks (Integrationen, Webhooks). Ohne Secret antwortet die Webhook-URL mit 503. Die in VideoOptimizer einzutragende URL steht im VideoOptimizer-Modul.</helpText>
+        </input-field>
         <input-field type="bool">
             <name>blockPrivateNetworks</name>
             <label>Block private networks</label>

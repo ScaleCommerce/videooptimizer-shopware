@@ -44,8 +44,8 @@
                 :label="$tc('scalecommerce-vo.subtitles.kind')"
                 :options="kindOptions"
                 :model-value="kind"
-                hide-clearable-button
-                @update:model-value="kind = $event || kind" />
+                :placeholder="$tc('scalecommerce-vo.subtitles.kindKeep')"
+                @update:model-value="kind = $event || null" />
             <mt-checkbox
                 :label="$tc('scalecommerce-vo.subtitles.makeDefault')"
                 :model-value="isDefault"

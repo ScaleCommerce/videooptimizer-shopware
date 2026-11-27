@@ -70,7 +70,10 @@ export function metadataProblem(rows) {
     const used = rows.filter(
         (row) => row.key.trim() !== '' || row.value.trim() !== ''
     );
-    if (used.length > MAX_METADATA_KEYS) {
+    // The limit counts the keys that are set; a row with an empty value is a removal.
+    if (
+        used.filter((row) => row.value.trim() !== '').length > MAX_METADATA_KEYS
+    ) {
         return 'tooMany';
     }
     const seen = new Set();

@@ -56,6 +56,7 @@ describe('metadata (#37)', () => {
         [[{ key: 'a', value: 'x'.repeat(65) }], 'valueTooLong'],
         [Array.from({ length: 11 }, (_, i) => ({ key: `k${i}`, value: 'v' })), 'tooMany'],
         [[{ key: 'a', value: '1' }, { key: '', value: '' }], null],
+        [[...Array.from({ length: 10 }, (_, i) => ({ key: `k${i}`, value: 'v' })), { key: 'gone', value: '' }], null],
     ])('finds the problem of %j', (rows, expected) => {
         expect(metadataProblem(rows)).toBe(expected);
     });

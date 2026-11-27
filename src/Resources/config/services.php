@@ -3,6 +3,7 @@
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
 use ScaleCommerce\VideoOptimizer\Controller\VideoOptimizerAdminController;
+use ScaleCommerce\VideoOptimizer\Controller\WebhookController;
 use ScaleCommerce\VideoOptimizer\DataResolver\BackgroundHeroElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\MediaSplitElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\SpotlightElementResolver;
@@ -70,6 +71,16 @@ return static function (ContainerConfigurator $container): void {
     $services->set(VideoOptimizerAdminController::class)
         ->public()
         ->args([service(VideoOptimizerClient::class)]);
+
+    $services->set(WebhookController::class)
+        ->public()
+        ->args([
+            service(VideoOptimizerClient::class),
+            service(SystemConfigService::class),
+            service('cache.object'),
+            service('router'),
+            service('logger'),
+        ]);
 
     $services->set(VideoOptimizerElementResolver::class)
         ->args([service(VideoOptimizerClient::class), service('logger')])

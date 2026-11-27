@@ -39,6 +39,15 @@ export default class VideoOptimizerApiService extends ApiService {
             .then((response) => ApiService.handleResponse(response));
     }
 
+    // { url, configured, lastDelivery } of the webhook receiver
+    getWebhookInfo() {
+        return this.httpClient
+            .get(`${this.getApiBasePath()}/webhook`, {
+                headers: this.getBasicHeaders(),
+            })
+            .then((response) => ApiService.handleResponse(response));
+    }
+
     getTags() {
         return this.httpClient
             .get(`${this.getApiBasePath()}/tags`, {
@@ -363,7 +372,9 @@ export default class VideoOptimizerApiService extends ApiService {
         if (kind) {
             form.append('kind', kind);
         }
-        form.append('is_default', isDefault ? 'true' : 'false');
+        if (isDefault !== null && isDefault !== undefined) {
+            form.append('is_default', isDefault ? 'true' : 'false');
+        }
 
         return this.httpClient
             .post(

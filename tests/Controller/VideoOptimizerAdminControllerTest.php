@@ -979,6 +979,25 @@ class VideoOptimizerAdminControllerTest extends TestCase
         yield 'unknown kind' => ['de.vtt', ['language' => 'de', 'kind' => 'lyrics']];
     }
 
+    public function testUploadSubtitleOmitsKindAndDefaultWhenNotSent(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('uploadSubtitle')->with(self::UUID, 'de.srt', 'x', 'de', null, null)->willReturn([]);
+
+        (new VideoOptimizerAdminController($client))->uploadSubtitle(self::UUID, $this->subtitleRequest('de.srt', 'x', ['language' => 'de']));
+    }
+
+    public function testMetadataRemovalsDoNotCountTowardsTheKeyLimit(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('updateVideo')->willReturn([]);
+        $metadata = array_fill_keys(array_map(static fn (int $i): string => 'k' . $i, range(1, 10)), 'x') + array_fill_keys(['r1', 'r2'], null);
+
+        $response = (new VideoOptimizerAdminController($client))->updateVideo(self::UUID, new Request([], [], [], [], [], [], json_encode(['metadata' => $metadata])));
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
     public function testUploadSubtitleWithoutFileIsRejected(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);

@@ -171,6 +171,14 @@ describe('subtitle calls (#36)', () => {
         expect(form.get('file').name).toBe('de.vtt');
     });
 
+    it('sends kind and default flag only when set', async () => {
+        await service.uploadSubtitle('vid', { file: new File(['x'], 'a.srt'), language: 'de', kind: null, isDefault: null });
+
+        const form = httpClient.post.mock.calls[0][1];
+        expect(form.has('kind')).toBe(false);
+        expect(form.has('is_default')).toBe(false);
+    });
+
     it('downloads a subtitle as blob', async () => {
         httpClient.get.mockResolvedValue({ data: 'blob' });
         expect(await service.downloadSubtitle('vid', 'de')).toBe('blob');
@@ -201,5 +209,15 @@ describe('savings call (#38)', () => {
 
         expect(httpClient.get.mock.calls[0][1].params).toEqual({ from: '2026-10-01', to: '2026-10-31', libraryId: 'lib' });
         expect(httpClient.get.mock.calls[1][1].params).toEqual({});
+    });
+});
+
+describe('webhook info call (#39)', () => {
+    it('reads the receiver info through the proxy', async () => {
+        const httpClient = { get: vi.fn(() => Promise.resolve({ data: { data: { url: 'u' } } })) };
+        const service = new VideoOptimizerApiService(httpClient, {});
+
+        expect(await service.getWebhookInfo()).toEqual({ data: { url: 'u' } });
+        expect(httpClient.get.mock.calls[0][0]).toBe('/api/_action/scalecommerce-vo/webhook');
     });
 });

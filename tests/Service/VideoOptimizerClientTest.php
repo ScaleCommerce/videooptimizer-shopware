@@ -1756,6 +1756,21 @@ class VideoOptimizerClientTest extends TestCase
         static::assertFalse($cache->hasItem('scalecommerce_vo_embed_vid-1'));
     }
 
+    public function testUploadSubtitleSendsKindAndDefaultOnlyWhenSet(): void
+    {
+        $body = '';
+        $http = new MockHttpClient(function (string $m, string $u, array $options) use (&$body): MockResponse {
+            $body = $this->drainBody($options['body']);
+
+            return new MockResponse('{"data":{}}');
+        });
+
+        $this->client($http)->uploadSubtitle('vid-1', 'de.vtt', 'WEBVTT', 'de');
+
+        static::assertStringNotContainsString('name="is_default"', $body);
+        static::assertStringNotContainsString('name="kind"', $body);
+    }
+
     public function testDownloadAndDeleteSubtitle(): void
     {
         $urls = [];

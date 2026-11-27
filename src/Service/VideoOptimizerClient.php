@@ -503,12 +503,13 @@ class VideoOptimizerClient implements ResetInterface
      *
      * @return array<string, mixed> {subtitle, skipped_cues}
      */
-    public function uploadSubtitle(string $uuid, string $filename, string $content, string $language, ?string $kind = null, bool $isDefault = false): array
+    public function uploadSubtitle(string $uuid, string $filename, string $content, string $language, ?string $kind = null, ?bool $isDefault = null): array
     {
-        $fields = [
-            'language' => $this->languageCode($language),
-            'is_default' => $isDefault ? 'true' : 'false',
-        ];
+        $fields = ['language' => $this->languageCode($language)];
+        // Only what is set: the API keeps the existing kind and default flag of a replaced subtitle.
+        if ($isDefault !== null) {
+            $fields['is_default'] = $isDefault ? 'true' : 'false';
+        }
         if ($kind !== null) {
             $fields['kind'] = $kind;
         }

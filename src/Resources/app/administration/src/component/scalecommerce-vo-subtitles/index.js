@@ -28,7 +28,7 @@ Component.register('scalecommerce-vo-subtitles', {
             isLoading: false,
             isUploading: false,
             language: null,
-            kind: 'subtitles',
+            kind: null,
             isDefault: false,
             file: null,
             confirmDelete: null,
@@ -145,7 +145,8 @@ Component.register('scalecommerce-vo-subtitles', {
                             file: this.file,
                             language: this.language,
                             kind: this.kind,
-                            isDefault: this.isDefault,
+                            // Only when ticked: the API keeps the existing flag otherwise.
+                            isDefault: this.isDefault ? true : null,
                         }
                     );
                 const skipped = (response.data ?? response).skipped_cues ?? 0;

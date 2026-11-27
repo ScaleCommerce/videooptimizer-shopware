@@ -379,7 +379,8 @@ class VideoOptimizerAdminController
                 $content,
                 $language,
                 is_string($kind) && $kind !== '' ? $kind : null,
-                filter_var($request->request->get('is_default'), FILTER_VALIDATE_BOOLEAN),
+                // Only when sent: the API keeps the existing value otherwise.
+                $request->request->has('is_default') ? filter_var($request->request->get('is_default'), FILTER_VALIDATE_BOOLEAN) : null,
             );
         });
     }
@@ -465,8 +466,13 @@ class VideoOptimizerAdminController
      */
     private function assertMetadata(mixed $metadata): array
     {
-        if (!is_array($metadata) || count($metadata) > self::MAX_METADATA_KEYS) {
-            throw new InvalidRequestException(sprintf('metadata must be an object with at most %d keys.', self::MAX_METADATA_KEYS));
+        if (!is_array($metadata)) {
+            throw new InvalidRequestException('metadata must be an object.');
+        }
+        // The limit counts the keys that are set; removals (null or empty) are free.
+        $set = array_filter($metadata, static fn (mixed $value): bool => $value !== null && $value !== '');
+        if (count($set) > self::MAX_METADATA_KEYS) {
+            throw new InvalidRequestException(sprintf('metadata can set at most %d keys.', self::MAX_METADATA_KEYS));
         }
         $result = [];
         foreach ($metadata as $key => $value) {

@@ -235,7 +235,8 @@
             "download": "Download",
             "delete": "Delete",
             "confirmDeleteTitle": "Delete subtitle",
-            "confirmDeleteText": "Delete the {language} subtitle of this video?"
+            "confirmDeleteText": "Delete the {language} subtitle of this video?",
+            "kindKeep": "Keep current (new: Subtitles)"
         },
         "subtitleLanguages": {
             "title": "Subtitle languages",
@@ -306,6 +307,20 @@
             "saved": "Estimated bandwidth saved",
             "savedPercent": "Estimated saving",
             "estimate": "Bandwidth figures are estimates; video traffic is tracked since October 2026."
+        },
+        "webhook": {
+            "title": "Webhook",
+            "subtitle": "VideoOptimizer reports finished, failed, changed and deleted videos here, so cached embeds and pages are refreshed at once.",
+            "url": "Webhook URL",
+            "urlHelp": "Enter this URL in VideoOptimizer under Integrations, Webhooks. It uses the shop's base URL; if your storefront runs on another domain, use that domain with the same path.",
+            "copy": "Copy",
+            "copied": "Webhook URL copied.",
+            "copyFailed": "The URL could not be copied; select and copy it manually.",
+            "configured": "Webhook secret is set.",
+            "notConfigured": "No webhook secret yet: set it in the plugin configuration (Webhook secret), otherwise deliveries are refused.",
+            "lastDelivery": "Last delivery: {event}, {time}",
+            "noDelivery": "No delivery received yet.",
+            "openConfig": "Open plugin configuration"
         }
     },
     "sw-privileges": {
