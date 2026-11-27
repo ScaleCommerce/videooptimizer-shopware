@@ -44,6 +44,7 @@ Component.register('scalecommerce-vo-video-gallery', {
             brokenPosters: {},
             nextCursor: null,
             isLoadingMore: false,
+            selectedVideoRecord: null,
         };
     },
 
@@ -52,6 +53,9 @@ Component.register('scalecommerce-vo-video-gallery', {
             // Don't leave the previous library's videos visible and clickable while loading.
             this.videos = [];
             this.loadVideos();
+        },
+        selectedUuid() {
+            this._ensureSelectedVideo();
         },
     },
 
@@ -67,9 +71,15 @@ Component.register('scalecommerce-vo-video-gallery', {
         },
 
         selectedVideo() {
+            if (!this.selectedUuid) {
+                return null;
+            }
+            // The selected video may be on a page that is not loaded yet; see _ensureSelectedVideo().
             return (
                 this.videos.find((video) => video.uuid === this.selectedUuid) ??
-                null
+                (this.selectedVideoRecord?.uuid === this.selectedUuid
+                    ? this.selectedVideoRecord
+                    : null)
             );
         },
 
@@ -138,9 +148,33 @@ Component.register('scalecommerce-vo-video-gallery', {
             this.nextCursor = null;
             if (!this.libraryId) {
                 this.videos = [];
+                this._ensureSelectedVideo();
                 return;
             }
             await this._loadPage(null);
+        },
+
+        // Loads the selected video on its own when it is not on a loaded page, so the selection
+        // line below the grid still shows it.
+        async _ensureSelectedVideo() {
+            const uuid = this.selectedUuid;
+            if (
+                this.mode !== 'select' ||
+                !uuid ||
+                this.videos.some((video) => video.uuid === uuid) ||
+                this.selectedVideoRecord?.uuid === uuid
+            ) {
+                return;
+            }
+            try {
+                const response =
+                    await this.scalecommerceVoApiService.getVideo(uuid);
+                if (this.selectedUuid === uuid) {
+                    this.selectedVideoRecord = response.data ?? response;
+                }
+            } catch {
+                // Only the selection line is affected; the selection itself stays.
+            }
         },
 
         async loadMoreVideos() {
@@ -189,6 +223,7 @@ Component.register('scalecommerce-vo-video-gallery', {
                     : null;
                 // A cursor that doesn't move would offer the same page forever.
                 this.nextCursor = next && next !== cursor ? next : null;
+                this._ensureSelectedVideo();
             } catch (error) {
                 if (request !== this._loadRequest) {
                     return;

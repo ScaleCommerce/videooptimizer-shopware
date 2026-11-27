@@ -106,7 +106,10 @@ class VideoOptimizerClient implements ResetInterface
 
     public function deleteLibrary(string $id): void
     {
+        // The library's videos can only be listed before it is gone.
+        $uuids = $this->libraryVideoUuids($id);
         $this->request('DELETE', '/libraries/' . $this->pathId($id));
+        array_map($this->forgetEmbed(...), $uuids);
     }
 
     /**
@@ -117,7 +120,10 @@ class VideoOptimizerClient implements ResetInterface
      */
     public function reprocessLibrary(string $id): array
     {
-        return $this->requestData('POST', '/libraries/' . $this->pathId($id) . '/reprocess');
+        $result = $this->requestData('POST', '/libraries/' . $this->pathId($id) . '/reprocess');
+        array_map($this->forgetEmbed(...), $this->libraryVideoUuids($id));
+
+        return $result;
     }
 
     public function listVideos(string $libraryId): array
@@ -411,6 +417,34 @@ class VideoOptimizerClient implements ResetInterface
         $this->assertHttpsUrl($url, 'The VideoOptimizer embed base URL must be an absolute https URL.');
 
         return $url;
+    }
+
+    /**
+     * Videos of a library whose cached pages a library action has to invalidate. Only needed (and
+     * only requested) when cache invalidation is wired; a failing listing doesn't stop the action.
+     *
+     * @return list<string>
+     */
+    private function libraryVideoUuids(string $id): array
+    {
+        if ($this->cacheInvalidator === null) {
+            return [];
+        }
+        try {
+            $videos = $this->listVideos($id);
+        } catch (\Throwable $e) {
+            $this->logger->warning('VideoOptimizer library videos could not be listed for cache invalidation.', [
+                'library' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+
+        return array_values(array_filter(
+            array_map(static fn (array $video): mixed => $video['uuid'] ?? null, $videos),
+            static fn (mixed $uuid): bool => \is_string($uuid) && preg_match('/^[A-Za-z0-9_-]+$/D', $uuid) === 1,
+        ));
     }
 
     private function embedUrl(string $uuid): string

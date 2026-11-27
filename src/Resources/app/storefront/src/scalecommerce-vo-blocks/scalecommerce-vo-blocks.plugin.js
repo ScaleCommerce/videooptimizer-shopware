@@ -160,7 +160,13 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
         } else if (event.shiftKey && active === first) {
             event.preventDefault();
             last.focus();
-        } else if (!event.shiftKey && active === last) {
+        } else if (
+            !event.shiftKey &&
+            active === last &&
+            !(last.tagName === 'VIDEO' && last.controls)
+        ) {
+            // A native <video controls> keeps the focus while Tab moves through its own controls
+            // (volume, fullscreen); the page behind is inert, so the focus comes back to "close".
             event.preventDefault();
             first.focus();
         }

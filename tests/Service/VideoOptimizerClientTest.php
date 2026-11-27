@@ -1222,4 +1222,58 @@ class VideoOptimizerClientTest extends TestCase
 
         $this->addToAssertionCount(1);
     }
+
+    /**
+     * @return iterable<string, array{callable(VideoOptimizerClient): mixed, list<string>}>
+     */
+    public static function libraryActions(): iterable
+    {
+        yield 'delete' => [fn (VideoOptimizerClient $c) => $c->deleteLibrary('lib-1'), ['GET /libraries/lib-1/videos', 'DELETE /libraries/lib-1']];
+        yield 'reprocess' => [fn (VideoOptimizerClient $c) => $c->reprocessLibrary('lib-1'), ['POST /libraries/lib-1/reprocess', 'GET /libraries/lib-1/videos']];
+    }
+
+    /**
+     * Deleting or reprocessing a library changes all its videos, so the pages showing them are
+     * invalidated like after a change to a single video.
+     *
+     * @param list<string> $expectedCalls
+     */
+    #[DataProvider('libraryActions')]
+    public function testLibraryActionsInvalidateTheirVideos(callable $action, array $expectedCalls): void
+    {
+        $calls = [];
+        $http = new MockHttpClient(function (string $method, string $url) use (&$calls): MockResponse {
+            $calls[] = $method . ' ' . str_replace('/api/v1', '', (string) parse_url($url, PHP_URL_PATH));
+
+            return $method === 'GET'
+                ? new MockResponse(json_encode(['data' => [['uuid' => 'v1'], ['uuid' => 'v2']]]))
+                : new MockResponse(json_encode(['data' => []]));
+        });
+        $invalidated = [];
+        $invalidator = $this->createMock(CacheInvalidator::class);
+        $invalidator->expects(static::exactly(2))->method('invalidate')->willReturnCallback(function (array $tags) use (&$invalidated): void {
+            $invalidated = [...$invalidated, ...$tags];
+        });
+
+        $action(new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedAvailability(), $invalidator));
+
+        static::assertSame($expectedCalls, $calls);
+        static::assertSame(['scalecommerce-vo-video-v1', 'scalecommerce-vo-video-v2'], $invalidated);
+    }
+
+    public function testLibraryDeleteStillRunsWhenListingItsVideosFails(): void
+    {
+        $calls = [];
+        $http = new MockHttpClient(function (string $method) use (&$calls): MockResponse {
+            $calls[] = $method;
+
+            return $method === 'GET' ? new MockResponse('{}', ['http_code' => 503]) : new MockResponse('', ['http_code' => 204]);
+        });
+        $invalidator = $this->createMock(CacheInvalidator::class);
+        $invalidator->expects(static::never())->method('invalidate');
+
+        (new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedAvailability(), $invalidator))->deleteLibrary('lib-1');
+
+        static::assertSame(['GET', 'DELETE'], $calls);
+    }
 }
