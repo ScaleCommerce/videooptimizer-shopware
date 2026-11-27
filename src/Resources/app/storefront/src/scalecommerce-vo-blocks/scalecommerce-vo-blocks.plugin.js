@@ -102,17 +102,14 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
                 'referrerpolicy',
                 'strict-origin-when-cross-origin'
             );
-            iframe.style.cssText =
-                'position:absolute;inset:0;width:100%;height:100%;border:0';
+            iframe.className = 'scalecommerce-vo-frame';
             return iframe;
         }
         const wrap = document.createElement('div');
-        wrap.className = 'scalecommerce-vo-video';
-        wrap.style.cssText = 'position:absolute;inset:0;width:100%;height:100%';
+        wrap.className = 'scalecommerce-vo-video scalecommerce-vo-fill';
         const video = document.createElement('video');
-        video.className = 'scalecommerce-vo-video__player';
-        video.style.cssText =
-            'width:100%;height:100%;object-fit:contain;background:#000';
+        video.className =
+            'scalecommerce-vo-video__player scalecommerce-vo-video__player--contain';
         video.setAttribute('playsinline', '');
         video.controls = nativeOptions.controls !== false;
         video.loop = !!nativeOptions.loop;

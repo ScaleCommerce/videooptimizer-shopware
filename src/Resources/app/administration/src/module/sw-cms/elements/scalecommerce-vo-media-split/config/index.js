@@ -4,7 +4,7 @@ import libraryLoader from '../../../../../mixin/scalecommerce-vo-library-loader'
 Shopware.Component.register('scalecommerce-vo-media-split-config', {
     template,
     mixins: ['cms-element', libraryLoader],
-    inject: ['scalecommerceVoApiService'],
+    inject: ['scalecommerceVoApiService', 'feature'],
 
     computed: {
         selectedLibraryId() {
