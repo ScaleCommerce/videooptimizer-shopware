@@ -187,6 +187,11 @@ The administration only shows the actions a user may perform. **CMS editors** wh
 elements in Shopping Experiences need at least the **Viewer** role, independent of their CMS permissions;
 without it, the element configuration explains which permission is missing.
 
+**Shopware MCP server.** The API token is stored in the system configuration. If you connect an MCP client
+to Shopware's (experimental) MCP server, its `system_config:read` privilege exposes the token
+(`ScaleVideoOptimizer.config.apiToken`) to that client. Grant it only to clients you trust, or give the
+token the narrowest permissions in your VideoOptimizer account. The plugin registers no MCP tools.
+
 ## Usage
 
 ### Admin module
