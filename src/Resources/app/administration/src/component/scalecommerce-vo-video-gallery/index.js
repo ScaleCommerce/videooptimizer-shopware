@@ -30,6 +30,7 @@ Component.register('scalecommerce-vo-video-gallery', {
             uploadTitle: '',
             uploadFile: null,
             isUploading: false,
+            uploadProgress: null,
             ingestUrl: '',
             ingestTitle: '',
             isIngesting: false,
@@ -225,31 +226,58 @@ Component.register('scalecommerce-vo-video-gallery', {
                 return;
             }
             this.isUploading = true;
+            this.uploadProgress = null;
+            this._uploadAbort = new AbortController();
+            let uuid;
             try {
-                const uuid = await this._uploadPresigned(
+                uuid = await this._uploadPresigned(
                     this.libraryId,
                     file,
                     this.uploadTitle
                 );
-                this.uploadFile = null;
-                this.uploadTitle = '';
-                if (this.$refs.fileInput) {
-                    this.$refs.fileInput.value = '';
-                }
-                this.createNotificationSuccess({
-                    message: this.$tc('scalecommerce-vo.gallery.uploadStarted'),
-                });
-                await this._pollUntilReady(uuid);
-                this.$emit('upload-complete', uuid);
             } catch (error) {
-                // _pollUntilReady already shows its own notification for polling failures.
-                if (!error?.handled) {
+                if (this._uploadAbort?.signal.aborted) {
+                    this.createNotificationInfo({
+                        message: this.$tc(
+                            'scalecommerce-vo.gallery.uploadCancelled'
+                        ),
+                    });
+                } else {
                     this.createNotificationError({
                         message: this._errorText(error),
                     });
                 }
+                return;
             } finally {
+                // The file is transferred (or the upload failed): release the upload form right
+                // away; processing is tracked in the background and shown on the tile.
                 this.isUploading = false;
+                this.uploadProgress = null;
+                this._uploadAbort = null;
+            }
+            this.uploadFile = null;
+            this.uploadTitle = '';
+            if (this.$refs.fileInput) {
+                this.$refs.fileInput.value = '';
+            }
+            this.createNotificationSuccess({
+                message: this.$tc('scalecommerce-vo.gallery.uploadStarted'),
+            });
+            this._watchProcessing(uuid);
+        },
+
+        onCancelUpload() {
+            if (this._uploadAbort) {
+                this._uploadAbort.abort();
+            }
+        },
+
+        // Reloads the list right away (the tile shows "processing") and selects the video once
+        // it is ready; does not block the upload form.
+        async _watchProcessing(uuid) {
+            await this.loadVideos();
+            if (await this._pollUntilReady(uuid)) {
+                this.$emit('upload-complete', uuid);
             }
         },
 
@@ -276,15 +304,11 @@ Component.register('scalecommerce-vo-video-gallery', {
                 });
                 this.ingestUrl = '';
                 this.ingestTitle = '';
-                await this._pollUntilReady(video.uuid);
-                this.$emit('upload-complete', video.uuid);
+                this._watchProcessing(video.uuid);
             } catch (error) {
-                // _pollUntilReady already shows its own notification for polling failures.
-                if (!error?.handled) {
-                    this.createNotificationError({
-                        message: this._errorText(error),
-                    });
-                }
+                this.createNotificationError({
+                    message: this._errorText(error),
+                });
             } finally {
                 this.isIngesting = false;
             }
@@ -300,10 +324,17 @@ Component.register('scalecommerce-vo-video-gallery', {
                     fileSize: file.size,
                 });
             const init = initiateResponse.data ?? initiateResponse;
+            this.uploadProgress = { done: 0, total: init.parts.length };
             const parts = await this.scalecommerceVoApiService.uploadParts(
                 file,
                 init.parts,
-                init.partSize
+                init.partSize,
+                {
+                    signal: this._uploadAbort?.signal,
+                    onProgress: (done, total) => {
+                        this.uploadProgress = { done, total };
+                    },
+                }
             );
             const payload = {
                 libraryId,
@@ -323,69 +354,65 @@ Component.register('scalecommerce-vo-video-gallery', {
 
         // Rejects with an error marked `handled: true` once the failure/timeout notification has
         // already been shown, so callers only need a bare try/catch (no duplicate notification).
-        _pollUntilReady(uuid, attempt = 0) {
-            if (this._unmounted) {
-                return Promise.resolve();
-            }
+        /**
+         * Polls until the video is ready (resolves true) or failed, unmounted or timed out
+         * (false). Every 5 s during the first minute, then every 15 s, for about 30 minutes in
+         * total: large or 4K files can take long, so a timeout is a notice, not an error.
+         */
+        async _pollUntilReady(uuid) {
             if (!uuid) {
-                return this.loadVideos();
+                await this.loadVideos();
+                return false;
             }
-            if (attempt > 60) {
-                return this.loadVideos().then(() => {
-                    const message = this.$tc(
-                        'scalecommerce-vo.gallery.processingTimeout'
-                    );
-                    this.createNotificationError({ message });
-                    const error = new Error(message);
-                    error.handled = true;
-                    throw error;
+            for (let attempt = 0; attempt < 128; attempt += 1) {
+                await new Promise((resolve) => {
+                    window.setTimeout(resolve, attempt < 12 ? 5000 : 15000);
                 });
-            }
-            return new Promise((resolve, reject) => {
-                window.setTimeout(async () => {
+                if (this._unmounted) {
+                    return false;
+                }
+                try {
+                    const response =
+                        await this.scalecommerceVoApiService.getVideo(uuid);
+                    const video = response.data ?? response;
                     if (this._unmounted) {
-                        resolve();
-                        return;
+                        return false;
                     }
-                    try {
-                        const response =
-                            await this.scalecommerceVoApiService.getVideo(uuid);
-                        const video = response.data ?? response;
-                        if (this._unmounted) {
-                            resolve();
-                            return;
-                        }
-                        if (video.status === 'ready') {
-                            await this.loadVideos();
-                            resolve();
-                            return;
-                        }
-                        if (video.status === 'failed') {
-                            await this.loadVideos();
-                            let message = this.$tc(
-                                'scalecommerce-vo.gallery.processingFailed'
-                            );
-                            if (
-                                typeof video.error === 'string' &&
-                                video.error
-                            ) {
-                                message = `${message} (${video.error})`;
-                            }
-                            this.createNotificationError({ message });
-                            const error = new Error(message);
-                            error.handled = true;
-                            reject(error);
-                            return;
-                        }
-                    } catch (error) {
-                        console.warn(
-                            '[VideoOptimizer] polling uploaded video status failed, retrying',
-                            error
+                    if (video.status === 'ready') {
+                        await this.loadVideos();
+                        return true;
+                    }
+                    if (video.status === 'failed') {
+                        await this.loadVideos();
+                        let message = this.$tc(
+                            'scalecommerce-vo.gallery.processingFailed'
                         );
+                        // Upstream text, shown as plain text in the (HTML) notification.
+                        const reason =
+                            typeof video.error === 'string'
+                                ? video.error
+                                      .replace(/<[^>]*>/g, '')
+                                      .trim()
+                                      .slice(0, 200)
+                                : '';
+                        if (reason) {
+                            message = `${message} (${reason})`;
+                        }
+                        this.createNotificationError({ message });
+                        return false;
                     }
-                    resolve(this._pollUntilReady(uuid, attempt + 1));
-                }, 5000);
+                } catch (error) {
+                    console.warn(
+                        '[VideoOptimizer] polling uploaded video status failed, retrying',
+                        error
+                    );
+                }
+            }
+            await this.loadVideos();
+            this.createNotificationInfo({
+                message: this.$tc('scalecommerce-vo.gallery.processingTimeout'),
             });
+            return false;
         },
 
         onRename(video) {

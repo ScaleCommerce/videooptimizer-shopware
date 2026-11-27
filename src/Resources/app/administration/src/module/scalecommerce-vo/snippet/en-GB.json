@@ -157,7 +157,7 @@
             "orientationLandscape": "landscape",
             "orientationSquare": "square",
             "processingFailed": "Video processing failed.",
-            "processingTimeout": "Processing is taking longer than expected; the list will refresh later.",
+            "processingTimeout": "Processing takes longer than expected. Reload the list later to see the finished video.",
             "cancel": "Cancel",
             "confirmDeleteTitle": "Delete video?",
             "confirmDeleteText": "“{title}” will be permanently deleted at VideoOptimizer. This cannot be undone.",
@@ -168,7 +168,9 @@
                 "queued": "queued",
                 "uploading": "uploading",
                 "failed": "failed"
-            }
+            },
+            "uploadProgress": "Part {done} of {total} uploaded",
+            "uploadCancelled": "Upload cancelled."
         },
         "detail": {
             "previewImage": "Preview image",

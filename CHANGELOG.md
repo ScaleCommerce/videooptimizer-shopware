@@ -15,10 +15,12 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - **Autoplaying native players** (single video, media split, spotlight, grid with presentation "direct") start when they scroll into view and pause when they leave it, instead of all starting at page load. (#8)
 
 ### Added
+- Administration upload: progress per part ("Part 2 of 4 uploaded") and a cancel button. (#10)
 - Administration: when libraries can't be loaded, the module and every element configuration say why (no or rejected API token, invalid API URL, missing VideoOptimizer permission, API unavailable), with a link to the plugin configuration for users who may change it. (#11)
 - Background hero: a pause/play button for the looping video. With `prefers-reduced-motion` or the browser's data saver, the video doesn't start and nothing is preloaded; the poster stays. (#6)
 
 ### Changed
+- Administration upload: each part is retried up to three times with backoff instead of failing the whole upload. The upload form is released as soon as the file is transferred; processing is tracked in the background for about 30 minutes (the new video is selected in the CMS element once it is ready), and a longer processing time is a notice instead of an error. The VideoOptimizer API has no endpoint to abort a multipart upload, so incomplete uploads are still removed by the storage's lifecycle rule. (#10)
 - Administration: create, edit, upload, rename, poster, reprocess and delete actions are only shown to users with the matching VideoOptimizer role. (#11)
 - Native players load video segments only when playback starts; until then only the playlists are fetched. hls.js caps the rendition at the player size, so small tiles no longer pull 4K. The hero option "priority" now means "start buffering right away" (others load once visible). (#8)
 

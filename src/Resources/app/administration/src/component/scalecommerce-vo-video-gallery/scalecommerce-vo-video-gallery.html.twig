@@ -26,13 +26,22 @@
                             {{ uploadFile ? uploadFile.name : $tc('scalecommerce-vo.gallery.noFile') }}
                         </span>
                     </div>
-                    <mt-button
-                        variant="primary"
-                        :is-loading="isUploading"
-                        :disabled="!uploadFile || isUploading || !libraryId"
-                        @click="onUpload">
-                        {{ $tc('scalecommerce-vo.gallery.upload') }}
-                    </mt-button>
+                    <div class="scalecommerce-vo-gallery__upload-actions">
+                        <mt-button
+                            variant="primary"
+                            :is-loading="isUploading"
+                            :disabled="!uploadFile || isUploading || !libraryId"
+                            @click="onUpload">
+                            {{ $tc('scalecommerce-vo.gallery.upload') }}
+                        </mt-button>
+                        <mt-button v-if="isUploading" variant="secondary" @click="onCancelUpload">
+                            {{ $tc('scalecommerce-vo.gallery.cancel') }}
+                        </mt-button>
+                    </div>
+                    <div v-if="uploadProgress" class="scalecommerce-vo-gallery__progress" role="status">
+                        <progress :value="uploadProgress.done" :max="uploadProgress.total"></progress>
+                        <span>{{ $tc('scalecommerce-vo.gallery.uploadProgress', { done: uploadProgress.done, total: uploadProgress.total }) }}</span>
+                    </div>
                 </div>
 
                 <div class="scalecommerce-vo-gallery__ingest-form">
@@ -139,9 +148,16 @@
                 <span class="scalecommerce-vo-gallery__upload-heading">{{ $tc('scalecommerce-vo.gallery.uploadHeading') }}</span>
                 <mt-text-field v-model="uploadTitle" :label="$tc('scalecommerce-vo.gallery.uploadTitle')" size="small" />
                 <input type="file" accept="video/*" ref="fileInput" @change="onFileSelected" />
-                <mt-button size="small" variant="primary" :disabled="!uploadFile || isUploading || !libraryId" @click="onUpload">
+                <mt-button size="small" variant="primary" :is-loading="isUploading" :disabled="!uploadFile || isUploading || !libraryId" @click="onUpload">
                     {{ $tc('scalecommerce-vo.gallery.upload') }}
                 </mt-button>
+                <mt-button v-if="isUploading" size="small" variant="secondary" @click="onCancelUpload">
+                    {{ $tc('scalecommerce-vo.gallery.cancel') }}
+                </mt-button>
+                <div v-if="uploadProgress" class="scalecommerce-vo-gallery__progress" role="status">
+                    <progress :value="uploadProgress.done" :max="uploadProgress.total"></progress>
+                    <span>{{ $tc('scalecommerce-vo.gallery.uploadProgress', { done: uploadProgress.done, total: uploadProgress.total }) }}</span>
+                </div>
 
                 <span class="scalecommerce-vo-gallery__upload-heading">{{ $tc('scalecommerce-vo.gallery.ingestHeading') }}</span>
                 <mt-text-field v-model="ingestUrl" :label="$tc('scalecommerce-vo.gallery.ingestUrl')" placeholder="https://…" size="small" />

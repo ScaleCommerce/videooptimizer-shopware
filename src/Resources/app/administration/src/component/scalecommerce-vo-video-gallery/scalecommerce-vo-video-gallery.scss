@@ -160,4 +160,22 @@
         color: #52667a;
         text-align: center;
     }
+
+    &__upload-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    &__progress {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: #52667a;
+
+        progress {
+            flex: 1;
+            min-width: 0;
+        }
+    }
 }

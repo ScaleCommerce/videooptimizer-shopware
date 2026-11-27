@@ -157,7 +157,7 @@
             "orientationLandscape": "quer",
             "orientationSquare": "quadratisch",
             "processingFailed": "Die Verarbeitung des Videos ist fehlgeschlagen.",
-            "processingTimeout": "Die Verarbeitung dauert länger als erwartet. Die Liste wird später aktualisiert.",
+            "processingTimeout": "Die Verarbeitung dauert länger als erwartet. Lade die Liste später neu, um das fertige Video zu sehen.",
             "cancel": "Abbrechen",
             "confirmDeleteTitle": "Video löschen?",
             "confirmDeleteText": "„{title}“ wird dauerhaft bei VideoOptimizer gelöscht. Dies kann nicht rückgängig gemacht werden.",
@@ -168,7 +168,9 @@
                 "queued": "eingereiht",
                 "uploading": "wird hochgeladen",
                 "failed": "fehlgeschlagen"
-            }
+            },
+            "uploadProgress": "Teil {done} von {total} hochgeladen",
+            "uploadCancelled": "Upload abgebrochen."
         },
         "detail": {
             "previewImage": "Vorschaubild",
