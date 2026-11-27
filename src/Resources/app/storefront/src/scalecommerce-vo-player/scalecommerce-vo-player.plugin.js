@@ -1,4 +1,8 @@
-import Hls from 'hls.js/dist/hls.light.mjs';
+import {
+    attachVideoSource,
+    destroyVideoSource,
+    markUnavailable,
+} from '../helper/attach-video-source';
 
 export default class ScalecommerceVoPlayer extends window.PluginBaseClass {
     static options = {
@@ -10,6 +14,7 @@ export default class ScalecommerceVoPlayer extends window.PluginBaseClass {
         autoplay: false,
         muted: false,
         loop: false,
+        unavailableLabel: null,
     };
 
     init() {
@@ -35,37 +40,19 @@ export default class ScalecommerceVoPlayer extends window.PluginBaseClass {
     }
 
     _attachSource() {
-        const { hls, mp4, webm } = this.options;
-
-        if (hls && Hls.isSupported()) {
-            this.hls = new Hls();
-            this.hls.loadSource(hls);
-            this.hls.attachMedia(this.video);
-            // With hls.js the media is fed via MSE; the autoplay attribute alone is unreliable,
-            // so kick off playback once the manifest is ready (already muted when autoplay is on).
-            if (this.options.autoplay) {
-                this.hls.on(Hls.Events.MANIFEST_PARSED, () =>
-                    this.video.play().catch(() => {})
-                );
+        const { hls, mp4, webm, autoplay, unavailableLabel } = this.options;
+        attachVideoSource(
+            this.video,
+            { hls, mp4: mp4 || webm },
+            {
+                autoplay: !!autoplay,
+                onUnplayable: () =>
+                    markUnavailable(this.el, this.video, unavailableLabel),
             }
-            return;
-        }
-
-        if (hls && this.video.canPlayType('application/vnd.apple.mpegurl')) {
-            this.video.src = hls;
-            return;
-        }
-
-        const fallback = mp4 || webm;
-        if (fallback) {
-            this.video.src = fallback;
-        }
+        );
     }
 
     destroy() {
-        if (this.hls) {
-            this.hls.destroy();
-            this.hls = null;
-        }
+        destroyVideoSource(this.video);
     }
 }

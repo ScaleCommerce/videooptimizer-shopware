@@ -49,6 +49,12 @@ trait VideoSurfaceTrait
             return ['playerMode' => $playerMode, 'embedUrl' => $embedUrl, 'embed' => null, 'error' => true];
         }
 
+        if (!$this->isPlayable($embed)) {
+            $this->logUnplayable($logger, $uuid);
+
+            return ['playerMode' => $playerMode, 'embedUrl' => $embedUrl, 'embed' => null, 'error' => true];
+        }
+
         return ['playerMode' => $playerMode, 'embedUrl' => $embedUrl, 'embed' => $embed, 'error' => false];
     }
 
@@ -111,6 +117,25 @@ trait VideoSurfaceTrait
             'duration' => $embed['duration'] ?? null,
             'aspectRatio' => $this->deriveAspectRatio($embed['resolution'] ?? null),
         ];
+    }
+
+    /**
+     * A video without HLS and MP4 (processing failed or not finished yet) cannot be played by the
+     * native nor by the hosted player, so it is treated like a failed lookup.
+     *
+     * @param array<string, mixed> $normalizedEmbed result of normalizeEmbed()
+     */
+    protected function isPlayable(array $normalizedEmbed): bool
+    {
+        return ($normalizedEmbed['hls'] ?? null) !== null || ($normalizedEmbed['mp4'] ?? null) !== null;
+    }
+
+    protected function logUnplayable(LoggerInterface $logger, string $uuid): void
+    {
+        $logger->warning('VideoOptimizer video has no playable sources; hiding video element.', [
+            'uuid' => $uuid,
+            'element' => $this->getType(),
+        ]);
     }
 
     protected function deriveAspectRatio(?string $resolution): ?string

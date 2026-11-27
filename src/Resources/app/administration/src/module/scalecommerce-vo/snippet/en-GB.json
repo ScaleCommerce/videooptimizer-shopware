@@ -171,7 +171,8 @@
             "genericError": "Request failed.",
             "orientation_portrait": "portrait",
             "orientation_landscape": "landscape",
-            "orientation_square": "square"
+            "orientation_square": "square",
+            "playerUnavailable": "The video cannot be played here."
         }
     },
     "sw-privileges": {

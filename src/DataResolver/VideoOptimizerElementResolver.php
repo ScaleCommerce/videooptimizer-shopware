@@ -67,7 +67,7 @@ class VideoOptimizerElementResolver extends AbstractCmsElementResolver
         // Always verify the video still exists upstream, even in embed mode - the hosted iframe
         // would otherwise render a bare 404 for a deleted video.
         try {
-            $struct->setEmbed($this->normalizeEmbed($this->client->getEmbed($uuid)));
+            $embed = $this->normalizeEmbed($this->client->getEmbed($uuid));
         } catch (\Throwable $e) {
             $this->logger->warning('VideoOptimizer embed lookup failed; hiding video element.', [
                 'uuid' => $uuid,
@@ -75,6 +75,16 @@ class VideoOptimizerElementResolver extends AbstractCmsElementResolver
                 'error' => $e->getMessage(),
             ]);
             $struct->setError(true);
+
+            return;
         }
+
+        if (!$this->isPlayable($embed)) {
+            $this->logUnplayable($this->logger, $uuid);
+            $struct->setError(true);
+
+            return;
+        }
+        $struct->setEmbed($embed);
     }
 }

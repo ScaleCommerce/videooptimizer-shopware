@@ -174,7 +174,11 @@ class VideoOptimizerClient
                     return ['__scvo_failed' => true, 'message' => $e->getMessage()];
                 }
 
-                $item->expiresAfter(self::EMBED_CACHE_TTL);
+                // No playable sources yet (processing) or at all (failed): cache briefly, so a video
+                // that becomes ready shows up within a minute instead of after the full TTL.
+                $sources = is_array($data['sources'] ?? null) ? $data['sources'] : [];
+                $playable = EmbedSources::hls($sources) !== null || EmbedSources::mp4($sources) !== null;
+                $item->expiresAfter($playable ? self::EMBED_CACHE_TTL : self::EMBED_FAILURE_CACHE_TTL);
 
                 return $data;
             }

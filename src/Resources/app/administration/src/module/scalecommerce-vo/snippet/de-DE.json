@@ -171,7 +171,8 @@
             "genericError": "Anfrage fehlgeschlagen.",
             "orientation_portrait": "hochkant",
             "orientation_landscape": "quer",
-            "orientation_square": "quadratisch"
+            "orientation_square": "quadratisch",
+            "playerUnavailable": "Das Video kann hier nicht abgespielt werden."
         }
     },
     "sw-privileges": {

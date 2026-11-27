@@ -1,5 +1,6 @@
 .scalecommerce-vo-detail {
     &__poster {
+        position: relative;
         aspect-ratio: 16 / 9;
         background: #000;
         border-radius: 4px;
@@ -13,6 +14,22 @@
             height: 100%;
             object-fit: contain;
         }
+    }
+
+    // Shown over the poster when the video cannot be played; explicit colour because the
+    // administration's base CSS colours every <p>.
+    &__player-error {
+        position: absolute;
+        left: 50%;
+        bottom: 16px;
+        transform: translateX(-50%);
+        margin: 0;
+        padding: 6px 12px;
+        border-radius: 4px;
+        background: rgba(0, 0, 0, 0.75);
+        color: #fff;
+        font-size: 13px;
+        white-space: nowrap;
     }
 
     &__meta {

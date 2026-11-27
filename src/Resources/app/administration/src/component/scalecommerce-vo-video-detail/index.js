@@ -31,6 +31,7 @@ Component.register('scalecommerce-vo-video-detail', {
             mediaModalOpen: false,
             cacheBust: 1,
             playback: null,
+            playerError: false,
         };
     },
 
@@ -130,12 +131,12 @@ Component.register('scalecommerce-vo-video-detail', {
                 this.playback = response.data ?? response;
                 await this.$nextTick();
                 await this._attachPlayer();
-            } catch (error) {
-                // Playback is a convenience on top of the poster; keep showing the poster.
-                console.warn(
-                    '[VideoOptimizer] failed to load playback sources',
-                    error
-                );
+            } catch {
+                // Playback is a convenience on top of the poster: keep showing the poster and say
+                // why there is no player.
+                if (!this._unmounted) {
+                    this.playerError = true;
+                }
             }
         },
 
@@ -147,6 +148,18 @@ Component.register('scalecommerce-vo-video-detail', {
                 return;
             }
             const { hls, mp4 } = this.playback;
+            const fail = () => {
+                this._destroyPlayer();
+                this.playerError = true;
+            };
+            const useMp4 = () => {
+                if (!mp4) {
+                    fail();
+                    return;
+                }
+                el.addEventListener('error', fail, { once: true });
+                el.src = mp4;
+            };
             if (hls) {
                 const { default: Hls } =
                     await import('hls.js/dist/hls.light.mjs');
@@ -156,9 +169,9 @@ Component.register('scalecommerce-vo-video-detail', {
                 if (Hls.isSupported()) {
                     this._hls = new Hls();
                     this._hls.on(Hls.Events.ERROR, (event, data) => {
-                        if (data.fatal && mp4) {
+                        if (data.fatal) {
                             this._destroyPlayer();
-                            el.src = mp4;
+                            useMp4();
                         }
                     });
                     this._hls.loadSource(hls);
@@ -166,13 +179,12 @@ Component.register('scalecommerce-vo-video-detail', {
                     return;
                 }
                 if (el.canPlayType('application/vnd.apple.mpegurl')) {
+                    el.addEventListener('error', useMp4, { once: true });
                     el.src = hls;
                     return;
                 }
             }
-            if (mp4) {
-                el.src = mp4;
-            }
+            useMp4();
         },
 
         _destroyPlayer() {

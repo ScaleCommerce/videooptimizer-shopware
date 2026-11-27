@@ -58,19 +58,21 @@ class VideoOptimizerElementResolverTest extends TestCase
         static::assertSame('1260 / 750', $embed['aspectRatio']);
     }
 
-    public function testEnrichHandlesMissingSourcesWithoutError(): void
+    /**
+     * A video without HLS and MP4 (processing failed or not finished) cannot be played; it is
+     * hidden like a failed lookup instead of rendering an empty player (issue #9).
+     */
+    public function testEmbedWithoutPlayableSourcesIsAnError(): void
     {
         $client = $this->createStub(VideoOptimizerClient::class);
-        $client->method('getEmbed')->willReturn(['poster' => null]);
+        $client->method('getEmbed')->willReturn(['poster' => 'https://cdn/poster.jpg', 'sources' => []]);
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(static::once())->method('warning')->with(static::stringContains('no playable sources'));
 
         $slot = $this->slotWithUuid('uuid-2');
-        $resolver = $this->resolver($client);
-        $resolver->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
+        $this->resolver($client, $logger)->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
 
-        $data = $slot->getData();
-        static::assertFalse($data->hasError());
-        static::assertNull($data->getEmbed()['hls']);
-        static::assertNull($data->getEmbed()['mp4']);
+        static::assertTrue($slot->getData()->hasError());
     }
 
     public function testEnrichHandlesApiErrorGracefully(): void

@@ -95,10 +95,30 @@ class VideoGridElementResolverTest extends TestCase
         static::assertSame('uuid-ok', $items[0]['videoUuid']);
     }
 
+    public function testItemsWithoutPlayableSourcesAreDropped(): void
+    {
+        $client = $this->createStub(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willReturnCallback(fn (string $uuid) => $uuid === 'uuid-failed'
+            ? ['poster' => 'https://cdn/failed.jpg', 'sources' => []]
+            : ['sources' => [['src' => "https://cdn/$uuid.mp4", 'type' => 'video/mp4', 'size' => 1]]]);
+        $client->method('embedBaseUrl')->willReturn('https://videooptimizer.eu');
+
+        $slot = $this->slot([
+            'presentation' => 'lightbox',
+            'playerMode' => 'native',
+            'items' => [['video' => 'uuid-ok'], ['video' => 'uuid-failed']],
+        ]);
+        $this->resolver($client)->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
+
+        $items = $slot->getData()->getItems();
+        static::assertCount(1, $items);
+        static::assertSame('uuid-ok', $items[0]['videoUuid']);
+    }
+
     public function testPresentationDefaultsToLightboxAndSkipsEmptyItems(): void
     {
         $client = $this->createStub(VideoOptimizerClient::class);
-        $client->method('getEmbed')->willReturn(['sources' => [], 'poster' => 'https://cdn/p.jpg', 'resolution' => null]);
+        $client->method('getEmbed')->willReturn(['sources' => [['src' => 'https://cdn/v.mp4', 'type' => 'video/mp4', 'size' => 1]], 'poster' => 'https://cdn/p.jpg', 'resolution' => null]);
 
         $slot = $this->slot([
             'playerMode' => 'embed',

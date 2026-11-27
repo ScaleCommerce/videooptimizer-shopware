@@ -7,7 +7,7 @@
     <template v-if="video">
         <div class="scalecommerce-vo-detail__poster">
             <video
-                v-if="canPlay"
+                v-if="canPlay && !playerError"
                 ref="player"
                 controls
                 playsinline
@@ -15,6 +15,9 @@
                 :poster="posterSrc"
                 :aria-label="video.title"></video>
             <img v-else-if="posterSrc" :src="posterSrc" :alt="video.title" />
+            <p v-if="playerError" class="scalecommerce-vo-detail__player-error" role="status">
+                {{ $tc('scalecommerce-vo.detail.playerUnavailable') }}
+            </p>
         </div>
         <p class="scalecommerce-vo-detail__meta">{{ metaLine }}</p>
 

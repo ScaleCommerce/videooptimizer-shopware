@@ -3,13 +3,13 @@
   "entryPoints": {
     "scale-video-optimizer": {
       "css": [
-        "/bundles/scalevideooptimizer/administration/assets/scale-video-optimizer-DurhBAhx.css"
+        "/bundles/scalevideooptimizer/administration/assets/scale-video-optimizer-fLdSnyeR.css"
       ],
       "dynamic": [
         "/bundles/scalevideooptimizer/administration/assets/hls.light-CqmBNinQ.js"
       ],
       "js": [
-        "/bundles/scalevideooptimizer/administration/assets/scale-video-optimizer-D0DQubi7.js"
+        "/bundles/scalevideooptimizer/administration/assets/scale-video-optimizer-DS_gW_Mt.js"
       ],
       "legacy": false,
       "preload": []

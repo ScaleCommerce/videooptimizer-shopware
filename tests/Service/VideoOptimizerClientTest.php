@@ -813,4 +813,29 @@ class VideoOptimizerClientTest extends TestCase
             static::assertLessThanOrEqual(200, mb_strlen($e->getMessage()));
         }
     }
+
+    /**
+     * @return iterable<string, array{array<string, mixed>, int}>
+     */
+    public static function embedCacheTtls(): iterable
+    {
+        yield 'playable' => [['sources' => [['src' => 'https://cdn/v.m3u8', 'type' => 'application/vnd.apple.mpegurl', 'codec' => 'hls']]], 3600];
+        yield 'no playable sources' => [['sources' => [], 'poster' => 'https://cdn/p.jpg'], 60];
+    }
+
+    /**
+     * An embed without playable sources (still processing, or failed) is cached only briefly, so a
+     * video that becomes ready shows up within a minute instead of after the full hour.
+     */
+    #[DataProvider('embedCacheTtls')]
+    public function testGetEmbedCacheTtlDependsOnPlayableSources(array $payload, int $ttl): void
+    {
+        $item = $this->createMock(ItemInterface::class);
+        $item->expects(static::once())->method('expiresAfter')->with($ttl);
+        $cache = $this->createStub(CacheInterface::class);
+        $cache->method('get')->willReturnCallback(fn (string $key, callable $callback) => $callback($item));
+
+        $http = new MockHttpClient(new MockResponse(json_encode(['data' => $payload])));
+        $this->client($http, null, $cache)->getEmbed('v1');
+    }
 }

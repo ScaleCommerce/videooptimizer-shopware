@@ -1,4 +1,8 @@
-import Hls from 'hls.js/dist/hls.light.mjs';
+import {
+    attachVideoSource,
+    destroyVideoSource,
+    markUnavailable,
+} from '../helper/attach-video-source';
 
 // Only one lightbox may be open at a time across the whole page (there can be several
 // ScalecommerceVoBlocks instances, e.g. inside a video grid), so this guard lives at
@@ -98,35 +102,23 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
     }
 
     _attachNative(video, options, autoplay) {
-        const { hls, mp4 } = options;
-        if (hls && Hls.isSupported()) {
-            const player = new Hls();
-            player.loadSource(hls);
-            player.attachMedia(video);
-            // Keep the instance reachable from the element itself so it can be destroyed
-            // later without the plugin having to track every dynamically built player.
-            video.__scvoHls = player;
-            if (autoplay) {
-                player.on(Hls.Events.MANIFEST_PARSED, () =>
-                    video.play().catch(() => {})
-                );
+        attachVideoSource(
+            video,
+            { hls: options.hls, mp4: options.mp4 },
+            {
+                autoplay,
+                onUnplayable: () =>
+                    markUnavailable(
+                        video.parentElement,
+                        video,
+                        options.unavailableLabel
+                    ),
             }
-            return;
-        }
-        if (hls && video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = hls;
-            return;
-        }
-        if (mp4) {
-            video.src = mp4;
-        }
+        );
     }
 
     _destroyVideo(video) {
-        if (video.__scvoHls) {
-            video.__scvoHls.destroy();
-            video.__scvoHls = null;
-        }
+        destroyVideoSource(video);
         video.pause();
         video.removeAttribute('src');
         video.load();

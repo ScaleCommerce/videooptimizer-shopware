@@ -54,7 +54,7 @@ class SpotlightElementResolverTest extends TestCase
     public function testPresentationDefaultsToLightbox(): void
     {
         $client = $this->createStub(VideoOptimizerClient::class);
-        $client->method('getEmbed')->willReturn(['sources' => [], 'poster' => 'https://cdn/p.jpg', 'resolution' => null]);
+        $client->method('getEmbed')->willReturn(['sources' => [['src' => 'https://cdn/v.mp4', 'type' => 'video/mp4', 'size' => 1]], 'poster' => 'https://cdn/p.jpg', 'resolution' => null]);
 
         // no presentation configured, embed player -> facade/lightbox needs the poster fetched
         $slot = $this->slot(['video' => 'uuid-2', 'playerMode' => 'embed']);

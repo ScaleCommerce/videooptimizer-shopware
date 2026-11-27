@@ -2,7 +2,8 @@
     "scalecommerce-vo": {
         "storefront": {
             "play": "Play video",
-            "close": "Close"
+            "close": "Close",
+            "unavailable": "Video cannot be played"
         }
     }
 }

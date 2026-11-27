@@ -58,7 +58,7 @@ class MediaSplitElementResolverTest extends TestCase
     {
         $client = $this->createMock(VideoOptimizerClient::class);
         $client->expects(static::once())->method('getEmbed')->with('uuid-2')->willReturn([
-            'sources' => [],
+            'sources' => [['src' => 'https://cdn/v.mp4', 'type' => 'video/mp4', 'size' => 1]],
             'poster' => 'https://cdn/poster.jpg',
             'resolution' => '1920x1080',
         ]);
