@@ -908,9 +908,22 @@ class VideoOptimizerClientTest extends TestCase
             $this->client($http)->listEncodings();
             static::fail('A redirect response is an error for API calls.');
         } catch (VideoOptimizerApiException $e) {
-            static::assertSame(302, $e->getStatusCode());
+            static::assertSame(502, $e->getStatusCode());
+            static::assertSame('The VideoOptimizer API answered with a redirect; check the API base URL.', $e->getMessage());
         }
         static::assertSame([0], $captured);
+    }
+
+    public function testRedirectOnTheThumbnailRouteIsABadGatewayToo(): void
+    {
+        $http = new MockHttpClient(fn (): MockResponse => new MockResponse('', ['http_code' => 301, 'response_headers' => ['Location' => 'https://cdn.example.com/x']]));
+        // Redirects that are not followed (here: the mock does not follow) must not reach the browser as 3xx.
+        try {
+            $this->client($http, $this->config())->getThumbnailImage('v1', 1);
+            static::fail('A redirect response is an error.');
+        } catch (VideoOptimizerApiException $e) {
+            static::assertSame(502, $e->getStatusCode());
+        }
     }
 
     public function testEveryApiRequestDisablesRedirects(): void

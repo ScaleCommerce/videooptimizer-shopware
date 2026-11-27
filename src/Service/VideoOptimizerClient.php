@@ -392,7 +392,7 @@ class VideoOptimizerClient implements ResetInterface
             ]);
             $status = $response->getStatusCode();
             if ($status < 200 || $status >= 300) {
-                throw VideoOptimizerApiException::fromResponse($status, $response->getContent(false));
+                throw $this->statusError($status, $response->getContent(false));
             }
 
             return [
@@ -688,7 +688,7 @@ class VideoOptimizerClient implements ResetInterface
         try {
             $status = $response->getStatusCode();
             if ($status < 200 || $status >= 300) {
-                throw VideoOptimizerApiException::fromResponse($status, $response->getContent(false));
+                throw $this->statusError($status, $response->getContent(false));
             }
 
             $content = $response->getContent();
@@ -715,6 +715,19 @@ class VideoOptimizerClient implements ResetInterface
         }
 
         return $decoded;
+    }
+
+    /**
+     * API calls do not follow redirects (issue #33). A redirect means the base URL points to the
+     * wrong place, which is a bad gateway, not an upstream status for the administration to relay.
+     */
+    private function statusError(int $status, string $body): VideoOptimizerApiException
+    {
+        if ($status >= 300 && $status < 400) {
+            return VideoOptimizerApiException::badGateway('The VideoOptimizer API answered with a redirect; check the API base URL.');
+        }
+
+        return VideoOptimizerApiException::fromResponse($status, $body);
     }
 
     /**
