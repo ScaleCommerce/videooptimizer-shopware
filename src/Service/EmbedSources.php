@@ -114,7 +114,7 @@ final class EmbedSources
             $src = $track['src'] ?? null;
             $lang = $track['srclang'] ?? null;
             if (!is_string($src) || preg_match('#^https://[^\s"\'<>]+$#iD', $src) !== 1
-                || !is_string($lang) || preg_match('/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/D', $lang) !== 1) {
+                || !is_string($lang) || preg_match('/^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$/D', $lang) !== 1) {
                 continue;
             }
             $label = is_string($track['label'] ?? null) ? trim($track['label']) : '';

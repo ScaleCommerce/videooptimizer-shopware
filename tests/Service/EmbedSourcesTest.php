@@ -92,4 +92,14 @@ class EmbedSourcesTest extends TestCase
         static::assertSame([], EmbedSources::posterSrcset(null));
         static::assertSame('', EmbedSources::srcsetAttribute([]));
     }
+
+    public function testTrackLanguagesAcceptBcp47Tags(): void
+    {
+        foreach (['de', 'de-DE', 'de-x-simple', 'zh-Hant-TW'] as $lang) {
+            static::assertCount(1, EmbedSources::tracks([['src' => 'https://cdn/a.vtt', 'srclang' => $lang]]), $lang);
+        }
+        foreach (['d', 'de_DE', 'de-', '-de', 'de--x', 'de-x-toolongsubtag', 'de x'] as $lang) {
+            static::assertSame([], EmbedSources::tracks([['src' => 'https://cdn/a.vtt', 'srclang' => $lang]]), $lang);
+        }
+    }
 }
