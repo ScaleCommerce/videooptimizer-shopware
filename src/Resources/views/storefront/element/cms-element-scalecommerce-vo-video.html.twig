@@ -27,9 +27,10 @@
                          autoplay: config.autoplay.value ?? false,
                          muted: config.muted.value ?? false,
                          loop: config.loop.value ?? false,
+                         theme: videoData.embed.theme ?? {},
                          unavailableLabel: 'scalecommerce-vo.storefront.unavailable'|trans
                      }|json_encode }}'
-                     style="--scvo-aspect: {{ aspectRatio }}">
+                     style="--scvo-aspect: {{ aspectRatio }}{% if videoData.embed.theme.accentColor ?? null %}; --vo-accent: {{ videoData.embed.theme.accentColor }}{% endif %}">
                     <video class="scalecommerce-vo-video__player"
                            playsinline
                            {% if videoData.embed.poster %}poster="{{ videoData.embed.poster }}"{% endif %}></video>

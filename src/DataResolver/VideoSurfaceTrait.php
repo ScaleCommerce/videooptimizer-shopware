@@ -126,6 +126,7 @@ trait VideoSurfaceTrait
             'mp4' => EmbedSources::mp4($sources),
             'poster' => $embed['poster'] ?? null,
             'title' => $embed['title'] ?? null,
+            'theme' => EmbedSources::theme($embed['theme'] ?? null),
             'duration' => $embed['duration'] ?? null,
             'aspectRatio' => $this->deriveAspectRatio($embed['resolution'] ?? null),
         ];

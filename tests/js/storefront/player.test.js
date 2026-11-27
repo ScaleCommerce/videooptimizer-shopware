@@ -121,3 +121,53 @@ describe('native player (#34)', () => {
         expect(observers).toHaveLength(0);
     });
 });
+
+describe('player theme (#41)', () => {
+    it('adds autoplay muted, loop and preload from the theme', async () => {
+        const { video } = setup({ mp4: 'https://cdn/v.mp4', theme: { autoplay: true, loopButton: true, preload: 'none' } });
+
+        expect(video.loop).toBe(true);
+        expect(video.muted).toBe(true);
+        expect(video.preload).toBe('none');
+        // Autoplay is driven by visibility, not by the attribute.
+        expect(video.autoplay).toBe(false);
+        await vi.waitFor(() => expect(observers).toHaveLength(1));
+        observers[0].show(true);
+        expect(video.play).toHaveBeenCalled();
+    });
+
+    it('starts muted with mutedStart and hides the controls when the theme says so', () => {
+        const { video } = setup({ mp4: 'https://cdn/v.mp4', controls: true, theme: { mutedStart: true, controls: false } });
+
+        expect(video.muted).toBe(true);
+        expect(video.controls).toBe(false);
+    });
+
+    it('never overrides what the element sets', () => {
+        const { video } = setup({ mp4: 'https://cdn/v.mp4', controls: false, loop: true, theme: { controls: true, loopButton: false } });
+
+        expect(video.controls).toBe(false);
+        expect(video.loop).toBe(true);
+    });
+
+    it('maps the buttons the native controls can honour', () => {
+        const { video } = setup({ mp4: 'https://cdn/v.mp4', theme: { fullscreenButton: false, playbackSpeed: false, pictureInPicture: false } });
+
+        expect(video.getAttribute('controlslist')).toBe('nofullscreen noplaybackrate');
+        expect(video.hasAttribute('disablepictureinpicture')).toBe(true);
+    });
+
+    it('makes a non-interactive player ignore the pointer', () => {
+        const { el } = setup({ mp4: 'https://cdn/v.mp4', theme: { interactive: false } });
+
+        expect(el.classList.contains('scalecommerce-vo-video--static')).toBe(true);
+    });
+
+    it('keeps the defaults without a theme', () => {
+        const { video, el } = setup({ mp4: 'https://cdn/v.mp4' });
+
+        expect(video.preload).toBe('metadata');
+        expect(video.hasAttribute('controlslist')).toBe(false);
+        expect(el.classList.contains('scalecommerce-vo-video--static')).toBe(false);
+    });
+});

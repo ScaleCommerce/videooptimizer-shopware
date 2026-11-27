@@ -27,10 +27,32 @@
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.55);
+    background: var(--vo-accent, rgba(0, 0, 0, 0.55));
     color: #fff;
     font-size: 24px;
     pointer-events: none;
+
+    // Player theme: shape and size of the play button, or none.
+    &--rectangle {
+        border-radius: 12px;
+        width: 88px;
+    }
+    &--small {
+        height: 48px;
+        &:not(.scalecommerce-vo-surface__play--rectangle) {
+            width: 48px;
+        }
+    }
+    &--large {
+        height: 88px;
+        font-size: 36px;
+        &:not(.scalecommerce-vo-surface__play--rectangle) {
+            width: 88px;
+        }
+    }
+    &--hidden {
+        display: none;
+    }
 }
 
 .scalecommerce-vo-lightbox-open {

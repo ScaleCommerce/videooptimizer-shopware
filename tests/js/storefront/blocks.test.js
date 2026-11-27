@@ -38,6 +38,23 @@ afterEach(() => {
     document.body.innerHTML = '';
 });
 
+describe('player theme (#41)', () => {
+    it('applies the theme to the player built from the facade', () => {
+        document.body.innerHTML = `<div class="block" data-vo-player-mode="native" data-vo-title="D" data-vo-native-options='${JSON.stringify({ mp4: 'https://cdn/v.mp4', theme: { loopButton: true, mutedStart: true, preload: 'auto', interactive: false, accentColor: '#C72876' } })}'>
+            <button type="button" class="facade" data-vo-action="lightbox">Play</button></div>`;
+        new ScalecommerceVoBlocks(document.querySelector('.block'));
+
+        document.querySelector('.facade').click();
+
+        const video = document.querySelector('.scalecommerce-vo-lightbox video');
+        expect(video.loop).toBe(true);
+        expect(video.muted).toBe(true);
+        expect(video.preload).toBe('auto');
+        expect(video.parentElement.classList.contains('scalecommerce-vo-video--static')).toBe(true);
+        expect(document.querySelector('.scalecommerce-vo-lightbox').style.getPropertyValue('--vo-accent')).toBe('#C72876');
+    });
+});
+
 describe('facade (#34)', () => {
     it('replaces the poster button with the native player and focuses it', () => {
         const { el, facade } = setup({ action: 'facade' });

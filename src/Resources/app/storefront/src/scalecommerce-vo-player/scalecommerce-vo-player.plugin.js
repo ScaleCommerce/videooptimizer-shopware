@@ -3,6 +3,8 @@ import {
     autoplayWhileVisible,
     destroyVideoSource,
     markUnavailable,
+    resolvePlayback,
+    applyPlayerTheme,
 } from '../helper/attach-video-source';
 
 export default class ScalecommerceVoPlayer extends window.PluginBaseClass {
@@ -16,6 +18,7 @@ export default class ScalecommerceVoPlayer extends window.PluginBaseClass {
         muted: false,
         loop: false,
         unavailableLabel: null,
+        theme: null,
     };
 
     init() {
@@ -29,22 +32,26 @@ export default class ScalecommerceVoPlayer extends window.PluginBaseClass {
     }
 
     _applyOptions() {
-        this.video.controls = !!this.options.controls;
+        const playback = resolvePlayback(this.options);
+        this._autoplay = playback.autoplay;
+        this.video.controls = playback.controls;
         // Autoplay is driven by visibility (see _attachSource), not by the attribute, so players
         // below the fold don't start loading and playing at page load.
         this.video.autoplay = false;
-        this.video.preload = 'metadata';
-        this.video.loop = !!this.options.loop;
+        this.video.preload = playback.preload;
+        this.video.loop = playback.loop;
         // Browsers block autoplay with sound, so a video set to autoplay must start muted
         // (mirrors the hosted VideoOptimizer embed). An explicit "muted" option still applies.
-        this.video.muted = !!this.options.muted || !!this.options.autoplay;
+        this.video.muted = playback.muted;
+        applyPlayerTheme(this.video, this.el, this.options);
         if (this.options.poster) {
             this.video.poster = this.options.poster;
         }
     }
 
     _attachSource() {
-        const { hls, mp4, webm, autoplay, unavailableLabel } = this.options;
+        const { hls, mp4, webm, unavailableLabel } = this.options;
+        const autoplay = this._autoplay;
         // hls.js loads on demand, so autoplay starts only once the source is attached.
         const attached = attachVideoSource(
             this.video,

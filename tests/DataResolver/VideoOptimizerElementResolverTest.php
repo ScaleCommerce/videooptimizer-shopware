@@ -40,6 +40,7 @@ class VideoOptimizerElementResolverTest extends TestCase
             'title' => 'Demo',
             'duration' => '10',
             'resolution' => '1260x750',
+            'theme' => ['accentColor' => '#C72876', 'loopButton' => true, 'preload' => 'bogus', 'x' => 1],
         ]);
 
         $slot = $this->slotWithUuid('uuid-1');
@@ -56,6 +57,8 @@ class VideoOptimizerElementResolverTest extends TestCase
         static::assertSame('https://cdn/poster.jpg', $embed['poster']);
         static::assertSame('Demo', $embed['title']);
         static::assertSame('1260 / 750', $embed['aspectRatio']);
+        // The theme is reduced to valid keys and values (#41).
+        static::assertSame(['loopButton' => true, 'accentColor' => '#C72876'], $embed['theme']);
     }
 
     /**

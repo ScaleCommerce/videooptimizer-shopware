@@ -2,6 +2,8 @@ import {
     attachVideoSource,
     destroyVideoSource,
     markUnavailable,
+    resolvePlayback,
+    applyPlayerTheme,
 } from '../helper/attach-video-source';
 
 // Only one lightbox may be open at a time across the whole page (there can be several
@@ -111,9 +113,14 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
         video.className =
             'scalecommerce-vo-video__player scalecommerce-vo-video__player--contain';
         video.setAttribute('playsinline', '');
-        video.controls = nativeOptions.controls !== false;
-        video.loop = !!nativeOptions.loop;
-        video.muted = !!nativeOptions.muted;
+        const playback = resolvePlayback(nativeOptions);
+        video.controls = playback.controls;
+        video.loop = playback.loop;
+        // The click is a gesture, so playback with sound is allowed unless muted is asked for.
+        video.muted =
+            !!nativeOptions.muted || nativeOptions.theme?.mutedStart === true;
+        video.preload = playback.preload;
+        applyPlayerTheme(video, wrap, nativeOptions);
         // Keeps the poster visible while loading and behind the "cannot be played" notice.
         if (nativeOptions.poster) {
             video.poster = nativeOptions.poster;
@@ -189,6 +196,12 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
             this.el.getAttribute('data-vo-label-close') || 'Close';
         const overlay = document.createElement('div');
         overlay.className = 'scalecommerce-vo-lightbox';
+        if (nativeOptions.theme?.accentColor) {
+            overlay.style.setProperty(
+                '--vo-accent',
+                nativeOptions.theme.accentColor
+            );
+        }
         overlay.setAttribute('role', 'dialog');
         overlay.setAttribute('aria-modal', 'true');
         overlay.setAttribute('aria-label', this._title());

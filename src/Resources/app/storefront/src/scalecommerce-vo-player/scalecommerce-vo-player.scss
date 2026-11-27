@@ -29,6 +29,7 @@
 }
 
 .scalecommerce-vo-video__player {
+    accent-color: var(--vo-accent, auto);
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -72,5 +73,10 @@
     color: #fff;
     font-size: 0.875rem;
     text-align: center;
+    pointer-events: none;
+}
+
+// Player theme `interactive: false`: a pure design element that ignores the pointer.
+.scalecommerce-vo-video--static {
     pointer-events: none;
 }

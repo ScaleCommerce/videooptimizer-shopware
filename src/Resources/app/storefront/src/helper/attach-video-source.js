@@ -227,3 +227,53 @@ export function markUnavailable(wrapper, video, label) {
     wrapper.classList.add('scalecommerce-vo-video--unavailable');
     wrapper.setAttribute('data-vo-unavailable', label || 'Video unavailable');
 }
+
+/**
+ * Playback settings of a native player: the element's own options combined with the `theme` of the
+ * video (GET /embed). The theme can only add behaviour the editor did not set (autoplay, muted start,
+ * loop) or switch the controls off; the element's explicit choices are never overridden.
+ * Keys the browser's native controls cannot honour (control bar colour, volume, time display,
+ * quality menu) are ignored.
+ */
+export function resolvePlayback(options = {}) {
+    const theme =
+        options.theme && !Array.isArray(options.theme) ? options.theme : {};
+    const autoplay = !!options.autoplay || theme.autoplay === true;
+    return {
+        controls: options.controls !== false && theme.controls !== false,
+        autoplay,
+        // Browsers block autoplay with sound, so an autoplaying video starts muted.
+        muted: !!options.muted || theme.mutedStart === true || autoplay,
+        loop: !!options.loop || theme.loopButton === true,
+        preload: ['auto', 'metadata', 'none'].includes(theme.preload)
+            ? theme.preload
+            : 'metadata',
+    };
+}
+
+/**
+ * Applies the theme to a <video> as far as native controls allow: hides the fullscreen button and
+ * the playback-rate menu (Chromium `controlsList`), disables Picture-in-Picture, and makes a
+ * non-interactive (`interactive: false`) player ignore the pointer.
+ */
+export function applyPlayerTheme(video, wrapper, options = {}) {
+    const theme =
+        options.theme && !Array.isArray(options.theme) ? options.theme : {};
+    const list = [];
+    if (theme.fullscreenButton === false) {
+        list.push('nofullscreen');
+    }
+    if (theme.playbackSpeed === false) {
+        list.push('noplaybackrate');
+    }
+    if (list.length) {
+        video.setAttribute('controlslist', list.join(' '));
+    }
+    if (theme.pictureInPicture === false) {
+        video.disablePictureInPicture = true;
+        video.setAttribute('disablepictureinpicture', '');
+    }
+    if (theme.interactive === false && wrapper) {
+        wrapper.classList.add('scalecommerce-vo-video--static');
+    }
+}

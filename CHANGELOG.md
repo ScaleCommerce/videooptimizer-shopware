@@ -4,6 +4,13 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Upgrade
+- The native player takes `preload` from the video's player theme (default `auto`) instead of the fixed `metadata`, and honours its autoplay, muted start, loop and controls settings in addition to the element's; set them in VideoOptimizer or override the template ([#41](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/41)).
+- The `data-vo-native-options` and player options JSON carry a new `theme` key and the facade play button gets shape/size modifier classes (`scalecommerce-vo-surface__play--round|rectangle|small|medium|large|hidden`); themes overriding these templates keep working without them ([#41](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/41)).
+
+### Added
+- The native player applies the player theme of `GET /embed`: controls, autoplay with muted start, loop, preload, `interactive: false`, no fullscreen/playback-rate menu/Picture-in-Picture where the browser's controls allow it, play button shape/size/visibility on the facade, and the accent colour as `--vo-accent` on the plugin's own controls. Control bar colour, volume, time display and quality menu cannot be changed on native controls and are ignored ([#41](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/41)).
+
 ## [2.0.1] - 2026-11-27
 
 ### Fixed
