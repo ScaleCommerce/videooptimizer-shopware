@@ -658,6 +658,11 @@ class VideoOptimizerClientTest extends TestCase
         yield 'unspecified' => ['https://0.0.0.0/api/v1'];
         yield 'loopback v6' => ['https://[::1]/api/v1'];
         yield 'unique local v6' => ['https://[fd00::1]/api/v1'];
+        yield 'localhost trailing dot' => ['https://localhost./api/v1'];
+        yield 'decimal ipv4' => ['https://2130706433/api/v1'];
+        yield 'short ipv4' => ['https://127.1/api/v1'];
+        yield 'hex ipv4' => ['https://0x7f000001/api/v1'];
+        yield 'cgnat' => ['https://100.64.0.1/api/v1'];
     }
 
     #[DataProvider('rejectedBaseUrls')]
@@ -687,9 +692,9 @@ class VideoOptimizerClientTest extends TestCase
             return new MockResponse(json_encode(['data' => []]));
         });
 
-        $this->client($http, $this->config(baseUrl: 'https://203.0.113.10:8443/api/v1'))->listLibraries();
+        $this->client($http, $this->config(baseUrl: 'https://93.184.215.14:8443/api/v1'))->listLibraries();
 
-        static::assertStringStartsWith('https://203.0.113.10:8443/api/v1/libraries', $capturedUrl);
+        static::assertStringStartsWith('https://93.184.215.14:8443/api/v1/libraries', $capturedUrl);
     }
 
     public function testReprocessLibrarySendsPostAndUnwrapsData(): void

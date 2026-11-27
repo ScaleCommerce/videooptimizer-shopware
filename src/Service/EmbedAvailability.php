@@ -13,6 +13,8 @@ class EmbedAvailability implements ResetInterface
 {
     private bool $degraded = false;
 
+    private bool $routeCacheTagged = false;
+
     public function markDegraded(): void
     {
         $this->degraded = true;
@@ -23,8 +25,19 @@ class EmbedAvailability implements ResetInterface
         return $this->degraded;
     }
 
+    public function markRouteCacheTagged(): void
+    {
+        $this->routeCacheTagged = true;
+    }
+
+    public function isRouteCacheTagged(): bool
+    {
+        return $this->routeCacheTagged;
+    }
+
     public function reset(): void
     {
         $this->degraded = false;
+        $this->routeCacheTagged = false;
     }
 }

@@ -17,6 +17,7 @@
 
         <service id="ScaleCommerce\VideoOptimizer\Subscriber\DegradedEmbedCacheSubscriber">
             <argument type="service" id="ScaleCommerce\VideoOptimizer\Service\EmbedAvailability"/>
+            <argument type="service" id="Shopware\Core\Framework\Adapter\Cache\CacheInvalidator"/>
             <tag name="kernel.event_subscriber"/>
         </service>
 

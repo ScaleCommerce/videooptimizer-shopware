@@ -351,7 +351,11 @@ class VideoOptimizerAdminController
                 : [
                     'status' => (string) $status,
                     'code' => 'SCALECOMMERCE_VO__API_TOKEN_FORBIDDEN',
-                    'detail' => 'The VideoOptimizer API token is not permitted to perform this action. Check the token permissions in VideoOptimizer.',
+                    // 403 also covers plan limits, trial restrictions and suspended organisations;
+                    // their upstream message (already plain text) says more than a generic hint.
+                    'detail' => $e->getMessage() !== VideoOptimizerApiException::genericMessage(Response::HTTP_FORBIDDEN)
+                        ? $e->getMessage()
+                        : 'The VideoOptimizer API token is not permitted to perform this action. Check the token permissions in VideoOptimizer.',
                 ];
         }
 

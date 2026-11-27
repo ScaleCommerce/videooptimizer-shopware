@@ -33,6 +33,8 @@ export function attachVideoSource(
 
     if (hls && Hls.isSupported()) {
         const player = new Hls();
+        // Reachable for destroyVideoSource() before anything can emit an error.
+        video.__scvoHls = player;
         player.on(Hls.Events.ERROR, (event, data) => {
             if (!data.fatal) {
                 return;
@@ -43,7 +45,6 @@ export function attachVideoSource(
         player.on(Hls.Events.MANIFEST_PARSED, play);
         player.loadSource(hls);
         player.attachMedia(video);
-        video.__scvoHls = player;
         return;
     }
 

@@ -633,7 +633,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
     public function testUpstreamAuthErrorBecomesBadGatewayWithOwnCode(int $upstreamStatus, string $code): void
     {
         $client = $this->createStub(VideoOptimizerClient::class);
-        $client->method('listLibraries')->willThrowException(new VideoOptimizerApiException($upstreamStatus, 'Unauthorized'));
+        $client->method('listLibraries')->willThrowException(VideoOptimizerApiException::fromResponse($upstreamStatus, ''));
 
         $response = (new VideoOptimizerAdminController($client))->listLibraries();
 
@@ -665,5 +665,22 @@ class VideoOptimizerAdminControllerTest extends TestCase
         $response = (new VideoOptimizerAdminController($client))->getThumbnailImage(self::UUID, '1');
 
         static::assertSame(400, $response->getStatusCode());
+    }
+
+    /**
+     * 403 also means "plan limit reached", "not available during the trial" etc.; that upstream
+     * message must reach the user instead of a misleading "check the token" hint.
+     */
+    public function testUpstream403KeepsTheUpstreamMessage(): void
+    {
+        $client = $this->createStub(VideoOptimizerClient::class);
+        $client->method('createLibrary')->willThrowException(new VideoOptimizerApiException(403, 'Library limit of the plan reached'));
+
+        $response = (new VideoOptimizerAdminController($client))->createLibrary(new Request([], [], [], [], [], [], '{"name":"x"}'));
+
+        static::assertSame(502, $response->getStatusCode());
+        $error = json_decode((string) $response->getContent(), true)['errors'][0];
+        static::assertSame('SCALECOMMERCE_VO__API_TOKEN_FORBIDDEN', $error['code']);
+        static::assertSame('Library limit of the plan reached', $error['detail']);
     }
 }

@@ -91,6 +91,10 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
         video.controls = nativeOptions.controls !== false;
         video.loop = !!nativeOptions.loop;
         video.muted = !!nativeOptions.muted;
+        // Keeps the poster visible while loading and behind the "cannot be played" notice.
+        if (nativeOptions.poster) {
+            video.poster = nativeOptions.poster;
+        }
         // The facade/lightbox click is a user gesture, so playback is allowed with the
         // configured muted setting; _attachNative kicks it off once the source is ready.
         if (autoplay) {

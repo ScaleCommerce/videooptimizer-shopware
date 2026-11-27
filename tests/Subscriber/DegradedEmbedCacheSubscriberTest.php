@@ -6,6 +6,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ScaleCommerce\VideoOptimizer\Service\EmbedAvailability;
 use ScaleCommerce\VideoOptimizer\Subscriber\DegradedEmbedCacheSubscriber;
+use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
@@ -39,7 +40,7 @@ class DegradedEmbedCacheSubscriberTest extends TestCase
         $availability->markDegraded();
         $response = new Response('', 200, ['Cache-Control' => $cacheControl]);
 
-        (new DegradedEmbedCacheSubscriber($availability))->onResponse($this->event($response));
+        ($this->subscriber($availability))->onResponse($this->event($response));
 
         static::assertStringContainsString($expected, (string) $response->headers->get('Cache-Control'));
     }
@@ -48,7 +49,7 @@ class DegradedEmbedCacheSubscriberTest extends TestCase
     {
         $response = new Response('', 200, ['Cache-Control' => 'public, s-maxage=7200']);
 
-        (new DegradedEmbedCacheSubscriber(new EmbedAvailability()))->onResponse($this->event($response));
+        ($this->subscriber(new EmbedAvailability()))->onResponse($this->event($response));
 
         static::assertStringContainsString('s-maxage=7200', (string) $response->headers->get('Cache-Control'));
     }
@@ -59,7 +60,7 @@ class DegradedEmbedCacheSubscriberTest extends TestCase
         $availability->markDegraded();
         $response = new Response('', 200, ['Cache-Control' => 'no-cache, private']);
 
-        (new DegradedEmbedCacheSubscriber($availability))->onResponse($this->event($response));
+        ($this->subscriber($availability))->onResponse($this->event($response));
 
         static::assertStringNotContainsString('max-age', (string) $response->headers->get('Cache-Control'));
         static::assertStringContainsString('no-cache', (string) $response->headers->get('Cache-Control'));
@@ -72,6 +73,62 @@ class DegradedEmbedCacheSubscriberTest extends TestCase
         $availability->reset();
 
         static::assertFalse($availability->isDegraded());
+    }
+
+    /**
+     * Shopware 6.6 keeps the resolved CMS page in the Store API route cache without TTL; a degraded
+     * render must be tagged and that tag invalidated once the response is sent.
+     */
+    public function testTagsAndInvalidatesTheRouteCacheWhenDegraded(): void
+    {
+        $availability = new EmbedAvailability();
+        $availability->markDegraded();
+        $invalidator = $this->createMock(CacheInvalidator::class);
+        $invalidator->expects(static::once())->method('invalidate')->with([DegradedEmbedCacheSubscriber::ROUTE_CACHE_TAG], true);
+        $tagsEvent = new class {
+            /** @var list<string> */
+            public array $tags = [];
+
+            /** @param list<string> $tags */
+            public function addTags(array $tags): void
+            {
+                $this->tags = [...$this->tags, ...$tags];
+            }
+        };
+
+        $subscriber = new DegradedEmbedCacheSubscriber($availability, $invalidator);
+        $subscriber->onRouteCacheTags($tagsEvent);
+        $subscriber->onTerminate();
+
+        static::assertSame([DegradedEmbedCacheSubscriber::ROUTE_CACHE_TAG], $tagsEvent->tags);
+        static::assertFalse($availability->isRouteCacheTagged());
+    }
+
+    public function testLeavesTheRouteCacheAloneWithoutDegradedEmbed(): void
+    {
+        $invalidator = $this->createMock(CacheInvalidator::class);
+        $invalidator->expects(static::never())->method('invalidate');
+        $tagsEvent = new class {
+            /** @var list<string> */
+            public array $tags = [];
+
+            /** @param list<string> $tags */
+            public function addTags(array $tags): void
+            {
+                $this->tags = [...$this->tags, ...$tags];
+            }
+        };
+
+        $subscriber = new DegradedEmbedCacheSubscriber(new EmbedAvailability(), $invalidator);
+        $subscriber->onRouteCacheTags($tagsEvent);
+        $subscriber->onTerminate();
+
+        static::assertSame([], $tagsEvent->tags);
+    }
+
+    private function subscriber(EmbedAvailability $availability): DegradedEmbedCacheSubscriber
+    {
+        return new DegradedEmbedCacheSubscriber($availability, $this->createStub(CacheInvalidator::class));
     }
 
     private function event(Response $response): ResponseEvent

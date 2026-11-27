@@ -508,12 +508,23 @@ class VideoOptimizerClient
         if (isset($parts['user']) || isset($parts['pass']) || isset($parts['query']) || isset($parts['fragment'])) {
             throw new InvalidApiBaseUrlException($message);
         }
+        // "localhost." resolves like "localhost"; compare without the trailing dot.
+        $host = rtrim($host, '.');
         if ($host === 'localhost' || str_ends_with($host, '.localhost')) {
             throw new InvalidApiBaseUrlException($message);
         }
         $ip = trim($host, '[]');
-        if (filter_var($ip, FILTER_VALIDATE_IP) !== false
-            && filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+        if (filter_var($ip, FILTER_VALIDATE_IP) !== false) {
+            // Global range only: rejects private, loopback, link-local, reserved and shared (CGNAT).
+            if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_GLOBAL_RANGE) === false) {
+                throw new InvalidApiBaseUrlException($message);
+            }
+
+            return;
+        }
+        // Numeric or hex host forms that resolvers still treat as IPv4 ("2130706433", "127.1",
+        // "0x7f000001") would slip past the IP check above.
+        if (preg_match('/^[0-9.]+$/', $host) === 1 || preg_match('/(^|\.)0x[0-9a-f]*($|\.)/', $host) === 1) {
             throw new InvalidApiBaseUrlException($message);
         }
     }

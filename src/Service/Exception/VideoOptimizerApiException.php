@@ -35,7 +35,12 @@ class VideoOptimizerApiException extends \RuntimeException
             }
         }
 
-        return new self($statusCode, $message !== '' ? $message : sprintf('VideoOptimizer API request failed with status %d.', $statusCode));
+        return new self($statusCode, $message !== '' ? $message : self::genericMessage($statusCode));
+    }
+
+    public static function genericMessage(int $statusCode): string
+    {
+        return sprintf('VideoOptimizer API request failed with status %d.', $statusCode);
     }
 
     /**
