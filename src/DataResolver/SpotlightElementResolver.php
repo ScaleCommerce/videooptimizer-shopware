@@ -56,7 +56,7 @@ class SpotlightElementResolver extends AbstractCmsElementResolver
         }
         $struct->setVideoUuid($uuid);
 
-        $surface = $this->buildVideoSurface($config, $uuid, $this->client, $this->logger, $struct->getPresentation());
+        $surface = $this->buildVideoSurface($config, $uuid, $this->client, $this->logger);
         $struct->setPlayerMode($surface['playerMode']);
         $struct->setEmbedUrl($surface['embedUrl']);
         $struct->setEmbed($surface['embed']);

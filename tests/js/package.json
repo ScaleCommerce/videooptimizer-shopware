@@ -1,0 +1,12 @@
+{
+    "private": true,
+    "type": "module",
+    "description": "JavaScript tests of the plugin (not part of the distributed package).",
+    "scripts": {
+        "test": "vitest run"
+    },
+    "devDependencies": {
+        "jsdom": "^31.0.1",
+        "vitest": "^5.1.2"
+    }
+}

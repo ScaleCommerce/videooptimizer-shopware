@@ -22,7 +22,8 @@ export default class ScalecommerceVoHero extends window.PluginBaseClass {
             ?.querySelector('.scalecommerce-vo-hero__toggle');
 
         const motionReduced = this._motionReduced();
-        attachVideoSource(
+        // hls.js loads on demand, so autoplay starts only once the source is attached.
+        const attached = attachVideoSource(
             video,
             { hls, mp4 },
             {
@@ -49,10 +50,14 @@ export default class ScalecommerceVoHero extends window.PluginBaseClass {
         }
 
         if (!motionReduced) {
-            this._stopAutoplay = autoplayWhileVisible(
-                video,
-                video.closest('.scalecommerce-vo-hero') || video
-            );
+            attached.then(() => {
+                if (!this._destroyed) {
+                    this._stopAutoplay = autoplayWhileVisible(
+                        video,
+                        video.closest('.scalecommerce-vo-hero') || video
+                    );
+                }
+            });
         }
     }
 
@@ -74,6 +79,7 @@ export default class ScalecommerceVoHero extends window.PluginBaseClass {
     }
 
     destroy() {
+        this._destroyed = true;
         if (this._stopAutoplay) {
             this._stopAutoplay();
         }

@@ -34,11 +34,13 @@ YouTube, Vimeo and self-hosting — the API token stays server-side, proxied thr
 ## ✨ Highlights
 
 - 📚 **Library management** — create and edit libraries (name, description) and their encoding ladder (codecs and resolutions), with add-on/unavailable options shown but disabled per the organization's plan; requeue all of a library's videos for re-encoding with the current ladder ("reprocess").
-- ⬆️ **Upload, URL import, rename, delete** — upload via presigned multipart upload (transferred directly to storage, not through Shopware), or import a video from a public `https://` URL. Deleting a video or a library asks for confirmation first.
+- ⬆️ **Upload, URL import, rename, delete** — upload via presigned multipart upload (transferred directly to storage, not through Shopware) with progress, cancel and automatic retries, or import a video from a public `https://` URL. Processing is tracked in the background; large libraries load page by page. Deleting a video or a library asks for confirmation first.
 - 🖼️ **Video detail overlay** — pick the poster from 10 auto-generated frames, or upload a custom one (from disk or the Shopware media library); shows dimensions, duration and orientation.
 - 🧱 **Five CMS elements/blocks** — `Video`, `Media split`, `Background hero`, `Spotlight` and `Video grid`, each with a presentation mode (poster/facade, lightbox, or embedded directly) and a player mode (native adaptive HLS via hls.js, or the hosted VideoOptimizer embed).
-- ⚡ **Storefront performance** — hls.js's light build, embed data cached per video, and only one lightweight embed loaded per video.
-- 🔐 **Token never touches the browser** — stored server-side in the plugin configuration; all admin and storefront traffic to VideoOptimizer is proxied through Shopware.
+- ⚡ **Storefront performance** — the player code and hls.js (light build) load only on pages with a video, and segments only once playback starts; autoplaying videos run only while visible. Embed lookups of a page run concurrently and are cached per video.
+- ♿ **Accessible** — titled embeds, keyboard-friendly facade and lightbox (focus trap, inert background), a pause button for the background hero and no autoplay with `prefers-reduced-motion`.
+- 🗂️ **Cache-aware** — pages are tagged per video, so changes in the administration invalidate exactly the affected storefront pages; a page rendered during an API outage is cached for 60 seconds only.
+- 🔐 **Token never touches the browser** — stored server-side in the plugin configuration; all admin and storefront traffic to VideoOptimizer is proxied through Shopware. The administration only offers the actions a user's role allows and explains a missing token or permission.
 - 🧩 **Runs on 6.6 and 6.7** — compiled administration (6.6 webpack + 6.7 Vite) and storefront assets are shipped, no build step required.
 
 <details>
@@ -213,7 +215,8 @@ In a Shopping Experiences layout, add one of the five VideoOptimizer blocks from
 via the gallery picker, then configure per element:
 
 - **Presentation mode** — poster/facade, lightbox, or embedded directly (background hero is always a
-  decorative, autoplaying background video).
+  decorative background video: it starts when visible, has a pause button and stays on its poster for
+  visitors with `prefers-reduced-motion` or the browser's data saver; "priority" starts buffering right away).
 - **Player mode** — native adaptive HLS player (hls.js) or the hosted VideoOptimizer embed (iframe), each
   with its own controls/autoplay/muted/loop options.
 
@@ -233,6 +236,9 @@ via the gallery picker, then configure per element:
 | The org-wide video listing (all libraries) fails with **403** | The token lacks the `library:view` permission | Grant `library:view` to the token in your VideoOptimizer account, or browse per library instead |
 | Saving a non-`https://` API/embed base URL is **rejected** | Both URLs are required to be `https://` so the token and storefront traffic are never sent in plaintext | Use an `https://` URL |
 | A video **renders nothing** on the storefront | The video was deleted upstream, or a lookup failure is still cached (up to 60 seconds) | Wait for the cache to expire, or check the Shopware log for a `warning` naming the video UUID and the upstream error |
+| The administration shows **"No VideoOptimizer API token is configured"** or **"…lacks the View permission"** | Token missing/rejected, or the admin user has no VideoOptimizer role | Save a valid token (users allowed to change plugin settings get a link), or grant the **Viewer** role under **Settings → Users & permissions → Roles** |
+| Videos **disappear for about a minute** | The VideoOptimizer API was unreachable or rate-limited; uncached videos fail fast for 60 seconds | Nothing to do; pages rendered meanwhile are cached for 60 seconds only and recover automatically |
+| Requests to VideoOptimizer are **blocked by a proxy/firewall** | Outgoing requests carry the `User-Agent` `VideoOptimizer-Shopware/<version> (…)` | Allow that User-Agent and the hosts `api.videooptimizer.eu` / `player.videooptimizer.eu` |
 | The admin still shows the **old UI after an update** | The browser served the previous cached admin bundle | Hard-reload the administration (`Cmd+Shift+R` / `Ctrl+Shift+R`) |
 
 ## Upgrading
@@ -263,23 +269,44 @@ choose "keep user data".
 The API token lives only in the plugin's system configuration. Every call to VideoOptimizer — from the
 admin module and from the storefront — is proxied through Shopware's own admin/storefront controllers, so
 the token is never sent to or exposed in the browser; the browser only ever receives short-lived
-**presigned URLs** for the direct-to-storage part uploads. Embed data for a given video is cached per
-video (successful lookups for 1 hour, failed lookups for 60 seconds) to keep storefront rendering fast and
-avoid hammering the upstream API, and the cache is invalidated immediately whenever a video's title,
-thumbnail or poster changes (or the video is deleted) in the administration. User-authored rich text and
-call-to-action URLs are sanitized both server-side and in the admin preview before they reach the
-storefront.
+**presigned URLs** for the direct-to-storage part uploads.
+
+**Caching.** Embed data is cached per video: 1 hour for playable videos, 60 seconds for failed lookups and
+for videos that are still processing (so they appear shortly after they are ready). The videos of a page
+are looked up concurrently. After a transport error, timeout, rate limit or 502/503/504, lookups of
+uncached videos fail fast for 60 seconds instead of waiting for a timeout each. Storefront pages are tagged
+`scalecommerce-vo-video-<uuid>` (HTTP cache, and on Shopware 6.6 the Store API route cache); changing,
+re-postering or deleting a video, or deleting/reprocessing its library, in the administration invalidates
+exactly these pages. A page rendered while a lookup failed is cached for at most 60 seconds. Changes made
+directly in the VideoOptimizer dashboard show up after the cache lifetime.
+
+User-authored rich text and call-to-action URLs are sanitized both server-side and in the admin preview
+before they reach the storefront.
+
+### Data sent to VideoOptimizer
+
+- **From the shop server:** API requests (with the token for admin actions, without it for the public
+  embed data used while rendering the storefront). Every request identifies the plugin with a `User-Agent`
+  such as `VideoOptimizer-Shopware/1.2.0 (Shopware 6.7.16.2; PHP 8.4.10; +https://shop.example.com)`: plugin,
+  Shopware and PHP version and the shop's public URL (`APP_URL`, reduced to scheme, host, port and path).
+  VideoOptimizer uses it to show which plugin versions an organization runs.
+- **From visitors' browsers:** the video, poster and (in embed mode) the hosted player are loaded directly
+  from VideoOptimizer's EU CDN / player host, like any other media on the page. The plugin itself sets no cookies; for the hosted
+  player (embed mode) see VideoOptimizer's privacy information.
 
 ## Development
 
 <details>
 <summary><b>Tests, rebuilding, 6.6 smoke-testing</b></summary>
 
-Run the test suite from a Shopware installation with the plugin linked under `custom/plugins`:
+Run the PHP test suite (PHPUnit 12 or later) from a Shopware installation with the plugin linked under
+`custom/plugins`, and the JavaScript tests (Vitest/jsdom, under `tests/js`, not part of the package):
 
 ```bash
 composer install
 vendor/bin/phpunit -c custom/plugins/ScaleVideoOptimizer/phpunit.xml.dist
+
+cd custom/plugins/ScaleVideoOptimizer/tests/js && npm ci && npx vitest run
 ```
 
 Rebuild the compiled assets after changing admin or storefront source (and commit the rebuilt output —

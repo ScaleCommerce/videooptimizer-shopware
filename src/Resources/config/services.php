@@ -8,10 +8,10 @@ use ScaleCommerce\VideoOptimizer\DataResolver\MediaSplitElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\SpotlightElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\VideoGridElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\VideoOptimizerElementResolver;
-use ScaleCommerce\VideoOptimizer\Service\EmbedAvailability;
+use ScaleCommerce\VideoOptimizer\Service\EmbedRenderState;
 use ScaleCommerce\VideoOptimizer\Service\PluginUserAgent;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
-use ScaleCommerce\VideoOptimizer\Subscriber\DegradedEmbedCacheSubscriber;
+use ScaleCommerce\VideoOptimizer\Subscriber\EmbedPageCacheSubscriber;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
 use Shopware\Core\Framework\Util\HtmlSanitizer;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
@@ -27,7 +27,7 @@ return static function (ContainerConfigurator $container): void {
             service(SystemConfigService::class),
             service('cache.object'),
             service('logger'),
-            service(EmbedAvailability::class),
+            service(EmbedRenderState::class),
             service(CacheInvalidator::class),
             service(PluginUserAgent::class),
         ])
@@ -37,12 +37,12 @@ return static function (ContainerConfigurator $container): void {
     $services->set(PluginUserAgent::class)
         ->args(['%kernel.shopware_version%', '%env(default::APP_URL)%']);
 
-    $services->set(EmbedAvailability::class)
+    $services->set(EmbedRenderState::class)
         ->tag('kernel.reset', ['method' => 'reset']);
 
-    $services->set(DegradedEmbedCacheSubscriber::class)
+    $services->set(EmbedPageCacheSubscriber::class)
         ->args([
-            service(EmbedAvailability::class),
+            service(EmbedRenderState::class),
             service(CacheInvalidator::class),
             service('event_dispatcher'),
         ])
@@ -71,4 +71,8 @@ return static function (ContainerConfigurator $container): void {
     $services->set(VideoGridElementResolver::class)
         ->args([service(VideoOptimizerClient::class), service('logger')])
         ->tag('shopware.cms.data_resolver');
+
+    // Former service IDs (renamed in 1.2.0), kept as aliases for decorators and references.
+    $services->alias('ScaleCommerce\\VideoOptimizer\\Service\\EmbedAvailability', EmbedRenderState::class);
+    $services->alias('ScaleCommerce\\VideoOptimizer\\Subscriber\\DegradedEmbedCacheSubscriber', EmbedPageCacheSubscriber::class);
 };

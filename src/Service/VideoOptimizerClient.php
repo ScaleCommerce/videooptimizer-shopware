@@ -54,7 +54,7 @@ class VideoOptimizerClient implements ResetInterface
         private readonly SystemConfigService $systemConfig,
         private readonly CacheInterface $cache,
         private readonly LoggerInterface $logger = new NullLogger(),
-        private readonly EmbedAvailability $availability = new EmbedAvailability(),
+        private readonly EmbedRenderState $availability = new EmbedRenderState(),
         private readonly ?CacheInvalidator $cacheInvalidator = null,
         private readonly PluginUserAgent $userAgent = new PluginUserAgent(),
     ) {
@@ -325,8 +325,8 @@ class VideoOptimizerClient implements ResetInterface
         $this->cache->delete($this->embedCacheKey($uuid));
         // Called after a successful admin call, so the API is reachable again.
         $this->cache->delete(self::EMBED_API_UNAVAILABLE_KEY);
-        // Pages showing this video were tagged while rendering (DegradedEmbedCacheSubscriber).
-        $this->cacheInvalidator?->invalidate([EmbedAvailability::cacheTag($uuid)]);
+        // Pages showing this video were tagged while rendering (EmbedPageCacheSubscriber).
+        $this->cacheInvalidator?->invalidate([EmbedRenderState::cacheTag($uuid)]);
     }
 
     public function listThumbnails(string $uuid): array

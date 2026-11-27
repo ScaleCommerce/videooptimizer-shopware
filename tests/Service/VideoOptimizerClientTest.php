@@ -10,7 +10,7 @@ use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidRequestException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
-use ScaleCommerce\VideoOptimizer\Service\EmbedAvailability;
+use ScaleCommerce\VideoOptimizer\Service\EmbedRenderState;
 use ScaleCommerce\VideoOptimizer\Service\PluginUserAgent;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
@@ -356,7 +356,7 @@ class VideoOptimizerClientTest extends TestCase
                 : new MockResponse(json_encode(['data' => ['sources' => [['type' => 'hls', 'src' => 'https://cdn/x.m3u8']]]]));
         });
         $userAgent = new PluginUserAgent('6.7.16.2', 'https://shop.example.com', '1.0.3');
-        $client = new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedAvailability(), null, $userAgent);
+        $client = new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedRenderState(), null, $userAgent);
 
         $client->listLibraries();
         $client->getEmbed('vid-1');
@@ -901,7 +901,7 @@ class VideoOptimizerClientTest extends TestCase
     #[DataProvider('embedAvailabilityCases')]
     public function testGetEmbedFlagsDegradedEmbeds(array $responses, int $calls, bool $degraded): void
     {
-        $availability = new EmbedAvailability();
+        $availability = new EmbedRenderState();
         $client = new VideoOptimizerClient(new MockHttpClient($responses), $this->config(), new ArrayAdapter(), new NullLogger(), $availability);
 
         for ($i = 0; $i < $calls; ++$i) {
@@ -1026,13 +1026,13 @@ class VideoOptimizerClientTest extends TestCase
         $invalidator = $this->createMock(CacheInvalidator::class);
         $invalidator->expects(static::once())->method('invalidate')->with(['scalecommerce-vo-video-v1']);
 
-        $client = new VideoOptimizerClient(new MockHttpClient(), $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedAvailability(), $invalidator);
+        $client = new VideoOptimizerClient(new MockHttpClient(), $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedRenderState(), $invalidator);
         $client->forgetEmbed('v1');
     }
 
     public function testGetEmbedRecordsTheRenderedVideo(): void
     {
-        $availability = new EmbedAvailability();
+        $availability = new EmbedRenderState();
         $client = new VideoOptimizerClient(new MockHttpClient($this->playable('v1')), $this->config(), new ArrayAdapter(), new NullLogger(), $availability);
 
         $client->getEmbed('v1');
@@ -1255,7 +1255,7 @@ class VideoOptimizerClientTest extends TestCase
             $invalidated = [...$invalidated, ...$tags];
         });
 
-        $action(new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedAvailability(), $invalidator));
+        $action(new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedRenderState(), $invalidator));
 
         static::assertSame($expectedCalls, $calls);
         static::assertSame(['scalecommerce-vo-video-v1', 'scalecommerce-vo-video-v2'], $invalidated);
@@ -1272,7 +1272,7 @@ class VideoOptimizerClientTest extends TestCase
         $invalidator = $this->createMock(CacheInvalidator::class);
         $invalidator->expects(static::never())->method('invalidate');
 
-        (new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedAvailability(), $invalidator))->deleteLibrary('lib-1');
+        (new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedRenderState(), $invalidator))->deleteLibrary('lib-1');
 
         static::assertSame(['GET', 'DELETE'], $calls);
     }

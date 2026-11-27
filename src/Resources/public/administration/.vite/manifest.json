@@ -1,12 +1,12 @@
 {
   "../node_modules/hls.js/dist/hls.light.mjs": {
-    "file": "assets/hls.light-CqmBNinQ.js",
+    "file": "assets/hls.light-F7BZHzvN.js",
     "name": "hls.light",
     "src": "../node_modules/hls.js/dist/hls.light.mjs",
     "isDynamicEntry": true
   },
   "main.js": {
-    "file": "assets/scale-video-optimizer-CwiDu_Q5.js",
+    "file": "assets/scale-video-optimizer--Xwd_ACU.js",
     "name": "scale-video-optimizer",
     "src": "main.js",
     "isEntry": true,

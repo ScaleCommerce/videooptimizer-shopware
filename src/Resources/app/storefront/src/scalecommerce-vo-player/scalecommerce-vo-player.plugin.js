@@ -45,7 +45,8 @@ export default class ScalecommerceVoPlayer extends window.PluginBaseClass {
 
     _attachSource() {
         const { hls, mp4, webm, autoplay, unavailableLabel } = this.options;
-        attachVideoSource(
+        // hls.js loads on demand, so autoplay starts only once the source is attached.
+        const attached = attachVideoSource(
             this.video,
             { hls, mp4: mp4 || webm },
             {
@@ -55,14 +56,24 @@ export default class ScalecommerceVoPlayer extends window.PluginBaseClass {
             }
         );
         if (autoplay) {
-            this._stopAutoplay = autoplayWhileVisible(this.video, this.el);
+            attached.then(() => {
+                if (!this._destroyed) {
+                    this._stopAutoplay = autoplayWhileVisible(
+                        this.video,
+                        this.el
+                    );
+                }
+            });
         }
     }
 
     destroy() {
+        this._destroyed = true;
         if (this._stopAutoplay) {
             this._stopAutoplay();
         }
-        destroyVideoSource(this.video);
+        if (this.video) {
+            destroyVideoSource(this.video);
+        }
     }
 }

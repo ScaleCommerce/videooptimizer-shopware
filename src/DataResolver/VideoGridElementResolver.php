@@ -62,7 +62,7 @@ class VideoGridElementResolver extends AbstractCmsElementResolver
             if (!is_string($uuid) || $uuid === '') {
                 continue;
             }
-            $surface = $this->buildVideoSurface($config, $uuid, $this->client, $this->logger, $presentation);
+            $surface = $this->buildVideoSurface($config, $uuid, $this->client, $this->logger);
             if ($surface['error']) {
                 // A video that no longer resolves upstream (e.g. deleted) is dropped rather than
                 // appended with an error flag - otherwise the grid renders a headline/intro with

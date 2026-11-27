@@ -1,4 +1,16 @@
-import Hls from 'hls.js/dist/hls.light.mjs';
+// hls.js is loaded on demand, once per page, when the first HLS source is attached. A single
+// dynamic import keeps it in one shared chunk instead of a copy per storefront plugin.
+let hlsPromise = null;
+function loadHls() {
+    hlsPromise ??= import('hls.js/dist/hls.light.mjs')
+        .then((module) => module.default)
+        .catch(() => {
+            // A transient chunk error must not disable hls.js for the rest of the page.
+            hlsPromise = null;
+            return null;
+        });
+    return hlsPromise;
+}
 
 /**
  * Attaches a VideoOptimizer source to a <video>: hls.js (MSE), native HLS (Safari) or MP4.
@@ -9,7 +21,7 @@ import Hls from 'hls.js/dist/hls.light.mjs';
  * The hls.js instance is kept on the element (`video.__scvoHls`) so callers can destroy it
  * via destroyVideoSource() without tracking it themselves.
  */
-export function attachVideoSource(
+export async function attachVideoSource(
     video,
     { hls = null, mp4 = null },
     { autoplay = false, deferLoad = false, onUnplayable = () => {} } = {}
@@ -31,38 +43,27 @@ export function attachVideoSource(
         play();
     };
 
-    if (hls && Hls.isSupported()) {
-        // hls.js ignores the video's preload hint and buffers right away; with deferLoad only the
-        // playlists are fetched until playback starts. capLevelToPlayerSize keeps small tiles from
-        // pulling the 4K rendition.
-        const player = new Hls({
-            autoStartLoad: !deferLoad,
-            capLevelToPlayerSize: true,
-        });
-        // Reachable for destroyVideoSource() before anything can emit an error.
-        video.__scvoHls = player;
-        if (deferLoad) {
-            video.addEventListener(
-                'play',
-                () => {
-                    if (video.__scvoHls === player) {
-                        player.startLoad();
-                    }
-                },
-                { once: true }
-            );
+    // Set by destroyVideoSource(); the element may be torn down while hls.js is still loading.
+    video.__scvoDestroyed = false;
+
+    // hls.js needs Media Source Extensions. Without them (e.g. older iOS) it is not loaded at all,
+    // and native HLS / MP4 are attached synchronously - still within the click that started
+    // playback, which iOS requires for playback with sound.
+    const mse = !!(window.ManagedMediaSource || window.MediaSource);
+    if (hls && mse) {
+        const Hls = await loadHls();
+        if (video.__scvoDestroyed) {
+            return;
         }
-        player.on(Hls.Events.ERROR, (event, data) => {
-            if (!data.fatal) {
-                return;
+        if (Hls && Hls.isSupported()) {
+            try {
+                attachHlsJs(Hls, video, hls, deferLoad, play, useMp4);
+            } catch {
+                destroyVideoSource(video);
+                useMp4();
             }
-            destroyVideoSource(video);
-            useMp4();
-        });
-        player.on(Hls.Events.MANIFEST_PARSED, play);
-        player.loadSource(hls);
-        player.attachMedia(video);
-        return;
+            return;
+        }
     }
 
     if (hls && video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -73,6 +74,48 @@ export function attachVideoSource(
     }
 
     useMp4();
+}
+
+function attachHlsJs(Hls, video, hls, deferLoad, play, useMp4) {
+    // hls.js ignores the video's preload hint and buffers right away; with deferLoad only the
+    // playlists are fetched until playback starts. If the visitor already pressed play while
+    // hls.js was loading, the "play" event is gone - start loading right away then.
+    // capLevelToPlayerSize keeps small tiles from pulling the 4K rendition.
+    const playRequested = !video.paused;
+    const deferred = deferLoad && !playRequested;
+    const player = new Hls({
+        autoStartLoad: !deferred,
+        capLevelToPlayerSize: true,
+    });
+    // Reachable for destroyVideoSource() before anything can emit an error.
+    video.__scvoHls = player;
+    if (deferred) {
+        video.addEventListener(
+            'play',
+            () => {
+                if (video.__scvoHls === player) {
+                    player.startLoad();
+                }
+            },
+            { once: true }
+        );
+    }
+    player.on(Hls.Events.ERROR, (event, data) => {
+        if (!data.fatal) {
+            return;
+        }
+        destroyVideoSource(video);
+        useMp4();
+    });
+    player.on(Hls.Events.MANIFEST_PARSED, () => {
+        play();
+        // Attaching the media interrupts a play() requested while hls.js was loading; resume it.
+        if (playRequested && video.paused) {
+            video.play().catch(() => {});
+        }
+    });
+    player.loadSource(hls);
+    player.attachMedia(video);
 }
 
 /**
@@ -132,6 +175,7 @@ export function autoplayWhileVisible(video, observed = video) {
 }
 
 export function destroyVideoSource(video) {
+    video.__scvoDestroyed = true;
     if (video.__scvoHls) {
         video.__scvoHls.destroy();
         video.__scvoHls = null;
