@@ -4,7 +4,9 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
-### Breaking
+## [1.2.1] - 2026-11-27
+
+### Upgrade
 - Admin proxy forwards `encoding_quality` on library create/update and rejects invalid values with 400 ([#22](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/22)).
 - Admin reprocess route reads the JSON body (malformed → 400) and passes `force` ([#22](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/22)).
 - Subclasses overriding `VideoOptimizerClient::reprocessLibrary()` must add `bool $force = false` ([#22](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/22)).
