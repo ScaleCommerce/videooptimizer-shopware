@@ -38,6 +38,7 @@
             "quality_performance": "Performance (Standard)",
             "quality_quality": "Qualität (schärfer)",
             "qualityHelp": "Performance: kompakte Dateien, schneller Start. Qualität: sichtbar schärfer, etwa 2,5- bis 3-mal so viel CDN-Traffic.",
+            "qualityApplyNote": "Eine geänderte Qualitätsstufe gilt für bestehende Videos erst nach „Videos neu verarbeiten“ mit „Alle Qualitäten neu kodieren“; neue Uploads nutzen sie sofort.",
             "qualityChangedHint": "Die Qualitätsstufe wurde geändert. Bereits verarbeitete Videos behalten ihre Dateien, bis sie mit „Alle Qualitäten neu kodieren“ neu verarbeitet werden.",
             "qualityReprocessHint": "Qualitätsstufe gespeichert. Damit bestehende Videos sie übernehmen: „Neu verarbeiten“ mit „Alle Qualitäten neu kodieren“ ausführen.",
             "reprocessForce": "Alle Qualitäten neu kodieren"

@@ -2,6 +2,16 @@
 
 All notable changes to this package. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
 
+## [2.1.1] - 2026-11-28
+
+### Upgrade
+- `POST /api/_action/scalecommerce-vo/libraries/{id}/reprocess` answers 400 instead of 204 when `force` is present but not a boolean (e.g. `"true"` or `1`; `null` still counts as absent); API clients must send `true`/`false` ([#51](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/51)).
+
+### Fixed
+- The reprocess route rejects a `force` that is not a boolean (other than `null`) with 400 instead of treating it as false ([#51](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/51)).
+- The library form shows a permanent note that a changed quality mode applies to existing videos only after a reprocess with "Re-encode all qualities" ([#50](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/50)).
+- The gallery selection mode opens the file picker from a button like the management mode (hidden input with an accessible name, file name shown); long titles and status badges wrap or carry a `title` ([#52](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/52)).
+
 ## [2.1.0] - 2026-11-28
 
 ### Upgrade

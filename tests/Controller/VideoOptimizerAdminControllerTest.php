@@ -858,6 +858,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
         yield 'no body' => ['', false];
         yield 'force' => ['{"force":true}', true];
         yield 'force false' => ['{"force":false}', false];
+        yield 'force null counts as absent' => ['{"force":null}', false];
     }
 
     #[DataProvider('reprocessBodies')]
@@ -869,6 +870,27 @@ class VideoOptimizerAdminControllerTest extends TestCase
         $response = (new VideoOptimizerAdminController($client))->reprocessLibrary(self::UUID, new Request([], [], [], [], [], [], $body));
 
         static::assertSame(200, $response->getStatusCode());
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function invalidForceBodies(): iterable
+    {
+        yield 'string' => ['{"force":"true"}'];
+        yield 'int' => ['{"force":1}'];
+    }
+
+    #[DataProvider('invalidForceBodies')]
+    public function testNonBooleanForceIsRejected(string $body): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('reprocessLibrary');
+
+        $response = (new VideoOptimizerAdminController($client))->reprocessLibrary(self::UUID, new Request([], [], [], [], [], [], $body));
+
+        static::assertSame(400, $response->getStatusCode());
+        static::assertStringContainsString('SCALECOMMERCE_VO__INVALID_REQUEST', (string) $response->getContent());
     }
 
     /**

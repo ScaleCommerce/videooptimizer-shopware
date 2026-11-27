@@ -102,7 +102,15 @@ class VideoOptimizerAdminController
     public function reprocessLibrary(string $id, Request $request): JsonResponse
     {
         // Optional {"force": true}: re-encode finished renditions too (needed after changing encoding_quality).
-        return $this->wrap(fn () => $this->client->reprocessLibrary($id, ($this->payload($request)['force'] ?? false) === true));
+        return $this->wrap(function () use ($id, $request): array {
+            $payload = $this->payload($request);
+            // null counts as absent; any other non-boolean is a client error.
+            if (isset($payload['force']) && !\is_bool($payload['force'])) {
+                throw new InvalidRequestException('force must be a boolean.');
+            }
+
+            return $this->client->reprocessLibrary($id, ($payload['force'] ?? false) === true);
+        });
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/libraries/{id}/videos', name: 'api.action.scalecommerce-vo.videos.list', methods: ['GET'], requirements: ['id' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:read']])]

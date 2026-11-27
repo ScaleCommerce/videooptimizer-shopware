@@ -38,6 +38,7 @@
             "quality_performance": "Performance (default)",
             "quality_quality": "Quality (sharper)",
             "qualityHelp": "Performance: compact files, fast start. Quality: visibly sharper, about 2.5–3× the CDN traffic.",
+            "qualityApplyNote": "Changing the quality mode only applies to existing videos after “Reprocess videos” with “Re-encode all qualities”; new uploads use it right away.",
             "qualityChangedHint": "The quality mode was changed. Videos that are already processed keep their files until they are reprocessed with \"Re-encode all qualities\".",
             "qualityReprocessHint": "Quality mode saved. To apply it to existing videos, run \"Reprocess\" with \"Re-encode all qualities\".",
             "reprocessForce": "Re-encode all qualities"
