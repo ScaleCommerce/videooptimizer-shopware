@@ -115,3 +115,101 @@ describe('hero play button', () => {
         expect(video.pause).toHaveBeenCalledOnce();
     });
 });
+
+describe('hero lifecycle (#34)', () => {
+    it('does nothing without a video source', () => {
+        document.body.innerHTML = '<div class="scalecommerce-vo-hero"><video></video></div>';
+
+        expect(() => new ScalecommerceVoHero(document.querySelector('video'))).not.toThrow();
+        expect(Hls.instances).toHaveLength(0);
+    });
+
+    it('shows the toggle button as a play button initially', () => {
+        const { video, toggle } = setup();
+        new ScalecommerceVoHero(video);
+
+        expect(toggle.hasAttribute('hidden')).toBe(false);
+        expect(toggle.getAttribute('aria-label')).toBe('Play');
+        expect(toggle.classList.contains('is-paused')).toBe(true);
+    });
+
+    it('keeps the toggle label in step with the video state', async () => {
+        const { video, toggle } = setup();
+        new ScalecommerceVoHero(video);
+        await vi.waitFor(() => expect(video.__scvoHls).toBeTruthy());
+
+        video.play();
+        expect(toggle.getAttribute('aria-label')).toBe('Pause');
+        video.pause();
+        expect(toggle.getAttribute('aria-label')).toBe('Play');
+    });
+
+    it('plays when it scrolls into view and pauses when it leaves', async () => {
+        const observers = [];
+        window.IntersectionObserver = class {
+            constructor(callback) {
+                this.callback = callback;
+                observers.push(this);
+            }
+
+            observe() {}
+
+            disconnect() {}
+        };
+        const { video } = setup();
+        new ScalecommerceVoHero(video);
+        await vi.waitFor(() => expect(observers).toHaveLength(1));
+
+        observers[0].callback([{ isIntersecting: true }]);
+        expect(video.play).toHaveBeenCalled();
+        observers[0].callback([{ isIntersecting: false }]);
+        expect(video.pause).toHaveBeenCalled();
+    });
+
+    it('plays nothing on its own with reduced motion', async () => {
+        window.matchMedia = () => ({ matches: true });
+        const observed = vi.fn();
+        window.IntersectionObserver = class {
+            observe() {
+                observed();
+            }
+
+            disconnect() {}
+        };
+        const { video } = setup();
+        new ScalecommerceVoHero(video);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+
+        expect(observed).not.toHaveBeenCalled();
+        expect(video.play).not.toHaveBeenCalled();
+    });
+
+    it('releases listeners, observer and hls.js on destroy', async () => {
+        const observers = [];
+        window.IntersectionObserver = class {
+            constructor() {
+                this.disconnected = false;
+                observers.push(this);
+            }
+
+            observe() {}
+
+            disconnect() {
+                this.disconnected = true;
+            }
+        };
+        const { video, toggle } = setup();
+        const plugin = new ScalecommerceVoHero(video);
+        await vi.waitFor(() => expect(observers).toHaveLength(1));
+        await vi.waitFor(() => expect(Hls.instances).toHaveLength(1));
+
+        plugin.destroy();
+        toggle.click();
+
+        expect(observers[0].disconnected).toBe(true);
+        expect(Hls.instances[0].destroyed).toBe(true);
+        // The toggle no longer controls the video after destroy.
+        expect(video.play).not.toHaveBeenCalled();
+        expect(video.pause).not.toHaveBeenCalled();
+    });
+});

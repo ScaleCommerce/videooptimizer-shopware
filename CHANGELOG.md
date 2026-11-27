@@ -15,6 +15,7 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 
 ### Changed
 - GitHub Actions run PHPUnit and PHPStan (level 5) on Shopware 6.6 and 6.7, Vitest and `shopware-cli extension validate` on every push and pull request ([#40](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/40)).
+- DOM tests (Vitest/jsdom) for the storefront player, the facade and lightbox blocks and the hero lifecycle ([#34](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/34)).
 
 ## [1.2.2] - 2026-11-27
 
