@@ -2,6 +2,15 @@
 
 All notable changes to this package. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Upgrade
+- A hosted embed (`playerMode` embed) of the single video element is sized to the video's own ratio instead of always 16:9 (portrait videos no longer sit in a landscape box); set the new format option to 16:9 to keep the old look ([#47](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/47)).
+- New element options `format`, `focalX` and `focalY` (single video, media split) are stored in the slot config; existing elements keep the original ratio. Themes can style the new `scalecommerce-vo-surface--portrait` / `scalecommerce-vo-video--portrait` classes (max width 420 px) ([#47](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/47)).
+
+### Added
+- Format option for the single video and media split elements: original, 16:9, 9:16, 1:1, 4:5 or 21:9; the video and poster cover the surface (`object-fit: cover`, the hosted embed gets `fit=cover`), portrait formats are capped at 420 px width; an optional focal point (X/Y in percent) sets `object-position` (not supported by the hosted embed) ([#47](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/47)).
+
 ## [2.1.1] - 2026-11-28
 
 ### Upgrade

@@ -302,6 +302,37 @@ class VideoOptimizerElementResolverTest extends TestCase
         return new VideoOptimizerElementResolver($client, $logger ?? new NullLogger());
     }
 
+    /**
+     * The format option fixes the surface ratio, the video covers it, the focal point moves it (#47).
+     */
+    public function testFormatAndFocalPointBecomeTheLayoutAndTheHostedPlayerCovers(): void
+    {
+        $client = $this->createStub(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willReturn(['sources' => [['src' => 'https://cdn/v.mp4', 'type' => 'video/mp4', 'codec' => 'h264', 'label' => '720p']], 'resolution' => '1920x1080']);
+        $client->method('embedBaseUrl')->willReturn('https://videooptimizer.eu');
+
+        $slot = $this->slotWithUuid('uuid-1', ['format' => '9-16', 'focalX' => 20, 'focalY' => '80', 'miniPlayer' => true, 'playerMode' => 'embed']);
+        $this->resolver($client)->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
+
+        $data = $slot->getData();
+        static::assertSame(['format' => '9-16', 'aspect' => '9 / 16', 'portrait' => true, 'cover' => true, 'position' => '20% 80%', 'mini' => true], $data->getLayout());
+        static::assertStringContainsString('&fit=cover', $data->getEmbedUrl());
+    }
+
+    public function testWithoutFormatTheOriginalRatioStaysAndNothingCovers(): void
+    {
+        $client = $this->createStub(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willReturn(['sources' => [['src' => 'https://cdn/v.mp4', 'type' => 'video/mp4', 'codec' => 'h264', 'label' => '720p']]]);
+        $client->method('embedBaseUrl')->willReturn('https://videooptimizer.eu');
+
+        $slot = $this->slotWithUuid('uuid-1', ['format' => 'bogus', 'focalX' => 150, 'focalY' => 'x']);
+        $this->resolver($client)->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
+
+        $data = $slot->getData();
+        static::assertSame(['format' => 'original', 'aspect' => null, 'portrait' => false, 'cover' => false, 'position' => '100% 50%', 'mini' => false], $data->getLayout());
+        static::assertStringNotContainsString('fit=', $data->getEmbedUrl());
+    }
+
     private function slotWithUuid(string $uuid, array $extraConfig = []): CmsSlotEntity
     {
         $slot = new CmsSlotEntity();

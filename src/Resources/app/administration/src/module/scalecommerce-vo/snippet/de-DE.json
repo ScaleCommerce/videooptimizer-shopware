@@ -66,7 +66,18 @@
                 "label": "Beschriftung"
             },
             "embedBadge": "Embed",
-            "videoMissing": "Das Video existiert nicht mehr"
+            "videoMissing": "Das Video existiert nicht mehr",
+            "format": "Format",
+            "formatOriginal": "Original (Videoformat)",
+            "format169": "16:9",
+            "format916": "9:16 (Hochformat)",
+            "format11": "1:1 (quadratisch)",
+            "format45": "4:5 (Hochformat)",
+            "format219": "21:9 (Banner)",
+            "formatHint": "Ein festes Format beschneidet das Video so, dass es die Fläche füllt (Hochformate sind auf 420 px Breite begrenzt).",
+            "focalX": "Bildausschnitt horizontal (%)",
+            "focalY": "Bildausschnitt vertikal (%)",
+            "focalHint": "Welcher Teil sichtbar bleibt, wenn das Video beschnitten wird. Wird vom gehosteten Embed nicht unterstützt."
         },
         "mediaSplit": {
             "label": "VideoOptimizer Media Split",

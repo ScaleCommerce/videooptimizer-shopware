@@ -3,6 +3,7 @@
 namespace ScaleCommerce\VideoOptimizer\Tests\Twig;
 
 use PHPUnit\Framework\TestCase;
+use ScaleCommerce\VideoOptimizer\DataResolver\Struct\VideoOptimizerVideoStruct;
 use Twig\Environment;
 use Twig\Loader\ArrayLoader;
 use Twig\Loader\ChainLoader;
@@ -43,6 +44,73 @@ class SurfaceTemplateTest extends TestCase
         $twig->addFilter(new TwigFilter('trans', static fn (string $key): string => $key));
 
         return $twig->render('page', ['embed' => $embed, 'presentation' => $presentation, 'mode' => $mode, 'options' => $options]);
+    }
+
+    public function testFormatSetsTheSurfaceRatioFocalPointAndFit(): void
+    {
+        $html = $this->render(['mp4' => 'https://cdn/v.mp4', 'aspectRatio' => '1920 / 1080'], 'facade', 'native', [
+            'layout' => ['aspect' => '9 / 16', 'portrait' => true, 'cover' => true, 'position' => '20% 80%'],
+        ]);
+
+        static::assertStringContainsString('--scvo-aspect: 9 / 16', $html);
+        static::assertStringContainsString('--scvo-pos: 20% 80%', $html);
+        static::assertStringContainsString('scalecommerce-vo-surface--portrait', $html);
+        static::assertStringContainsString('data-vo-fit="cover"', $html);
+    }
+
+    public function testWithoutFormatTheVideoRatioStays(): void
+    {
+        $html = $this->render(['mp4' => 'https://cdn/v.mp4', 'aspectRatio' => '1260 / 750'], 'facade');
+
+        static::assertStringContainsString('--scvo-aspect: 1260 / 750', $html);
+        static::assertStringNotContainsString('data-vo-fit', $html);
+        static::assertStringNotContainsString('--portrait', $html);
+    }
+
+    /**
+     * @param array<string, mixed> $layout
+     * @param array<string, mixed> $embed
+     */
+    private function renderSingle(string $mode, array $layout, array $embed = ['mp4' => 'https://cdn/v.mp4', 'aspectRatio' => '1920 / 1080']): string
+    {
+        $data = new VideoOptimizerVideoStruct();
+        $data->setVideoUuid('abc');
+        $data->setPlayerMode($mode);
+        $data->setEmbedUrl('https://player.example/embed/abc?fit=cover');
+        $data->setEmbed($embed);
+        $data->setLayout($layout);
+
+        $views = new FilesystemLoader();
+        $views->addPath(dirname(__DIR__, 2) . '/src/Resources/views', 'ScaleVideoOptimizer');
+        $twig = new Environment($views, ['autoescape' => 'html']);
+        $twig->addFilter(new TwigFilter('trans', static fn (string $key): string => $key));
+
+        return $twig->render('@ScaleVideoOptimizer/storefront/element/cms-element-scalecommerce-vo-video.html.twig', ['element' => ['data' => $data, 'config' => []]]);
+    }
+
+    public function testSingleVideoAppliesFormatAndFocalPointToTheNativePlayer(): void
+    {
+        $html = $this->renderSingle('native', ['aspect' => '4 / 5', 'portrait' => true, 'cover' => true, 'position' => '10% 30%']);
+
+        static::assertStringContainsString('scalecommerce-vo-video--portrait', $html);
+        static::assertStringContainsString('--scvo-aspect: 4 / 5; --scvo-pos: 10% 30%', $html);
+    }
+
+    public function testSingleVideoAppliesTheFormatToTheHostedPlayerToo(): void
+    {
+        $html = $this->renderSingle('embed', ['aspect' => '1 / 1', 'portrait' => false, 'cover' => true, 'position' => '50% 50%']);
+
+        static::assertStringContainsString('--scvo-aspect: 1 / 1', $html);
+        static::assertStringContainsString('fit=cover', $html);
+        static::assertStringNotContainsString('--portrait', $html);
+    }
+
+    public function testSingleVideoWithoutLayoutKeepsTheVideoRatio(): void
+    {
+        $html = $this->renderSingle('native', [], ['mp4' => 'https://cdn/v.mp4', 'aspectRatio' => '1260 / 750']);
+
+        static::assertStringContainsString('--scvo-aspect: 1260 / 750', $html);
+        static::assertStringNotContainsString('--scvo-pos', $html);
     }
 
     public function testThemeIsPassedToThePlayerOptionsAndAccentIsACustomProperty(): void

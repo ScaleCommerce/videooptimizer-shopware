@@ -1,10 +1,11 @@
 import template from './scalecommerce-vo-cms-element.html.twig';
 import './scalecommerce-vo-cms-element.scss';
 import elementVideo from '../../../../../mixin/scalecommerce-vo-element-video';
+import layout from '../../../../../mixin/scalecommerce-vo-layout';
 
 Shopware.Component.register('scalecommerce-vo-cms-element', {
     template,
-    mixins: ['cms-element', elementVideo],
+    mixins: ['cms-element', elementVideo, layout],
 
     computed: {
         videoUuid() {

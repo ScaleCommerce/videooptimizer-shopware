@@ -21,6 +21,21 @@
         :model-value="element.config.playerMode.value"
         @update:model-value="onPlayerModeChange" />
 
+    <mt-select
+        :label="$tc('scalecommerce-vo.cms.format')"
+        :options="formatOptions"
+        :model-value="element.config.format.value"
+        @update:model-value="onFormatChange" />
+    <mt-number-field
+        :label="$tc('scalecommerce-vo.cms.focalX')"
+        :min="0" :max="100" :step="5"
+        v-model="element.config.focalX.value" />
+    <mt-number-field
+        :label="$tc('scalecommerce-vo.cms.focalY')"
+        :min="0" :max="100" :step="5"
+        v-model="element.config.focalY.value" />
+    <p class="scalecommerce-vo-cms-element-config__hint">{{ $tc('scalecommerce-vo.cms.formatHint') }} {{ $tc('scalecommerce-vo.cms.focalHint') }}</p>
+
     <mt-switch :label="$tc('scalecommerce-vo.cms.showControls')" v-model="element.config.showControls.value" />
     <mt-switch :label="$tc('scalecommerce-vo.cms.autoplay')" v-model="element.config.autoplay.value" />
     <p class="scalecommerce-vo-cms-element-config__hint">{{ $tc('scalecommerce-vo.cms.autoplayHint') }}</p>

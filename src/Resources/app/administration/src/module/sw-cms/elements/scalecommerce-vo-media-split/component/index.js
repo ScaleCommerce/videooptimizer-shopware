@@ -1,10 +1,11 @@
 import template from './scalecommerce-vo-media-split-component.html.twig';
 import './scalecommerce-vo-media-split-component.scss';
 import elementVideo from '../../../../../mixin/scalecommerce-vo-element-video';
+import layout from '../../../../../mixin/scalecommerce-vo-layout';
 
 Shopware.Component.register('scalecommerce-vo-media-split-component', {
     template,
-    mixins: ['cms-element', elementVideo],
+    mixins: ['cms-element', elementVideo, layout],
 
     computed: {
         videoUuid() {

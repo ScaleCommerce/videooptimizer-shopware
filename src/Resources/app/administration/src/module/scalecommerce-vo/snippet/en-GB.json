@@ -66,7 +66,18 @@
                 "label": "Label"
             },
             "embedBadge": "Embed",
-            "videoMissing": "The video no longer exists"
+            "videoMissing": "The video no longer exists",
+            "format": "Format",
+            "formatOriginal": "Original (video ratio)",
+            "format169": "16:9",
+            "format916": "9:16 (portrait)",
+            "format11": "1:1 (square)",
+            "format45": "4:5 (portrait)",
+            "format219": "21:9 (banner)",
+            "formatHint": "A fixed format crops the video to fill the area (portrait formats are limited to 420 px width).",
+            "focalX": "Focal point horizontal (%)",
+            "focalY": "Focal point vertical (%)",
+            "focalHint": "Which part stays visible when the video is cropped. Not supported by the hosted embed."
         },
         "mediaSplit": {
             "label": "VideoOptimizer media split",

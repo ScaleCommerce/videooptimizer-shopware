@@ -55,7 +55,9 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
             playerMode,
             embedUrl,
             nativeOptions,
-            true
+            true,
+            // A fixed format (data-vo-fit="cover") makes the player fill the surface like the poster.
+            this.el.getAttribute('data-vo-fit') === 'cover'
         );
         this.facade.remove();
         this.el.appendChild(player);
@@ -81,7 +83,7 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
         target.focus({ preventScroll: true });
     }
 
-    _buildPlayer(playerMode, embedUrl, nativeOptions, autoplay) {
+    _buildPlayer(playerMode, embedUrl, nativeOptions, autoplay, cover = false) {
         if (playerMode === 'embed') {
             const iframe = document.createElement('iframe');
             // The user clicked to play, so force autoplay (muted to satisfy browser
@@ -111,8 +113,9 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
         const wrap = document.createElement('div');
         wrap.className = 'scalecommerce-vo-video scalecommerce-vo-fill';
         const video = document.createElement('video');
-        video.className =
-            'scalecommerce-vo-video__player scalecommerce-vo-video__player--contain';
+        video.className = cover
+            ? 'scalecommerce-vo-video__player'
+            : 'scalecommerce-vo-video__player scalecommerce-vo-video__player--contain';
         video.setAttribute('playsinline', '');
         const playback = resolvePlayback(nativeOptions);
         video.controls = playback.controls;

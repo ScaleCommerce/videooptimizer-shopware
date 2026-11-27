@@ -332,3 +332,32 @@ describe('lightbox as a native dialog (#32)', () => {
         expect(close).toHaveBeenCalledTimes(1);
     });
 });
+
+describe('format (#47)', () => {
+    function fixed(action) {
+        document.body.innerHTML = `<div class="block" data-vo-fit="cover" data-vo-player-mode="native" data-vo-title="D" data-vo-native-options='${NATIVE}'>
+            <button type="button" class="facade" data-vo-action="${action}">Play</button></div>`;
+        new ScalecommerceVoBlocks(document.querySelector('.block'));
+        document.querySelector('.facade').click();
+    }
+
+    it('lets the player opened from the facade fill a fixed-format surface', () => {
+        fixed('facade');
+
+        const video = document.querySelector('.block video');
+        expect(video.classList.contains('scalecommerce-vo-video__player--contain')).toBe(false);
+    });
+
+    it('keeps the whole video in the lightbox, which has its own 16:9 stage', () => {
+        fixed('lightbox');
+
+        const video = document.querySelector('.scalecommerce-vo-lightbox video');
+        expect(video.classList.contains('scalecommerce-vo-video__player--contain')).toBe(true);
+    });
+
+    it('still letterboxes the facade player without a format', () => {
+        setup({ action: 'facade' }).facade.click();
+
+        expect(document.querySelector('.block video').classList.contains('scalecommerce-vo-video__player--contain')).toBe(true);
+    });
+});

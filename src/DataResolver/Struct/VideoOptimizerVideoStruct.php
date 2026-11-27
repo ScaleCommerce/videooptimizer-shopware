@@ -16,6 +16,29 @@ class VideoOptimizerVideoStruct extends Struct
 
     protected ?string $embedUrl = null;
 
+    /**
+     * @var array<string, mixed>
+     */
+    protected array $layout = [];
+
+    /**
+     * Format, focal point and mini player flag, see VideoSurfaceTrait::layoutOptions().
+     *
+     * @return array<string, mixed>
+     */
+    public function getLayout(): array
+    {
+        return $this->layout;
+    }
+
+    /**
+     * @param array<string, mixed> $layout
+     */
+    public function setLayout(array $layout): void
+    {
+        $this->layout = $layout;
+    }
+
     public function getVideoUuid(): ?string
     {
         return $this->videoUuid;
