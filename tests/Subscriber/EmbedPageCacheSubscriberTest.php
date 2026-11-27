@@ -4,8 +4,8 @@ namespace ScaleCommerce\VideoOptimizer\Tests\Subscriber;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use ScaleCommerce\VideoOptimizer\Service\EmbedAvailability;
-use ScaleCommerce\VideoOptimizer\Subscriber\DegradedEmbedCacheSubscriber;
+use ScaleCommerce\VideoOptimizer\Service\EmbedRenderState;
+use ScaleCommerce\VideoOptimizer\Subscriber\EmbedPageCacheSubscriber;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
 use Shopware\Core\Framework\Adapter\Cache\Event\AddCacheTagEvent;
 use Symfony\Component\EventDispatcher\EventDispatcher;
@@ -15,11 +15,11 @@ use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpKernel\KernelEvents;
 
-class DegradedEmbedCacheSubscriberTest extends TestCase
+class EmbedPageCacheSubscriberTest extends TestCase
 {
     public function testRunsAfterShopwaresCacheHeaders(): void
     {
-        $events = DegradedEmbedCacheSubscriber::getSubscribedEvents();
+        $events = EmbedPageCacheSubscriber::getSubscribedEvents();
 
         // Shopware's CacheResponseSubscriber::setResponseCache runs at -1500.
         static::assertLessThan(-1500, $events[KernelEvents::RESPONSE][1]);
@@ -38,7 +38,7 @@ class DegradedEmbedCacheSubscriberTest extends TestCase
     #[DataProvider('cacheControls')]
     public function testCapsCacheLifetimeWhenAnEmbedWasDegraded(string $cacheControl, string $expected): void
     {
-        $availability = new EmbedAvailability();
+        $availability = new EmbedRenderState();
         $availability->markDegraded();
         $response = new Response('', 200, ['Cache-Control' => $cacheControl]);
 
@@ -51,14 +51,14 @@ class DegradedEmbedCacheSubscriberTest extends TestCase
     {
         $response = new Response('', 200, ['Cache-Control' => 'public, s-maxage=7200']);
 
-        ($this->subscriber(new EmbedAvailability()))->onResponse($this->event($response));
+        ($this->subscriber(new EmbedRenderState()))->onResponse($this->event($response));
 
         static::assertStringContainsString('s-maxage=7200', (string) $response->headers->get('Cache-Control'));
     }
 
     public function testLeavesUncacheableResponseAlone(): void
     {
-        $availability = new EmbedAvailability();
+        $availability = new EmbedRenderState();
         $availability->markDegraded();
         $response = new Response('', 200, ['Cache-Control' => 'no-cache, private']);
 
@@ -70,7 +70,7 @@ class DegradedEmbedCacheSubscriberTest extends TestCase
 
     public function testResetClearsTheState(): void
     {
-        $availability = new EmbedAvailability();
+        $availability = new EmbedRenderState();
         $availability->markDegraded();
         $availability->reset();
 
@@ -83,10 +83,10 @@ class DegradedEmbedCacheSubscriberTest extends TestCase
      */
     public function testTagsAndInvalidatesTheRouteCacheWhenDegraded(): void
     {
-        $availability = new EmbedAvailability();
+        $availability = new EmbedRenderState();
         $availability->markDegraded();
         $invalidator = $this->createMock(CacheInvalidator::class);
-        $invalidator->expects(static::once())->method('invalidate')->with([DegradedEmbedCacheSubscriber::ROUTE_CACHE_TAG], true);
+        $invalidator->expects(static::once())->method('invalidate')->with([EmbedPageCacheSubscriber::ROUTE_CACHE_TAG], true);
         $tagsEvent = new class {
             /** @var list<string> */
             public array $tags = [];
@@ -98,11 +98,11 @@ class DegradedEmbedCacheSubscriberTest extends TestCase
             }
         };
 
-        $subscriber = new DegradedEmbedCacheSubscriber($availability, $invalidator, new EventDispatcher());
+        $subscriber = new EmbedPageCacheSubscriber($availability, $invalidator, new EventDispatcher());
         $subscriber->onRouteCacheTags($tagsEvent);
         $subscriber->onTerminate();
 
-        static::assertSame([DegradedEmbedCacheSubscriber::ROUTE_CACHE_TAG], $tagsEvent->tags);
+        static::assertSame([EmbedPageCacheSubscriber::ROUTE_CACHE_TAG], $tagsEvent->tags);
         static::assertFalse($availability->isRouteCacheTagged());
     }
 
@@ -121,7 +121,7 @@ class DegradedEmbedCacheSubscriberTest extends TestCase
             }
         };
 
-        $subscriber = new DegradedEmbedCacheSubscriber(new EmbedAvailability(), $invalidator, new EventDispatcher());
+        $subscriber = new EmbedPageCacheSubscriber(new EmbedRenderState(), $invalidator, new EventDispatcher());
         $subscriber->onRouteCacheTags($tagsEvent);
         $subscriber->onTerminate();
 
@@ -134,7 +134,7 @@ class DegradedEmbedCacheSubscriberTest extends TestCase
      */
     public function testTagsTheResponseWithTheRenderedVideos(): void
     {
-        $availability = new EmbedAvailability();
+        $availability = new EmbedRenderState();
         $availability->markRendered('v1');
         $availability->markRendered('v2');
         $availability->markRendered('v1');
@@ -144,7 +144,7 @@ class DegradedEmbedCacheSubscriberTest extends TestCase
             $collected = [...$collected, ...$event->tags];
         });
 
-        $subscriber = new DegradedEmbedCacheSubscriber($availability, $this->createStub(CacheInvalidator::class), $dispatcher);
+        $subscriber = new EmbedPageCacheSubscriber($availability, $this->createStub(CacheInvalidator::class), $dispatcher);
         $subscriber->onResponse($this->event(new Response('', 200, ['Cache-Control' => 'public, s-maxage=7200'])));
 
         static::assertSame(['scalecommerce-vo-video-v1', 'scalecommerce-vo-video-v2'], $collected);
@@ -152,7 +152,7 @@ class DegradedEmbedCacheSubscriberTest extends TestCase
 
     public function testAddsVideoTagsToTheRouteCache(): void
     {
-        $availability = new EmbedAvailability();
+        $availability = new EmbedRenderState();
         $availability->markRendered('v1');
         $tagsEvent = new class {
             /** @var list<string> */
@@ -165,14 +165,29 @@ class DegradedEmbedCacheSubscriberTest extends TestCase
             }
         };
 
-        (new DegradedEmbedCacheSubscriber($availability, $this->createStub(CacheInvalidator::class), new EventDispatcher()))->onRouteCacheTags($tagsEvent);
+        (new EmbedPageCacheSubscriber($availability, $this->createStub(CacheInvalidator::class), new EventDispatcher()))->onRouteCacheTags($tagsEvent);
 
         static::assertSame(['scalecommerce-vo-video-v1'], $tagsEvent->tags);
     }
 
-    private function subscriber(EmbedAvailability $availability): DegradedEmbedCacheSubscriber
+    /**
+     * The names before 1.2.0 stay usable (deprecated subclasses; the service IDs are aliases).
+     */
+    public function testFormerClassNamesStillWork(): void
     {
-        return new DegradedEmbedCacheSubscriber($availability, $this->createStub(CacheInvalidator::class), new EventDispatcher());
+        $state = new \ScaleCommerce\VideoOptimizer\Service\EmbedAvailability();
+        $state->markRendered('v1');
+
+        $subscriber = new \ScaleCommerce\VideoOptimizer\Subscriber\DegradedEmbedCacheSubscriber($state, $this->createStub(CacheInvalidator::class), new EventDispatcher());
+
+        static::assertInstanceOf(EmbedRenderState::class, $state);
+        static::assertInstanceOf(EmbedPageCacheSubscriber::class, $subscriber);
+        static::assertSame(['scalecommerce-vo-video-v1'], $state->cacheTags());
+    }
+
+    private function subscriber(EmbedRenderState $availability): EmbedPageCacheSubscriber
+    {
+        return new EmbedPageCacheSubscriber($availability, $this->createStub(CacheInvalidator::class), new EventDispatcher());
     }
 
     private function event(Response $response): ResponseEvent

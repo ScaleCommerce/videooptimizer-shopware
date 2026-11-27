@@ -17,7 +17,7 @@ trait VideoSurfaceTrait
     /**
      * @return array{playerMode: string, embedUrl: string, embed: array<string, mixed>|null, error: bool}
      */
-    protected function buildVideoSurface(FieldConfigCollection $config, string $uuid, VideoOptimizerClient $client, LoggerInterface $logger, string $presentation = 'direct'): array
+    protected function buildVideoSurface(FieldConfigCollection $config, string $uuid, VideoOptimizerClient $client, LoggerInterface $logger): array
     {
         $playerMode = $config->get('playerMode')?->getValue() === 'embed' ? 'embed' : 'native';
 

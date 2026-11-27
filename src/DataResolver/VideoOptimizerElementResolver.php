@@ -4,7 +4,6 @@ namespace ScaleCommerce\VideoOptimizer\DataResolver;
 
 use Psr\Log\LoggerInterface;
 use ScaleCommerce\VideoOptimizer\DataResolver\Struct\VideoOptimizerVideoStruct;
-use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\Content\Cms\Aggregate\CmsSlot\CmsSlotEntity;
 use Shopware\Core\Content\Cms\DataResolver\CriteriaCollection;
@@ -51,46 +50,14 @@ class VideoOptimizerElementResolver extends AbstractCmsElementResolver
 
         $struct->setVideoUuid($uuid);
 
-        $playerMode = $fieldConfig->get('playerMode')?->getValue() === 'embed' ? 'embed' : 'native';
-        $struct->setPlayerMode($playerMode);
-
-        try {
-            $struct->setEmbedUrl($this->buildEmbedUrl($uuid, $fieldConfig, $this->client));
-        } catch (InvalidApiBaseUrlException $e) {
-            // A misconfigured embed base URL must not take down the whole CMS page - surface it
-            // as this element's error state instead, and skip the (equally misconfigured) upstream call.
-            $this->logger->warning('VideoOptimizer embed base URL is misconfigured; hiding video element.', [
-                'uuid' => $uuid,
-                'element' => $this->getType(),
-                'error' => $e->getMessage(),
-            ]);
-            $struct->setEmbedUrl('');
+        $surface = $this->buildVideoSurface($fieldConfig, $uuid, $this->client, $this->logger);
+        $struct->setPlayerMode($surface['playerMode']);
+        $struct->setEmbedUrl($surface['embedUrl']);
+        if ($surface['error']) {
             $struct->setError(true);
 
             return;
         }
-
-        // Always verify the video still exists upstream, even in embed mode - the hosted iframe
-        // would otherwise render a bare 404 for a deleted video.
-        try {
-            $embed = $this->normalizeEmbed($this->client->getEmbed($uuid));
-        } catch (\Throwable $e) {
-            $this->logger->warning('VideoOptimizer embed lookup failed; hiding video element.', [
-                'uuid' => $uuid,
-                'element' => $this->getType(),
-                'error' => $e->getMessage(),
-            ]);
-            $struct->setError(true);
-
-            return;
-        }
-
-        if (!$this->isPlayable($embed)) {
-            $this->logUnplayable($this->logger, $uuid);
-            $struct->setError(true);
-
-            return;
-        }
-        $struct->setEmbed($embed);
+        $struct->setEmbed($surface['embed']);
     }
 }
