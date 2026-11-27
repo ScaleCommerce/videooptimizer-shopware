@@ -94,7 +94,7 @@ class SpotlightElementResolverTest extends TestCase
 
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(static::once())->method('warning')->with(
-            static::isType('string'),
+            static::isString(),
             ['uuid' => 'uuid-4', 'element' => 'scalecommerce-vo-spotlight', 'error' => 'bad url']
         );
 
@@ -110,7 +110,7 @@ class SpotlightElementResolverTest extends TestCase
 
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(static::once())->method('warning')->with(
-            static::isType('string'),
+            static::isString(),
             ['uuid' => 'uuid-5', 'element' => 'scalecommerce-vo-spotlight', 'error' => 'video gone']
         );
 

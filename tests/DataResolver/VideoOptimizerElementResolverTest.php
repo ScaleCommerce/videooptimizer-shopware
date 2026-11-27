@@ -176,7 +176,7 @@ class VideoOptimizerElementResolverTest extends TestCase
 
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(static::once())->method('warning')->with(
-            static::isType('string'),
+            static::isString(),
             ['uuid' => 'uuid-bad-embed-base', 'element' => 'scalecommerce-vo-video', 'error' => 'bad url']
         );
 
@@ -192,7 +192,7 @@ class VideoOptimizerElementResolverTest extends TestCase
 
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(static::once())->method('warning')->with(
-            static::isType('string'),
+            static::isString(),
             ['uuid' => 'missing', 'element' => 'scalecommerce-vo-video', 'error' => 'Not found']
         );
 

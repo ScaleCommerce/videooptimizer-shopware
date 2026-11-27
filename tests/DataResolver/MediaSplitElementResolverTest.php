@@ -192,7 +192,7 @@ class MediaSplitElementResolverTest extends TestCase
 
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(static::once())->method('warning')->with(
-            static::isType('string'),
+            static::isString(),
             ['uuid' => 'uuid-5', 'element' => 'scalecommerce-vo-media-split', 'error' => 'bad url']
         );
 
@@ -208,7 +208,7 @@ class MediaSplitElementResolverTest extends TestCase
 
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(static::once())->method('warning')->with(
-            static::isType('string'),
+            static::isString(),
             ['uuid' => 'uuid-3', 'element' => 'scalecommerce-vo-media-split', 'error' => 'video gone']
         );
 

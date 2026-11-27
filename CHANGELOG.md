@@ -20,6 +20,10 @@ Nothing to do for a standard installation: configuration, CMS element data and t
 - A rejected or under-privileged VideoOptimizer API token no longer makes the administration refresh its own session and repeat the request; the error now says that the token was rejected or lacks the permission. (#2)
 - Error messages from the API are passed to the administration as short plain text (max. 200 characters, markup removed), as admin notifications render HTML. (#2)
 
+### Changed
+- Source maps are no longer shipped: the two `.map` files of the administration bundle are removed (about 1.5 MB less in the package), along with the `sourceMappingURL` comments that pointed to them. `*.map` is excluded from Composer dist archives as well. (#14)
+- The test suite runs on PHPUnit 12 and later (`isType('string')` replaced by `isString()`). (#14)
+
 ### Security
 - Admin API routes accept only UUIDs for `{id}`/`{uuid}`, and the client rejects any ID that is not a plain path segment before sending a request. Previously `%2E%2E` reached the client as `..`, and the dot-segment removal of the HTTP client re-targeted the upstream request one level up (for example `DELETE …/videos/%2E%2E/poster` → `DELETE /api/v1/poster`). (#5)
 - The API and embed base URLs must not contain userinfo, a query or a fragment, and must not point to `localhost` or a private, loopback, link-local or reserved IP address. (#5)

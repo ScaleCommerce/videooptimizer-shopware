@@ -136,7 +136,7 @@ class VideoGridElementResolverTest extends TestCase
 
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(static::once())->method('warning')->with(
-            static::isType('string'),
+            static::isString(),
             ['uuid' => 'uuid-gone', 'element' => 'scalecommerce-vo-video-grid', 'error' => 'video gone']
         );
 
@@ -152,7 +152,7 @@ class VideoGridElementResolverTest extends TestCase
 
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(static::once())->method('warning')->with(
-            static::isType('string'),
+            static::isString(),
             ['uuid' => 'uuid-x', 'element' => 'scalecommerce-vo-video-grid', 'error' => 'bad url']
         );
 

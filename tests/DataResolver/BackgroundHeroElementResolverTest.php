@@ -145,7 +145,7 @@ class BackgroundHeroElementResolverTest extends TestCase
 
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(static::once())->method('warning')->with(
-            static::isType('string'),
+            static::isString(),
             ['uuid' => 'uuid-2', 'element' => 'scalecommerce-vo-background-hero', 'error' => 'down']
         );
 
