@@ -113,14 +113,15 @@ class VideoOptimizerClient implements ResetInterface
     }
 
     /**
-     * Requeues every video in a selfhosted/media-managed library for re-encoding with the
-     * library's current encoding ladder.
+     * Requeues the videos of a selfhosted/media-managed library for re-encoding with the library's
+     * current settings. Finished renditions are kept unless $force is set, which is needed after
+     * changing `encoding_quality`.
      *
      * @return array{queued: int}
      */
-    public function reprocessLibrary(string $id): array
+    public function reprocessLibrary(string $id, bool $force = false): array
     {
-        $result = $this->requestData('POST', '/libraries/' . $this->pathId($id) . '/reprocess');
+        $result = $this->requestData('POST', '/libraries/' . $this->pathId($id) . '/reprocess', $force ? ['json' => ['force' => true]] : []);
         array_map($this->forgetEmbed(...), $this->libraryVideoUuids($id));
 
         return $result;

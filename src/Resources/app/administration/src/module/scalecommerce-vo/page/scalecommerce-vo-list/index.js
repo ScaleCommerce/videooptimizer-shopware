@@ -36,6 +36,9 @@ Component.register('scalecommerce-vo-list', {
             formDescription: '',
             selectedCodecs: [],
             selectedResolutions: [],
+            formQuality: 'performance',
+            forceReprocess: false,
+            forceReprocessSuggestedFor: null,
             isSaving: false,
             confirmDeleteLibrary: false,
             isReprocessing: false,
@@ -119,6 +122,21 @@ Component.register('scalecommerce-vo-list', {
         },
         galleryLibraryId() {
             return this.mode === 'create' ? null : this.selectedLibraryId;
+        },
+        qualityOptions() {
+            return ['performance', 'quality'].map((value) => ({
+                value,
+                label: this.$tc(`scalecommerce-vo.library.quality_${value}`),
+            }));
+        },
+        // The stored quality differs from the form: after saving, finished renditions are only
+        // re-encoded by a forced reprocess.
+        qualityChanged() {
+            const library = this.activeLibrary;
+            return (
+                !!library &&
+                (library.encoding_quality || 'performance') !== this.formQuality
+            );
         },
         // True once the selected codecs/resolutions differ from what is stored on the library,
         // so the "reprocess videos" hint only appears when it is actually relevant. Both sides go
@@ -214,8 +232,10 @@ Component.register('scalecommerce-vo-list', {
                 this.formDescription = '';
                 this.selectedCodecs = [];
                 this.selectedResolutions = [];
+                this.formQuality = 'performance';
                 return;
             }
+            this.formQuality = library.encoding_quality || 'performance';
             this.formName = library.name || '';
             this.formDescription = library.description || '';
             this.selectedCodecs = this._splitKeys(library.codec);
@@ -224,16 +244,19 @@ Component.register('scalecommerce-vo-list', {
 
         onSelectLibrary(id) {
             this.selectedLibraryId = id;
+            this.forceReprocessSuggestedFor = null;
             this.mode = 'edit';
             this._loadForm();
         },
 
         onNewLibrary() {
             this.mode = 'create';
+            this.forceReprocessSuggestedFor = null;
             this.formName = '';
             this.formDescription = '';
             this.selectedCodecs = [];
             this.selectedResolutions = [];
+            this.formQuality = 'performance';
         },
 
         onCancelCreate() {
@@ -320,7 +343,10 @@ Component.register('scalecommerce-vo-list', {
                 );
 
                 if (this.mode === 'create') {
-                    const payload = { name };
+                    const payload = {
+                        name,
+                        encoding_quality: this.formQuality,
+                    };
                     if (this.formDescription.trim()) {
                         payload.description = this.formDescription.trim();
                     }
@@ -339,26 +365,44 @@ Component.register('scalecommerce-vo-list', {
                     await this.loadLibraries();
                     if (created && created.id) {
                         this.selectedLibraryId = created.id;
+                        this.forceReprocessSuggestedFor = null;
                     }
                     this._loadForm();
                     this.createNotificationSuccess({
                         message: this.$tc('scalecommerce-vo.library.created'),
                     });
                 } else {
+                    const qualityChanged = this.qualityChanged;
+                    const libraryId = this.selectedLibraryId;
+                    const payload = {
+                        name,
+                        description: this.formDescription.trim(),
+                        codec,
+                        resolutions,
+                    };
+                    // Only send the quality when the user changed it, so a response without the
+                    // field never silently switches a library back to "performance".
+                    if (qualityChanged) {
+                        payload.encoding_quality = this.formQuality;
+                    }
                     await this.scalecommerceVoApiService.updateLibrary(
-                        this.selectedLibraryId,
-                        {
-                            name,
-                            description: this.formDescription.trim(),
-                            codec,
-                            resolutions,
-                        }
+                        libraryId,
+                        payload
                     );
                     await this.loadLibraries();
                     this._loadForm();
                     this.createNotificationSuccess({
                         message: this.$tc('scalecommerce-vo.library.saved'),
                     });
+                    if (qualityChanged) {
+                        // Existing videos keep their renditions until a forced reprocess.
+                        this.forceReprocessSuggestedFor = libraryId;
+                        this.createNotificationInfo({
+                            message: this.$tc(
+                                'scalecommerce-vo.library.qualityReprocessHint'
+                            ),
+                        });
+                    }
                 }
             } catch (error) {
                 this.createNotificationError({
@@ -394,6 +438,8 @@ Component.register('scalecommerce-vo-list', {
         },
 
         onReprocessLibraryClick() {
+            this.forceReprocess =
+                this.forceReprocessSuggestedFor === this.selectedLibraryId;
             this.confirmReprocessLibrary = true;
         },
 
@@ -406,8 +452,12 @@ Component.register('scalecommerce-vo-list', {
             try {
                 const response =
                     await this.scalecommerceVoApiService.reprocessLibrary(
-                        this.selectedLibraryId
+                        this.selectedLibraryId,
+                        { force: this.forceReprocess }
                     );
+                if (this.forceReprocess) {
+                    this.forceReprocessSuggestedFor = null;
+                }
                 const data = response.data ?? response;
                 // Fallback to 0 so a malformed/omitted `queued` field can't render "undefined videos ...".
                 this.createNotificationSuccess({

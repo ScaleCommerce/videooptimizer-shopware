@@ -76,6 +76,10 @@
                     :title="$t('scalecommerce-vo.library.reprocessConfirmTitle')"
                     @modal-close="confirmReprocessLibrary = false">
                     <p>{{ $t('scalecommerce-vo.library.reprocessConfirmText', { name: activeLibrary ? activeLibrary.name : '' }) }}</p>
+                    <mt-checkbox
+                        :label="$tc('scalecommerce-vo.library.reprocessForce')"
+                        :model-value="forceReprocess"
+                        @update:model-value="forceReprocess = $event" />
                     <template #modal-footer>
                         <mt-button size="small" variant="secondary" @click="confirmReprocessLibrary = false">
                             {{ $tc('scalecommerce-vo.library.cancel') }}
@@ -137,8 +141,22 @@
                     </div>
                 </sw-container>
 
+                <div class="scalecommerce-vo-list__quality">
+                    <mt-select
+                        :label="$tc('scalecommerce-vo.library.quality')"
+                        :options="qualityOptions"
+                        :model-value="formQuality"
+                        :disabled="!mediaManaged"
+                        :help-text="$tc('scalecommerce-vo.library.qualityHelp')"
+                        hide-clearable-button
+                        @update:model-value="formQuality = $event || formQuality" />
+                </div>
+
                 <mt-banner v-if="ladderChanged" class="scalecommerce-vo-list__banner" variant="attention">
                     {{ $tc('scalecommerce-vo.library.ladderChangedHint') }}
+                </mt-banner>
+                <mt-banner v-if="qualityChanged" class="scalecommerce-vo-list__banner" variant="attention">
+                    {{ $tc('scalecommerce-vo.library.qualityChangedHint') }}
                 </mt-banner>
             </mt-card>
             {% endblock %}

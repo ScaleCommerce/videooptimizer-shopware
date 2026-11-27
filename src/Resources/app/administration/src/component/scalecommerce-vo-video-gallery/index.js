@@ -5,6 +5,7 @@ import {
     formatDuration,
     orientationKey,
 } from '../../helper/video-meta';
+import { isVideoPlatformUrl } from '../../helper/video-platform';
 
 // Videos per page in the gallery; further pages load on demand ("Load more videos").
 const PAGE_SIZE = 60;
@@ -89,9 +90,15 @@ Component.register('scalecommerce-vo-video-gallery', {
                 : '';
         },
 
+        // The API refuses video platform page links (YouTube) for URL import; say so before sending.
+        ingestUrlIsPlatform() {
+            return isVideoPlatformUrl(this.ingestUrl);
+        },
+
         canIngest() {
             return (
                 this.ingestUrl.startsWith('https://') &&
+                !this.ingestUrlIsPlatform &&
                 !!this.libraryId &&
                 !this.isUploading &&
                 !this.isIngesting
@@ -402,8 +409,14 @@ Component.register('scalecommerce-vo-video-gallery', {
                 this.ingestTitle = '';
                 this._watchProcessing(video.uuid, context);
             } catch (error) {
+                const code = error?.response?.data?.errors?.[0]?.code;
                 this.createNotificationError({
-                    message: this._errorText(error),
+                    message:
+                        code === 'SCALECOMMERCE_VO__SOURCE_URL_VIDEO_PLATFORM'
+                            ? this.$tc(
+                                  'scalecommerce-vo.gallery.ingestPlatform'
+                              )
+                            : this._errorText(error),
                 });
             } finally {
                 this.isIngesting = false;

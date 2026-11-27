@@ -29,7 +29,9 @@ class VideoOptimizerAdminController
      */
     private const ALLOWED_POSTER_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-    private const LIBRARY_PAYLOAD_KEYS = ['name', 'description', 'codec', 'resolutions'];
+    private const LIBRARY_PAYLOAD_KEYS = ['name', 'description', 'codec', 'resolutions', 'encoding_quality'];
+
+    private const ENCODING_QUALITIES = ['performance', 'quality'];
 
     private const INGEST_PAYLOAD_KEYS = ['library_id', 'source_url', 'title'];
 
@@ -52,13 +54,13 @@ class VideoOptimizerAdminController
     #[Route(path: '/api/_action/scalecommerce-vo/libraries', name: 'api.action.scalecommerce-vo.libraries.create', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:create']])]
     public function createLibrary(Request $request): JsonResponse
     {
-        return $this->wrap(fn () => $this->client->createLibrary($this->only($this->payload($request), self::LIBRARY_PAYLOAD_KEYS)));
+        return $this->wrap(fn () => $this->client->createLibrary($this->libraryPayload($request)));
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/libraries/{id}', name: 'api.action.scalecommerce-vo.libraries.update', methods: ['PATCH'], requirements: ['id' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:update']])]
     public function updateLibrary(string $id, Request $request): JsonResponse
     {
-        return $this->wrap(fn () => $this->client->updateLibrary($id, $this->only($this->payload($request), self::LIBRARY_PAYLOAD_KEYS)));
+        return $this->wrap(fn () => $this->client->updateLibrary($id, $this->libraryPayload($request)));
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/libraries/{id}', name: 'api.action.scalecommerce-vo.libraries.delete', methods: ['DELETE'], requirements: ['id' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:delete']])]
@@ -72,9 +74,10 @@ class VideoOptimizerAdminController
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/libraries/{id}/reprocess', name: 'api.action.scalecommerce-vo.libraries.reprocess', methods: ['POST'], requirements: ['id' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:update']])]
-    public function reprocessLibrary(string $id): JsonResponse
+    public function reprocessLibrary(string $id, Request $request): JsonResponse
     {
-        return $this->wrap(fn () => $this->client->reprocessLibrary($id));
+        // Optional {"force": true}: re-encode finished renditions too (needed after changing encoding_quality).
+        return $this->wrap(fn () => $this->client->reprocessLibrary($id, ($this->payload($request)['force'] ?? false) === true));
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/libraries/{id}/videos', name: 'api.action.scalecommerce-vo.videos.list', methods: ['GET'], requirements: ['id' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:read']])]
@@ -260,6 +263,19 @@ class VideoOptimizerAdminController
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    private function libraryPayload(Request $request): array
+    {
+        $payload = $this->only($this->payload($request), self::LIBRARY_PAYLOAD_KEYS);
+        if (\array_key_exists('encoding_quality', $payload) && !\in_array($payload['encoding_quality'], self::ENCODING_QUALITIES, true)) {
+            throw new InvalidRequestException('encoding_quality must be "performance" or "quality".');
+        }
+
+        return $payload;
+    }
+
+    /**
      * Compares the media type before any ";" parameter, case-insensitively, against the allowlist.
      */
     private function safeThumbnailContentType(string $contentType): string
@@ -359,6 +375,10 @@ class VideoOptimizerAdminController
     {
         $status = $e->getStatusCode();
         $error = ['status' => (string) $status, 'detail' => $e->getMessage()];
+        if ($e->getApiCode() === 'source_url_video_platform') {
+            // URL import of a YouTube & co. page link; the administration shows its own hint.
+            $error['code'] = 'SCALECOMMERCE_VO__SOURCE_URL_VIDEO_PLATFORM';
+        }
 
         if ($status === Response::HTTP_UNAUTHORIZED || $status === Response::HTTP_FORBIDDEN) {
             $status = Response::HTTP_BAD_GATEWAY;

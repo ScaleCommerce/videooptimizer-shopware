@@ -338,28 +338,47 @@ Component.register('scalecommerce-vo-video-detail', {
                 this.statusText = this.$tc(
                     'scalecommerce-vo.detail.processing'
                 );
+                // An uploaded poster becomes the active one by itself once it is processed (API since
+                // 2026-11-12), so waiting for "ready" + source "custom" is enough.
                 await this._pollPoster((video, attempt) => {
                     const status = video.poster?.custom_status;
                     if (status === 'processing') {
                         sawProcessing = true;
                         return false;
                     }
+                    if (status === 'failed') {
+                        return sawProcessing || attempt >= 3;
+                    }
                     return (
-                        ['ready', 'failed'].includes(status) &&
+                        status === 'ready' &&
+                        (video.poster?.source === 'custom' || attempt >= 5) &&
                         (sawProcessing || attempt >= 3)
                     );
                 });
+                if (this._unmounted) {
+                    return;
+                }
                 if (this.video.poster?.custom_status === 'failed') {
                     throw new Error(
                         this.$tc('scalecommerce-vo.detail.posterFailed')
                     );
                 }
-                await this.scalecommerceVoApiService.selectPoster(this.uuid, {
-                    source: 'custom',
-                });
-                await this._pollPoster(
-                    (video) => video.poster?.source === 'custom'
-                );
+                // Fallback for an API that does not activate the poster by itself.
+                if (this.video.poster?.source !== 'custom') {
+                    await this.scalecommerceVoApiService.selectPoster(
+                        this.uuid,
+                        { source: 'custom' }
+                    );
+                    if (this._unmounted) {
+                        return;
+                    }
+                    await this._pollPoster(
+                        (video) => video.poster?.source === 'custom'
+                    );
+                    if (this._unmounted) {
+                        return;
+                    }
+                }
                 this.createNotificationSuccess({
                     message: this.$tc('scalecommerce-vo.detail.posterUpdated'),
                 });

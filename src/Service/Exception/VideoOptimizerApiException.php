@@ -10,9 +10,21 @@ class VideoOptimizerApiException extends \RuntimeException
      */
     private const MAX_MESSAGE_LENGTH = 200;
 
-    public function __construct(private readonly int $statusCode, string $message, ?\Throwable $previous = null)
-    {
+    public function __construct(
+        private readonly int $statusCode,
+        string $message,
+        ?\Throwable $previous = null,
+        private readonly ?string $apiCode = null,
+    ) {
         parent::__construct($message, $statusCode, $previous);
+    }
+
+    /**
+     * Machine-readable error code of the API (`data.code`), e.g. `source_url_video_platform`.
+     */
+    public function getApiCode(): ?string
+    {
+        return $this->apiCode;
     }
 
     public function getStatusCode(): int
@@ -35,7 +47,11 @@ class VideoOptimizerApiException extends \RuntimeException
             }
         }
 
-        return new self($statusCode, $message !== '' ? $message : self::genericMessage($statusCode));
+        $code = \is_array($decoded) && \is_array($decoded['data'] ?? null) && \is_string($decoded['data']['code'] ?? null)
+            ? $decoded['data']['code']
+            : null;
+
+        return new self($statusCode, $message !== '' ? $message : self::genericMessage($statusCode), null, $code);
     }
 
     public static function genericMessage(int $statusCode): string

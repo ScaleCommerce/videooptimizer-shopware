@@ -53,11 +53,12 @@ export default class VideoOptimizerApiService extends ApiService {
             .then((response) => ApiService.handleResponse(response));
     }
 
-    reprocessLibrary(id) {
+    // force: re-encode finished renditions too (needed after changing encoding_quality).
+    reprocessLibrary(id, { force = false } = {}) {
         return this.httpClient
             .post(
                 `${this.getApiBasePath()}/libraries/${encodeURIComponent(id)}/reprocess`,
-                {},
+                force ? { force: true } : {},
                 { headers: this.getBasicHeaders() }
             )
             .then((response) => ApiService.handleResponse(response));

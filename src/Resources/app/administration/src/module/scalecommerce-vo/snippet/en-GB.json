@@ -32,8 +32,15 @@
             "ladderChangedHint": "The encoding ladder applies to new uploads. Use “Reprocess videos” to update existing videos.",
             "reprocess": "Reprocess videos",
             "reprocessConfirmTitle": "Reprocess videos?",
-            "reprocessConfirmText": "All videos in “{name}” will be re-encoded with the current encoding ladder. This may take a while.",
-            "reprocessQueued": "{count} videos queued for reprocessing."
+            "reprocessConfirmText": "Videos in “{name}” will be reprocessed with the current settings. Qualities that are already finished are kept; only missing or failed ones are created. “Re-encode all qualities” also recreates finished ones. This may take a while.",
+            "reprocessQueued": "{count} videos queued for reprocessing.",
+            "quality": "Quality mode",
+            "quality_performance": "Performance (default)",
+            "quality_quality": "Quality (sharper)",
+            "qualityHelp": "Performance: compact files, fast start. Quality: visibly sharper, about 2.5–3× the CDN traffic.",
+            "qualityChangedHint": "The quality mode was changed. Videos that are already processed keep their files until they are reprocessed with \"Re-encode all qualities\".",
+            "qualityReprocessHint": "Quality mode saved. To apply it to existing videos, run \"Reprocess\" with \"Re-encode all qualities\".",
+            "reprocessForce": "Re-encode all qualities"
         },
         "cms": {
             "label": "VideoOptimizer video",
@@ -171,7 +178,9 @@
             },
             "uploadProgress": "Part {done} of {total} uploaded",
             "uploadCancelled": "Upload cancelled.",
-            "loadMore": "Load more videos"
+            "loadMore": "Load more videos",
+            "ingestUrlHelp": "Public https link to the video file itself, e.g. https://example.com/video.mp4.",
+            "ingestPlatform": "Links to video pages such as YouTube cannot be imported. Please use a link to the video file itself."
         },
         "detail": {
             "previewImage": "Preview image",

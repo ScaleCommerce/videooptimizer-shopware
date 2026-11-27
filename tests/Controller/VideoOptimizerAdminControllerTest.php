@@ -257,6 +257,28 @@ class VideoOptimizerAdminControllerTest extends TestCase
         static::assertSame(200, $response->getStatusCode());
     }
 
+    public function testUpdateLibraryForwardsValidEncodingQuality(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('updateLibrary')
+            ->with('lib-1', ['encoding_quality' => 'quality'])
+            ->willReturn(['id' => 'lib-1']);
+
+        $response = (new VideoOptimizerAdminController($client))->updateLibrary('lib-1', new Request([], [], [], [], [], [], '{"encoding_quality":"quality"}'));
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testMalformedReprocessBodyIsRejected(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('reprocessLibrary');
+
+        $response = (new VideoOptimizerAdminController($client))->reprocessLibrary(self::UUID, new Request([], [], [], [], [], [], '{not json'));
+
+        static::assertSame(400, $response->getStatusCode());
+    }
+
     public function testUpdateVideoOnlyPassesTitle(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
@@ -419,10 +441,10 @@ class VideoOptimizerAdminControllerTest extends TestCase
     public function testReprocessLibraryReturnsClientData(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
-        $client->expects(static::once())->method('reprocessLibrary')->with('lib-1')->willReturn(['queued' => 3]);
+        $client->expects(static::once())->method('reprocessLibrary')->with('lib-1', false)->willReturn(['queued' => 3]);
 
         $controller = new VideoOptimizerAdminController($client);
-        $response = $controller->reprocessLibrary('lib-1');
+        $response = $controller->reprocessLibrary('lib-1', new Request());
 
         static::assertSame(200, $response->getStatusCode());
         static::assertSame(['data' => ['queued' => 3]], json_decode((string) $response->getContent(), true));
@@ -745,5 +767,68 @@ class VideoOptimizerAdminControllerTest extends TestCase
         $response = (new VideoOptimizerAdminController($client))->listVideos(self::UUID, new Request(['limit' => '500']));
 
         static::assertSame(400, $response->getStatusCode());
+    }
+
+    public function testCreateLibraryPassesEncodingQuality(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('createLibrary')
+            ->with(['name' => 'Lib', 'encoding_quality' => 'quality'])
+            ->willReturn(['id' => self::UUID]);
+
+        $response = (new VideoOptimizerAdminController($client))->createLibrary(new Request([], [], [], [], [], [], '{"name":"Lib","encoding_quality":"quality","foo":"bar"}'));
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testUnknownEncodingQualityIsRejected(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('updateLibrary');
+
+        $response = (new VideoOptimizerAdminController($client))->updateLibrary(self::UUID, new Request([], [], [], [], [], [], '{"encoding_quality":"ultra"}'));
+
+        static::assertSame(400, $response->getStatusCode());
+    }
+
+    /**
+     * @return iterable<string, array{string, bool}>
+     */
+    public static function reprocessBodies(): iterable
+    {
+        yield 'no body' => ['', false];
+        yield 'force' => ['{"force":true}', true];
+        yield 'force false' => ['{"force":false}', false];
+    }
+
+    #[DataProvider('reprocessBodies')]
+    public function testReprocessPassesForce(string $body, bool $force): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('reprocessLibrary')->with(self::UUID, $force)->willReturn(['queued' => 3]);
+
+        $response = (new VideoOptimizerAdminController($client))->reprocessLibrary(self::UUID, new Request([], [], [], [], [], [], $body));
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    /**
+     * The API rejects YouTube page links for URL import with data.code "source_url_video_platform";
+     * the administration shows its own hint for it.
+     */
+    public function testRejectedVideoPlatformLinkGetsOwnCode(): void
+    {
+        $client = $this->createStub(VideoOptimizerClient::class);
+        $client->method('ingestVideoUrl')->willThrowException(VideoOptimizerApiException::fromResponse(
+            400,
+            '{"statusCode":400,"message":"YouTube links cannot be imported.","data":{"code":"source_url_video_platform","platform":"youtube"}}'
+        ));
+
+        $response = (new VideoOptimizerAdminController($client))->ingestVideoUrl(new Request([], [], [], [], [], [], '{"library_id":"' . self::UUID . '","source_url":"https://www.youtube.com/watch?v=x"}'));
+
+        static::assertSame(400, $response->getStatusCode());
+        $error = json_decode((string) $response->getContent(), true)['errors'][0];
+        static::assertSame('SCALECOMMERCE_VO__SOURCE_URL_VIDEO_PLATFORM', $error['code']);
+        static::assertSame('YouTube links cannot be imported.', $error['detail']);
     }
 }

@@ -32,8 +32,15 @@
             "ladderChangedHint": "Die Encoding-Leiter gilt für neue Uploads. Bestehende Videos über „Videos neu verarbeiten“ aktualisieren.",
             "reprocess": "Videos neu verarbeiten",
             "reprocessConfirmTitle": "Videos neu verarbeiten?",
-            "reprocessConfirmText": "Alle Videos der Bibliothek „{name}“ werden mit der aktuellen Encoding-Leiter neu verarbeitet. Das kann einige Zeit dauern.",
-            "reprocessQueued": "{count} Videos zur Neuverarbeitung eingereiht."
+            "reprocessConfirmText": "Die Videos der Bibliothek „{name}“ werden mit den aktuellen Einstellungen neu verarbeitet. Bereits fertige Qualitäten bleiben erhalten, es werden nur fehlende oder fehlgeschlagene erzeugt. Mit „Alle Qualitäten neu kodieren“ werden auch fertige Qualitäten neu erstellt. Das kann einige Zeit dauern.",
+            "reprocessQueued": "{count} Videos zur Neuverarbeitung eingereiht.",
+            "quality": "Qualitätsstufe",
+            "quality_performance": "Performance (Standard)",
+            "quality_quality": "Qualität (schärfer)",
+            "qualityHelp": "Performance: kompakte Dateien, schneller Start. Qualität: sichtbar schärfer, etwa 2,5- bis 3-mal so viel CDN-Traffic.",
+            "qualityChangedHint": "Die Qualitätsstufe wurde geändert. Bereits verarbeitete Videos behalten ihre Dateien, bis sie mit „Alle Qualitäten neu kodieren“ neu verarbeitet werden.",
+            "qualityReprocessHint": "Qualitätsstufe gespeichert. Damit bestehende Videos sie übernehmen: „Neu verarbeiten“ mit „Alle Qualitäten neu kodieren“ ausführen.",
+            "reprocessForce": "Alle Qualitäten neu kodieren"
         },
         "cms": {
             "label": "VideoOptimizer-Video",
@@ -171,7 +178,9 @@
             },
             "uploadProgress": "Teil {done} von {total} hochgeladen",
             "uploadCancelled": "Upload abgebrochen.",
-            "loadMore": "Weitere Videos laden"
+            "loadMore": "Weitere Videos laden",
+            "ingestUrlHelp": "Öffentlicher https-Link direkt zur Videodatei, z. B. https://example.com/video.mp4.",
+            "ingestPlatform": "Links zu Videoseiten wie YouTube können nicht importiert werden. Bitte einen Link direkt zur Videodatei angeben."
         },
         "detail": {
             "previewImage": "Vorschaubild",
