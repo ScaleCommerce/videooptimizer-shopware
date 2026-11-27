@@ -1676,4 +1676,99 @@ class VideoOptimizerClientTest extends TestCase
         static::assertSame('source_url_video_platform', $e->getApiCode());
         static::assertNull(VideoOptimizerApiException::fromResponse(500, 'oops')->getApiCode());
     }
+
+    /**
+     * HttpClient turns an iterable request body into a closure that yields chunks until it returns ''.
+     */
+    private function drainBody(\Closure $body): string
+    {
+        $content = '';
+        while (($chunk = $body(16372)) !== '') {
+            $content .= $chunk;
+        }
+
+        return $content;
+    }
+
+    public function testSubtitleLanguagesAreListedCreatedAndDeleted(): void
+    {
+        $calls = [];
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$calls): MockResponse {
+            $calls[] = [$method, $url, $options['body'] ?? null];
+
+            return new MockResponse($method === 'DELETE' ? '{"data":{"code":"de","deleted":true}}' : '{"data":[{"code":"de","label":"Deutsch","video_count":2}]}');
+        });
+        $client = $this->client($http);
+
+        static::assertSame('de', $client->listSubtitleLanguages()[0]['code']);
+        $client->createSubtitleLanguage('en-US', ' English ');
+        $client->deleteSubtitleLanguage('en-US');
+
+        static::assertSame(['GET', 'https://api.videooptimizer.eu/api/v1/subtitle-languages'], [$calls[0][0], $calls[0][1]]);
+        static::assertSame('{"code":"en-US","label":"English"}', $calls[1][2]);
+        static::assertSame(['DELETE', 'https://api.videooptimizer.eu/api/v1/subtitle-languages/en-US'], [$calls[2][0], $calls[2][1]]);
+    }
+
+    public function testSubtitleLanguageCodeCannotChangeThePath(): void
+    {
+        $http = new MockHttpClient(static fn (): MockResponse => new MockResponse('{}'));
+
+        $this->expectException(InvalidRequestException::class);
+        $this->client($http)->deleteSubtitleLanguage('../videos');
+    }
+
+    public function testSubtitleLanguageInUseCarriesDetails(): void
+    {
+        $http = new MockHttpClient(new MockResponse('{"message":"in use","data":{"code":"subtitle_language_in_use","details":{"videos":4}}}', ['http_code' => 409]));
+
+        try {
+            $this->client($http)->deleteSubtitleLanguage('de');
+            static::fail('Expected an exception.');
+        } catch (VideoOptimizerApiException $e) {
+            static::assertSame(409, $e->getStatusCode());
+            static::assertSame('subtitle_language_in_use', $e->getApiCode());
+            static::assertSame(['videos' => 4], $e->getApiDetails());
+        }
+    }
+
+    public function testUploadSubtitleSendsMultipartAndForgetsTheEmbed(): void
+    {
+        $captured = [];
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$captured): MockResponse {
+            $captured = ['method' => $method, 'url' => $url, 'headers' => $options['headers'] ?? [], 'body' => $this->drainBody($options['body'])];
+
+            return new MockResponse('{"data":{"subtitle":{"language":"de"},"skipped_cues":1}}');
+        });
+        $cache = new ArrayAdapter();
+        $cache->get('scalecommerce_vo_embed_vid-1', static fn (): array => ['cached' => true]);
+
+        $result = $this->client($http, null, $cache)->uploadSubtitle('vid-1', 'de.vtt', "WEBVTT\n\n", 'de', 'captions', true);
+
+        static::assertSame(1, $result['skipped_cues']);
+        static::assertSame('POST', $captured['method']);
+        static::assertStringEndsWith('/videos/vid-1/subtitles', $captured['url']);
+        static::assertStringContainsString('multipart/form-data; boundary=', implode("\n", $captured['headers']));
+        static::assertStringContainsString('name="language"', $captured['body']);
+        static::assertStringContainsString('captions', $captured['body']);
+        static::assertStringContainsString('filename="de.vtt"', $captured['body']);
+        static::assertStringContainsString('WEBVTT', $captured['body']);
+        // The embed lists the tracks, so a changed subtitle must not be served from the 1 h cache.
+        static::assertFalse($cache->hasItem('scalecommerce_vo_embed_vid-1'));
+    }
+
+    public function testDownloadAndDeleteSubtitle(): void
+    {
+        $urls = [];
+        $http = new MockHttpClient(function (string $method, string $url) use (&$urls): MockResponse {
+            $urls[] = $method . ' ' . $url;
+
+            return new MockResponse($method === 'GET' ? "WEBVTT\n" : '{"data":{"success":true}}');
+        });
+        $client = $this->client($http);
+
+        static::assertSame("WEBVTT\n", $client->downloadSubtitle('vid-1', 'de-CH'));
+        $client->deleteSubtitle('vid-1', 'de-CH');
+
+        static::assertSame(['GET https://api.videooptimizer.eu/api/v1/videos/vid-1/subtitles/de-CH', 'DELETE https://api.videooptimizer.eu/api/v1/videos/vid-1/subtitles/de-CH'], $urls);
+    }
 }

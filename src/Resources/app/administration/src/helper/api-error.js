@@ -28,3 +28,26 @@ export function apiErrorKind(error) {
         detail: first.detail ?? error?.message ?? null,
     };
 }
+
+/**
+ * The readable message of a failed proxy call: the server's detail, the error message, or the
+ * given fallback.
+ */
+export function apiErrorText(error, fallback = '') {
+    return (
+        error?.response?.data?.errors?.[0]?.detail ?? error?.message ?? fallback
+    );
+}
+
+/**
+ * The number of videos that still carry a subtitle language when the API refused to delete it
+ * (409 subtitle_language_in_use); null for any other error.
+ */
+export function subtitleLanguageInUse(error) {
+    const first = error?.response?.data?.errors?.[0];
+    if (first?.code !== 'SCALECOMMERCE_VO__SUBTITLE_LANGUAGE_IN_USE') {
+        return null;
+    }
+
+    return Number.isInteger(first.meta?.videos) ? first.meta.videos : 0;
+}

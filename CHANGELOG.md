@@ -4,6 +4,9 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Added
+- Subtitles per video (list, upload .vtt/.srt, download, delete) in the video detail and management of the organization's subtitle languages (list, add, delete; 409 shows how many videos still use a language) in the module ([#36](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/36)).
+
 ## [1.2.2] - 2026-11-27
 
 ### Upgrade

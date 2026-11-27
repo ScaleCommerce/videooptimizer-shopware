@@ -138,3 +138,42 @@ describe('VideoOptimizerApiService', () => {
         expect(globalThis.fetch).toHaveBeenCalledOnce();
     });
 });
+
+describe('subtitle calls (#36)', () => {
+    let service;
+    let httpClient;
+
+    beforeEach(() => {
+        httpClient = {
+            get: vi.fn(() => Promise.resolve({ data: { data: [] } })),
+            post: vi.fn(() => Promise.resolve({ data: { data: {} } })),
+            delete: vi.fn(() => Promise.resolve({ data: {} })),
+        };
+        service = new VideoOptimizerApiService(httpClient, {});
+    });
+
+    it('encodes the language in the path', async () => {
+        await service.deleteSubtitle('vid', 'de/../x');
+        expect(httpClient.delete.mock.calls[0][0]).toBe('/api/_action/scalecommerce-vo/videos/vid/subtitles/de%2F..%2Fx');
+        await service.deleteSubtitleLanguage('en-US');
+        expect(httpClient.delete.mock.calls[1][0]).toBe('/api/_action/scalecommerce-vo/subtitle-languages/en-US');
+    });
+
+    it('uploads a subtitle as multipart form data', async () => {
+        const file = new File(['WEBVTT'], 'de.vtt');
+        await service.uploadSubtitle('vid', { file, language: 'de', kind: 'captions', isDefault: true });
+
+        const [url, form] = httpClient.post.mock.calls[0];
+        expect(url).toBe('/api/_action/scalecommerce-vo/videos/vid/subtitles');
+        expect(form.get('language')).toBe('de');
+        expect(form.get('kind')).toBe('captions');
+        expect(form.get('is_default')).toBe('true');
+        expect(form.get('file').name).toBe('de.vtt');
+    });
+
+    it('downloads a subtitle as blob', async () => {
+        httpClient.get.mockResolvedValue({ data: 'blob' });
+        expect(await service.downloadSubtitle('vid', 'de')).toBe('blob');
+        expect(httpClient.get.mock.calls[0][1].responseType).toBe('blob');
+    });
+});

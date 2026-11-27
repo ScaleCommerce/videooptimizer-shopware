@@ -1,0 +1,84 @@
+{% block scalecommerce_vo_subtitles %}
+<div class="scalecommerce-vo-subtitles">
+    <strong>{{ $tc('scalecommerce-vo.subtitles.title') }}</strong>
+
+    <p v-if="loadError" class="scalecommerce-vo-subtitles__hint" role="status">{{ loadError }}</p>
+
+    <p v-else-if="!isLoading && subtitles.length === 0" class="scalecommerce-vo-subtitles__hint">
+        {{ $tc('scalecommerce-vo.subtitles.empty') }}
+    </p>
+
+    <ul v-if="subtitles.length" class="scalecommerce-vo-subtitles__list">
+        <li v-for="subtitle in subtitles" :key="subtitle.language" class="scalecommerce-vo-subtitles__item">
+            <span class="scalecommerce-vo-subtitles__name">
+                {{ languageLabel(subtitle.language) }} ({{ subtitle.language }})
+            </span>
+            <span class="scalecommerce-vo-subtitles__meta">
+                {{ $tc('scalecommerce-vo.subtitles.kind_' + subtitle.kind) }}
+                · {{ $tc('scalecommerce-vo.subtitles.cues', subtitle.cue_count, { count: subtitle.cue_count }) }}
+                <template v-if="subtitle.is_default"> · {{ $tc('scalecommerce-vo.subtitles.default') }}</template>
+                <template v-if="subtitle.origin === 'embedded'"> · {{ $tc('scalecommerce-vo.subtitles.embedded') }}</template>
+            </span>
+            <mt-button size="small" variant="secondary" @click="onDownload(subtitle)">
+                {{ $tc('scalecommerce-vo.subtitles.download') }}
+            </mt-button>
+            <mt-button v-if="canUpdate" size="small" variant="critical" @click="confirmDelete = subtitle">
+                {{ $tc('scalecommerce-vo.subtitles.delete') }}
+            </mt-button>
+        </li>
+    </ul>
+
+    <template v-if="canUpdate">
+        <p v-if="!isLoading && languages.length === 0" class="scalecommerce-vo-subtitles__hint">
+            {{ $tc('scalecommerce-vo.subtitles.noLanguages') }}
+        </p>
+
+        <div v-else-if="languages.length" class="scalecommerce-vo-subtitles__form">
+            <mt-select
+                :label="$tc('scalecommerce-vo.subtitles.language')"
+                :options="options"
+                :model-value="language"
+                hide-clearable-button
+                @update:model-value="language = $event || language" />
+            <mt-select
+                :label="$tc('scalecommerce-vo.subtitles.kind')"
+                :options="kindOptions"
+                :model-value="kind"
+                hide-clearable-button
+                @update:model-value="kind = $event || kind" />
+            <mt-checkbox
+                :label="$tc('scalecommerce-vo.subtitles.makeDefault')"
+                :model-value="isDefault"
+                @update:model-value="isDefault = $event" />
+            <div class="scalecommerce-vo-subtitles__upload">
+                <label class="scalecommerce-vo-detail__file">
+                    <input type="file" accept=".vtt,.srt" :disabled="isUploading" @change="onFileSelected" />
+                    {{ file ? file.name : $tc('scalecommerce-vo.subtitles.chooseFile') }}
+                </label>
+                <mt-button size="small" variant="primary" :disabled="!canUpload" :is-loading="isUploading" @click="onUpload">
+                    {{ $tc('scalecommerce-vo.subtitles.upload') }}
+                </mt-button>
+            </div>
+            <p v-if="replaces" class="scalecommerce-vo-subtitles__hint">
+                {{ $tc('scalecommerce-vo.subtitles.replaces') }}
+            </p>
+        </div>
+    </template>
+
+    <sw-modal
+        v-if="confirmDelete"
+        variant="small"
+        :title="$t('scalecommerce-vo.subtitles.confirmDeleteTitle')"
+        @modal-close="confirmDelete = null">
+        <p>{{ $t('scalecommerce-vo.subtitles.confirmDeleteText', { language: languageLabel(confirmDelete.language) }) }}</p>
+        <template #modal-footer>
+            <mt-button size="small" variant="secondary" @click="confirmDelete = null">
+                {{ $tc('scalecommerce-vo.library.cancel') }}
+            </mt-button>
+            <mt-button size="small" variant="critical" @click="onConfirmDelete">
+                {{ $tc('scalecommerce-vo.subtitles.delete') }}
+            </mt-button>
+        </template>
+    </sw-modal>
+</div>
+{% endblock %}

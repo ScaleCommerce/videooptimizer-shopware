@@ -5,6 +5,8 @@ import './component/scalecommerce-vo-video-gallery';
 import './component/scalecommerce-vo-video-detail';
 import './component/scalecommerce-vo-preview-surface';
 import './component/scalecommerce-vo-api-notice';
+import './component/scalecommerce-vo-subtitles';
+import './component/scalecommerce-vo-subtitle-languages';
 import './module/sw-cms/elements/scalecommerce-vo-video';
 import './module/sw-cms/blocks/video/scalecommerce-vo-video';
 import './module/sw-cms/elements/scalecommerce-vo-media-split';

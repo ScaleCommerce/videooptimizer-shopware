@@ -15,6 +15,7 @@ class VideoOptimizerApiException extends \RuntimeException
         string $message,
         ?\Throwable $previous = null,
         private readonly ?string $apiCode = null,
+        private readonly array $apiDetails = [],
     ) {
         parent::__construct($message, $statusCode, $previous);
     }
@@ -25,6 +26,17 @@ class VideoOptimizerApiException extends \RuntimeException
     public function getApiCode(): ?string
     {
         return $this->apiCode;
+    }
+
+    /**
+     * Structured details of the error (`data.details`), e.g. `{videos: 3}` for a subtitle language
+     * that is still in use.
+     *
+     * @return array<string, mixed>
+     */
+    public function getApiDetails(): array
+    {
+        return $this->apiDetails;
     }
 
     public function getStatusCode(): int
@@ -51,7 +63,11 @@ class VideoOptimizerApiException extends \RuntimeException
             ? $decoded['data']['code']
             : null;
 
-        return new self($statusCode, $message !== '' ? $message : self::genericMessage($statusCode), null, $code);
+        $details = \is_array($decoded) && \is_array($decoded['data'] ?? null) && \is_array($decoded['data']['details'] ?? null)
+            ? $decoded['data']['details']
+            : (\is_array($decoded) && \is_array($decoded['details'] ?? null) ? $decoded['details'] : []);
+
+        return new self($statusCode, $message !== '' ? $message : self::genericMessage($statusCode), null, $code, $details);
     }
 
     public static function genericMessage(int $statusCode): string

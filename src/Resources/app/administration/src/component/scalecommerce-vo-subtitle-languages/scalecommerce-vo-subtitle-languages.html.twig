@@ -1,0 +1,61 @@
+{% block scalecommerce_vo_subtitle_languages %}
+<mt-card
+    class="scalecommerce-vo-subtitle-languages"
+    :title="$tc('scalecommerce-vo.subtitleLanguages.title')"
+    :subtitle="$tc('scalecommerce-vo.subtitleLanguages.subtitle')"
+    position-identifier="scalecommerce-vo-subtitle-languages">
+
+    <scalecommerce-vo-api-notice :error="error" />
+
+    <p v-if="!isLoading && !error && languages.length === 0" class="scalecommerce-vo-subtitle-languages__hint">
+        {{ $tc('scalecommerce-vo.subtitleLanguages.empty') }}
+    </p>
+
+    <ul v-if="languages.length" class="scalecommerce-vo-subtitle-languages__list">
+        <li v-for="language in languages" :key="language.code" class="scalecommerce-vo-subtitle-languages__item">
+            <span class="scalecommerce-vo-subtitle-languages__name">{{ language.label }}</span>
+            <code>{{ language.code }}</code>
+            <span class="scalecommerce-vo-subtitle-languages__count">
+                {{ $tc('scalecommerce-vo.subtitleLanguages.videoCount', language.video_count, { count: language.video_count }) }}
+            </span>
+            <mt-button v-if="canDelete" size="small" variant="critical" @click="confirmDelete = language">
+                {{ $tc('scalecommerce-vo.subtitleLanguages.delete') }}
+            </mt-button>
+        </li>
+    </ul>
+
+    <div v-if="canUpdate && !error" class="scalecommerce-vo-subtitle-languages__form">
+        <mt-text-field
+            :label="$tc('scalecommerce-vo.subtitleLanguages.code')"
+            :help-text="$tc('scalecommerce-vo.subtitleLanguages.codeHelp')"
+            :model-value="code"
+            maxlength="35"
+            @update:model-value="code = $event" />
+        <mt-text-field
+            :label="$tc('scalecommerce-vo.subtitleLanguages.label')"
+            :help-text="$tc('scalecommerce-vo.subtitleLanguages.labelHelp')"
+            :model-value="label"
+            maxlength="60"
+            @update:model-value="label = $event" />
+        <mt-button size="small" variant="primary" :disabled="!canAdd" :is-loading="isSaving" @click="onAdd">
+            {{ $tc('scalecommerce-vo.subtitleLanguages.add') }}
+        </mt-button>
+    </div>
+
+    <sw-modal
+        v-if="confirmDelete"
+        variant="small"
+        :title="$t('scalecommerce-vo.subtitleLanguages.confirmDeleteTitle')"
+        @modal-close="confirmDelete = null">
+        <p>{{ $t('scalecommerce-vo.subtitleLanguages.confirmDeleteText', { language: confirmDelete.label }) }}</p>
+        <template #modal-footer>
+            <mt-button size="small" variant="secondary" @click="confirmDelete = null">
+                {{ $tc('scalecommerce-vo.library.cancel') }}
+            </mt-button>
+            <mt-button size="small" variant="critical" @click="onConfirmDelete">
+                {{ $tc('scalecommerce-vo.subtitleLanguages.delete') }}
+            </mt-button>
+        </template>
+    </sw-modal>
+</mt-card>
+{% endblock %}

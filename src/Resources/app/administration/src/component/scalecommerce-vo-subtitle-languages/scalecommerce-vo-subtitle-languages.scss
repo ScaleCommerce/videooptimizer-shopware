@@ -1,0 +1,30 @@
+.scalecommerce-vo-subtitle-languages {
+    &__hint {
+        color: #52667a;
+        margin: 0 0 12px;
+    }
+
+    &__list {
+        list-style: none;
+        margin: 0 0 16px;
+        padding: 0;
+    }
+
+    &__item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 6px 0;
+        border-bottom: 1px solid #d1d9e0;
+    }
+
+    &__name {
+        font-weight: 600;
+    }
+
+    &__count {
+        flex: 1;
+        color: #52667a;
+        font-size: 13px;
+    }
+}

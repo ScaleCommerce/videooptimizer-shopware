@@ -11,6 +11,8 @@ use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
+use Symfony\Component\Mime\Part\DataPart;
+use Symfony\Component\Mime\Part\Multipart\FormDataPart;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
@@ -408,6 +410,101 @@ class VideoOptimizerClient implements ResetInterface
         }
     }
 
+    /**
+     * The organization's subtitle languages (BCP 47 code, label, video count), in player order.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function listSubtitleLanguages(): array
+    {
+        return $this->listOf($this->requestData('GET', '/subtitle-languages'));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function createSubtitleLanguage(string $code, ?string $label = null): array
+    {
+        $payload = ['code' => $this->languageCode($code)];
+        if ($label !== null && trim($label) !== '') {
+            $payload['label'] = trim($label);
+        }
+
+        return $this->requestData('POST', '/subtitle-languages', ['json' => $payload], retryOnRateLimit: false);
+    }
+
+    /**
+     * Refused upstream with 409 `subtitle_language_in_use` while videos still carry the language.
+     */
+    public function deleteSubtitleLanguage(string $code): void
+    {
+        $this->request('DELETE', '/subtitle-languages/' . rawurlencode($this->languageCode($code)), retryOnRateLimit: false);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function listSubtitles(string $uuid): array
+    {
+        return $this->listOf($this->requestData('GET', '/videos/' . $this->pathId($uuid) . '/subtitles'));
+    }
+
+    /**
+     * Uploads or replaces the subtitle of one language (SRT or WebVTT, max. 2 MB).
+     *
+     * @return array<string, mixed> {subtitle, skipped_cues}
+     */
+    public function uploadSubtitle(string $uuid, string $filename, string $content, string $language, ?string $kind = null, bool $isDefault = false): array
+    {
+        $fields = [
+            'language' => $this->languageCode($language),
+            'is_default' => $isDefault ? 'true' : 'false',
+        ];
+        if ($kind !== null) {
+            $fields['kind'] = $kind;
+        }
+        $fields['file'] = new DataPart($content, $filename, 'text/plain');
+        $form = new FormDataPart($fields);
+
+        $result = $this->requestData('POST', '/videos/' . $this->pathId($uuid) . '/subtitles', [
+            'headers' => $form->getPreparedHeaders()->toArray(),
+            'body' => $form->bodyToIterable(),
+        ], retryOnRateLimit: false);
+        $this->forgetEmbed($uuid);
+
+        return $result;
+    }
+
+    /**
+     * The stored WebVTT file of one language.
+     */
+    public function downloadSubtitle(string $uuid, string $language): string
+    {
+        $url = $this->baseUrl() . '/videos/' . $this->pathId($uuid) . '/subtitles/' . rawurlencode($this->languageCode($language));
+
+        try {
+            $response = $this->httpClient->request('GET', $url, [
+                'headers' => $this->buildHeaders(true, 'text/vtt'),
+                'max_duration' => self::ADMIN_MAX_DURATION,
+                'max_redirects' => self::API_MAX_REDIRECTS,
+            ]);
+            $status = $response->getStatusCode();
+            if ($status < 200 || $status >= 300) {
+                throw $this->statusError($status, $response->getContent(false));
+            }
+
+            return $response->getContent();
+        } catch (TransportExceptionInterface $e) {
+            throw $this->unreachable('GET', $url, $e);
+        }
+    }
+
+    public function deleteSubtitle(string $uuid, string $language): void
+    {
+        $this->request('DELETE', '/videos/' . $this->pathId($uuid) . '/subtitles/' . rawurlencode($this->languageCode($language)));
+        $this->forgetEmbed($uuid);
+    }
+
     public function selectThumbnail(string $uuid, int $index): array
     {
         $result = $this->requestData('POST', '/videos/' . $this->pathId($uuid) . '/thumbnail', ['json' => ['thumbnailIndex' => $index]]);
@@ -469,6 +566,30 @@ class VideoOptimizerClient implements ResetInterface
      *
      * @return list<string>
      */
+    /**
+     * Language codes are BCP 47 tags (`de`, `en-US`, `de-x-simple`; the API normalizes case and
+     * `_`); only those characters can reach a URL path.
+     */
+    private function languageCode(string $code): string
+    {
+        $code = trim($code);
+        if (preg_match('/^[A-Za-z0-9][A-Za-z0-9_-]{0,34}$/D', $code) !== 1) {
+            throw new InvalidRequestException('Invalid subtitle language code.');
+        }
+
+        return $code;
+    }
+
+    /**
+     * @param array<array-key, mixed> $data
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function listOf(array $data): array
+    {
+        return array_values(array_filter($data, 'is_array'));
+    }
+
     private function libraryVideoUuids(string $id): array
     {
         if ($this->cacheInvalidator === null) {

@@ -11,6 +11,7 @@ use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Symfony\Bundle\FrameworkBundle\Routing\AttributeRouteControllerLoader;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Exception\MethodNotAllowedException;
 use Symfony\Component\Routing\Exception\ResourceNotFoundException;
@@ -888,5 +889,115 @@ class VideoOptimizerAdminControllerTest extends TestCase
         $error = json_decode((string) $response->getContent(), true)['errors'][0];
         static::assertSame('SCALECOMMERCE_VO__SOURCE_URL_VIDEO_PLATFORM', $error['code']);
         static::assertSame('YouTube links cannot be imported.', $error['detail']);
+    }
+
+    public function testEveryRouteRequiresAnAclPrivilege(): void
+    {
+        $routes = (new AttributeRouteControllerLoader())->load(VideoOptimizerAdminController::class, 'attribute');
+        foreach ($routes as $name => $route) {
+            static::assertNotEmpty($route->getDefault('_acl'), sprintf('Route %s has no _acl.', $name));
+        }
+    }
+
+    public function testSubtitleLanguageInUseKeepsStatusAndGetsOwnCode(): void
+    {
+        $client = $this->createStub(VideoOptimizerClient::class);
+        $client->method('deleteSubtitleLanguage')->willThrowException(VideoOptimizerApiException::fromResponse(
+            409,
+            '{"message":"Language is still in use.","data":{"code":"subtitle_language_in_use","details":{"videos":3}}}'
+        ));
+
+        $response = (new VideoOptimizerAdminController($client))->deleteSubtitleLanguage('de');
+
+        static::assertSame(409, $response->getStatusCode());
+        $error = json_decode((string) $response->getContent(), true)['errors'][0];
+        static::assertSame('SCALECOMMERCE_VO__SUBTITLE_LANGUAGE_IN_USE', $error['code']);
+        static::assertSame(['videos' => 3], $error['meta']);
+    }
+
+    public function testCreateSubtitleLanguagePassesCodeAndLabel(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('createSubtitleLanguage')->with('en-US', 'English')->willReturn(['code' => 'en-US']);
+
+        $response = (new VideoOptimizerAdminController($client))->createSubtitleLanguage(new Request([], [], [], [], [], [], '{"code":"en-US","label":"English","x":1}'));
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testSubtitleLanguageRouteRejectsPathTricks(): void
+    {
+        $routes = (new AttributeRouteControllerLoader())->load(VideoOptimizerAdminController::class, 'attribute');
+        $context = new RequestContext();
+        $context->setMethod('DELETE');
+        $matcher = new UrlMatcher($routes, $context);
+
+        static::assertSame('api.action.scalecommerce-vo.subtitle-languages.delete', $matcher->match('/api/_action/scalecommerce-vo/subtitle-languages/en-US')['_route']);
+        $this->expectException(ResourceNotFoundException::class);
+        $matcher->match('/api/_action/scalecommerce-vo/subtitle-languages/..');
+    }
+
+    private function subtitleRequest(string $name, string $content, array $fields): Request
+    {
+        $path = tempnam(sys_get_temp_dir(), 'scvo');
+        file_put_contents($path, $content);
+
+        return new Request([], $fields, [], [], ['file' => new UploadedFile($path, $name, null, null, true)]);
+    }
+
+    public function testUploadSubtitleRelaysFileAndOptions(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('uploadSubtitle')
+            ->with(self::UUID, 'de.vtt', "WEBVTT\n", 'de', 'captions', true)
+            ->willReturn(['skipped_cues' => 0]);
+
+        $response = (new VideoOptimizerAdminController($client))->uploadSubtitle(self::UUID, $this->subtitleRequest('de.vtt', "WEBVTT\n", ['language' => 'de', 'kind' => 'captions', 'is_default' => 'true']));
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    #[DataProvider('invalidSubtitleUploads')]
+    public function testUploadSubtitleRejectsInvalidInput(string $name, array $fields): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('uploadSubtitle');
+
+        $response = (new VideoOptimizerAdminController($client))->uploadSubtitle(self::UUID, $this->subtitleRequest($name, 'x', $fields));
+
+        static::assertSame(400, $response->getStatusCode());
+        static::assertSame('SCALECOMMERCE_VO__INVALID_REQUEST', json_decode((string) $response->getContent(), true)['errors'][0]['code']);
+    }
+
+    /**
+     * @return iterable<string, array{string, array<string, string>}>
+     */
+    public static function invalidSubtitleUploads(): iterable
+    {
+        yield 'wrong extension' => ['subtitle.txt', ['language' => 'de']];
+        yield 'no language' => ['de.vtt', []];
+        yield 'unknown kind' => ['de.vtt', ['language' => 'de', 'kind' => 'lyrics']];
+    }
+
+    public function testUploadSubtitleWithoutFileIsRejected(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('uploadSubtitle');
+
+        $response = (new VideoOptimizerAdminController($client))->uploadSubtitle(self::UUID, new Request([], ['language' => 'de']));
+
+        static::assertSame(400, $response->getStatusCode());
+    }
+
+    public function testDownloadSubtitleIsAnAttachment(): void
+    {
+        $client = $this->createStub(VideoOptimizerClient::class);
+        $client->method('downloadSubtitle')->willReturn("WEBVTT\n");
+
+        $response = (new VideoOptimizerAdminController($client))->downloadSubtitle(self::UUID, 'de');
+
+        static::assertSame("WEBVTT\n", $response->getContent());
+        static::assertStringStartsWith('attachment;', (string) $response->headers->get('Content-Disposition'));
+        static::assertSame('nosniff', $response->headers->get('X-Content-Type-Options'));
     }
 }

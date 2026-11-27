@@ -284,4 +284,76 @@ export default class VideoOptimizerApiService extends ApiService {
             )
             .then((response) => ApiService.handleResponse(response));
     }
+
+    getSubtitleLanguages() {
+        return this.httpClient
+            .get(`${this.getApiBasePath()}/subtitle-languages`, {
+                headers: this.getBasicHeaders(),
+            })
+            .then((response) => ApiService.handleResponse(response));
+    }
+
+    createSubtitleLanguage(payload) {
+        return this.httpClient
+            .post(`${this.getApiBasePath()}/subtitle-languages`, payload, {
+                headers: this.getBasicHeaders(),
+            })
+            .then((response) => ApiService.handleResponse(response));
+    }
+
+    deleteSubtitleLanguage(code) {
+        return this.httpClient
+            .delete(
+                `${this.getApiBasePath()}/subtitle-languages/${encodeURIComponent(code)}`,
+                { headers: this.getBasicHeaders() }
+            )
+            .then((response) => ApiService.handleResponse(response));
+    }
+
+    getSubtitles(uuid) {
+        return this.httpClient
+            .get(
+                `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/subtitles`,
+                { headers: this.getBasicHeaders() }
+            )
+            .then((response) => ApiService.handleResponse(response));
+    }
+
+    // `file` is a File (.vtt/.srt); the proxy relays it to the API as multipart.
+    uploadSubtitle(uuid, { file, language, kind, isDefault }) {
+        const form = new FormData();
+        form.append('file', file);
+        form.append('language', language);
+        if (kind) {
+            form.append('kind', kind);
+        }
+        form.append('is_default', isDefault ? 'true' : 'false');
+
+        return this.httpClient
+            .post(
+                `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/subtitles`,
+                form,
+                { headers: this.getBasicHeaders() }
+            )
+            .then((response) => ApiService.handleResponse(response));
+    }
+
+    // The stored WebVTT file as a blob.
+    downloadSubtitle(uuid, language) {
+        return this.httpClient
+            .get(
+                `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/subtitles/${encodeURIComponent(language)}`,
+                { headers: this.getBasicHeaders(), responseType: 'blob' }
+            )
+            .then((response) => response.data);
+    }
+
+    deleteSubtitle(uuid, language) {
+        return this.httpClient
+            .delete(
+                `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/subtitles/${encodeURIComponent(language)}`,
+                { headers: this.getBasicHeaders() }
+            )
+            .then((response) => ApiService.handleResponse(response));
+    }
 }
