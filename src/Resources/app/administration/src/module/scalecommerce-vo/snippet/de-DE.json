@@ -312,7 +312,7 @@
         },
         "webhook": {
             "title": "Webhook",
-            "subtitle": "VideoOptimizer meldet hier fertige, fehlgeschlagene, geänderte und gelöschte Videos, damit zwischengespeicherte Embeds und Seiten sofort aktualisiert werden.",
+            "subtitle": "VideoOptimizer meldet hier fertige und fehlgeschlagene Videos, damit zwischengespeicherte Embeds und Seiten sofort aktualisiert werden.",
             "url": "Webhook-URL",
             "urlHelp": "Trage diese URL in VideoOptimizer unter Integrationen, Webhooks ein. Sie nutzt die Basis-URL des Shops; läuft deine Storefront auf einer anderen Domain, nimm diese Domain mit demselben Pfad.",
             "copy": "Kopieren",

@@ -904,7 +904,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
         $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('deleteSubtitleLanguage')->willThrowException(VideoOptimizerApiException::fromResponse(
             409,
-            '{"message":"Language is still in use.","data":{"code":"subtitle_language_in_use","details":{"videos":3}}}'
+            '{"message":"Language is still in use.","data":{"code":"subtitle_language_in_use","videos":3}}'
         ));
 
         $response = (new VideoOptimizerAdminController($client))->deleteSubtitleLanguage('de');
@@ -1114,6 +1114,16 @@ class VideoOptimizerAdminControllerTest extends TestCase
         $response = (new VideoOptimizerAdminController($client))->updateVideo(self::UUID, new Request([], [], [], [], [], [], $body));
 
         static::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testEmptyMetadataValuesBecomeRemovals(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('updateVideo')
+            ->with(self::UUID, static::callback(static fn (array $p): bool => json_encode($p['metadata']) === '{"a":null,"b":null,"c":"x"}'))
+            ->willReturn([]);
+
+        (new VideoOptimizerAdminController($client))->updateVideo(self::UUID, new Request([], [], [], [], [], [], '{"metadata":{"a":"","b":"  ","c":"x"}}'));
     }
 
     public function testUpdateVideoCanClearTagsAndMetadata(): void

@@ -32,7 +32,7 @@ class WebhookControllerTest extends TestCase
         $config = $this->createStub(SystemConfigService::class);
         $config->method('getString')->willReturnMap([[WebhookController::SECRET_CONFIG_KEY, null, $secret]]);
         $router = $this->createStub(UrlGeneratorInterface::class);
-        $router->method('generate')->willReturn('https://shop.example/scalecommerce-vo/webhook');
+        $router->method('generate')->willReturn('https://shop.example/api/scalecommerce-vo/webhook');
 
         return new WebhookController($client, $config, $this->cache, $router);
     }
@@ -220,7 +220,7 @@ class WebhookControllerTest extends TestCase
         $controller = $this->controller($client);
 
         $before = $this->json($controller->info())['data'];
-        static::assertSame('https://shop.example/scalecommerce-vo/webhook', $before['url']);
+        static::assertSame('https://shop.example/api/scalecommerce-vo/webhook', $before['url']);
         static::assertTrue($before['configured']);
         static::assertNull($before['lastDelivery']);
 
@@ -234,8 +234,11 @@ class WebhookControllerTest extends TestCase
         $routes = (new AttributeRouteControllerLoader())->load(WebhookController::class, 'attribute');
 
         $receive = $routes->get(WebhookController::ROUTE);
-        static::assertSame(['storefront'], $receive->getDefault('_routeScope'));
-        static::assertFalse($receive->getDefault('csrf_protected'));
+        // An API route without authentication (the signature authenticates): no sales channel, no
+        // Storefront, no domain mapping involved.
+        static::assertSame('/api/scalecommerce-vo/webhook', $receive->getPath());
+        static::assertSame(['api'], $receive->getDefault('_routeScope'));
+        static::assertFalse($receive->getDefault('auth_required'));
         static::assertSame(['POST'], $receive->getMethods());
         static::assertNull($receive->getDefault('_acl'));
 

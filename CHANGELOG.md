@@ -5,13 +5,14 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 ## [Unreleased]
 
 ### Upgrade
-- To use webhooks, enter the URL shown in the VideoOptimizer module under Integrations, Webhooks in VideoOptimizer and set the signing secret in the plugin setting `webhookSecret`; until then the route answers 503. The route is a Storefront route, so it needs the Storefront and a sales channel domain that reaches the shop ([#39](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/39)).
+- To use webhooks, create a webhook in VideoOptimizer under Integrations, Webhooks with the URL shown in the VideoOptimizer module (`/api/scalecommerce-vo/webhook` on the shop's admin/API host) and set its signing secret in the plugin setting `webhookSecret`; until then the route answers 503 ([#39](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/39)).
+- `VideoOptimizerClient::listVideos()`, `listVideosPage()` and `listAllVideos()` take optional `$tags` and `$metadata` arguments; subclasses overriding them must accept and pass them on ([#37](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/37)).
 
 ### Added
 - Subtitles per video (list, upload .vtt/.srt, download, delete) in the video detail and management of the organization's subtitle languages (list, add, delete; 409 shows how many videos still use a language) in the module ([#36](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/36)).
 - Tags and metadata (key/value, e.g. CMS IDs) editable in the video detail; the video lists filter by tag and by metadata value ([#37](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/37)).
 - Savings card in the module: file-size reduction and estimated bandwidth saved, for the organization or a library and a period ([#38](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/38)).
-- Webhook receiver `POST /scalecommerce-vo/webhook` (HMAC-SHA256 signature, replay window, duplicate detection, 1 MiB limit) that drops the cached embed and the cached pages of a video on `video.ready`, `video.failed`, `video.updated` and `video.deleted`; the plugin setting `webhookSecret` and a module card with the URL to enter in VideoOptimizer ([#39](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/39)).
+- Webhook receiver `POST /api/scalecommerce-vo/webhook` (API route without login, HMAC-SHA256 signature, replay window, duplicate detection, 1 MiB limit) that drops the cached embed and the cached pages of a video on `video.ready` and `video.failed`; the plugin setting `webhookSecret` and a module card with the URL to enter in VideoOptimizer ([#39](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/39)).
 - The element configuration and the editor preview flag a selected video that no longer exists ([#35](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/35)).
 
 ### Fixed

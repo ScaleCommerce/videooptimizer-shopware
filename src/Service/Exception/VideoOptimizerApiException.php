@@ -29,7 +29,7 @@ class VideoOptimizerApiException extends \RuntimeException
     }
 
     /**
-     * Structured details of the error (`data.details`), e.g. `{videos: 3}` for a subtitle language
+     * Structured details of the error (`data.details`, or the fields next to `data.code`), e.g. `{videos: 3}` for a subtitle language
      * that is still in use.
      *
      * @return array<string, mixed>
@@ -63,9 +63,14 @@ class VideoOptimizerApiException extends \RuntimeException
             ? $decoded['data']['code']
             : null;
 
-        $details = \is_array($decoded) && \is_array($decoded['data'] ?? null) && \is_array($decoded['data']['details'] ?? null)
-            ? $decoded['data']['details']
-            : (\is_array($decoded) && \is_array($decoded['details'] ?? null) ? $decoded['details'] : []);
+        $details = [];
+        if (\is_array($decoded)) {
+            $data = \is_array($decoded['data'] ?? null) ? $decoded['data'] : [];
+            // Either nested (`data.details`) or flat next to the code (`data.videos`).
+            $nested = \is_array($data['details'] ?? null) ? $data['details'] : (\is_array($decoded['details'] ?? null) ? $decoded['details'] : []);
+            unset($data['code'], $data['details']);
+            $details = $nested + $data;
+        }
 
         return new self($statusCode, $message !== '' ? $message : self::genericMessage($statusCode), null, $code, $details);
     }

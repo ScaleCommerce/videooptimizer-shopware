@@ -1,6 +1,6 @@
 import template from './scalecommerce-vo-subtitles.html.twig';
 import './scalecommerce-vo-subtitles.scss';
-import { apiErrorText } from '../../helper/api-error';
+import { apiErrorText, readBlobError } from '../../helper/api-error';
 import { languageOptions, subtitleFileProblem } from '../../helper/subtitles';
 
 const { Component, Mixin } = Shopware;
@@ -192,7 +192,8 @@ Component.register('scalecommerce-vo-subtitles', {
                 link.download = `${this.uuid}-${subtitle.language}.vtt`;
                 link.click();
                 window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-            } catch (error) {
+            } catch (caught) {
+                const error = await readBlobError(caught);
                 this.createNotificationError({
                     message: apiErrorText(
                         error,

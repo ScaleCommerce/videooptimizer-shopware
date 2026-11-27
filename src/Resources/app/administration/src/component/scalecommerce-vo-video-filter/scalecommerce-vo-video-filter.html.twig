@@ -1,6 +1,7 @@
 {% block scalecommerce_vo_video_filter %}
-<div v-if="visible" class="scalecommerce-vo-video-filter">
+<div class="scalecommerce-vo-video-filter">
     <scalecommerce-vo-tag-picker
+        v-if="showTags"
         :model-value="tags"
         :available="available"
         :label="$tc('scalecommerce-vo.filter.tags')"

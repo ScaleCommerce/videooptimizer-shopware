@@ -312,7 +312,7 @@
         },
         "webhook": {
             "title": "Webhook",
-            "subtitle": "VideoOptimizer reports finished, failed, changed and deleted videos here, so cached embeds and pages are refreshed at once.",
+            "subtitle": "VideoOptimizer reports finished and failed videos here, so cached embeds and pages are refreshed at once.",
             "url": "Webhook URL",
             "urlHelp": "Enter this URL in VideoOptimizer under Integrations, Webhooks. It uses the shop's base URL; if your storefront runs on another domain, use that domain with the same path.",
             "copy": "Copy",

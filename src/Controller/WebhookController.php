@@ -24,7 +24,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
  */
 class WebhookController
 {
-    public const ROUTE = 'frontend.scalecommerce-vo.webhook';
+    public const ROUTE = 'api.scalecommerce-vo.webhook';
 
     public const SECRET_CONFIG_KEY = 'ScaleVideoOptimizer.config.webhookSecret';
 
@@ -36,6 +36,8 @@ class WebhookController
 
     private const LAST_DELIVERY_KEY = 'scalecommerce_vo_webhook_last';
 
+    // VideoOptimizer sends video.ready, video.failed and webhook.test; the others are handled too
+    // (harmless: they only drop caches) in case the API starts to send them.
     private const VIDEO_EVENTS = ['video.ready', 'video.failed', 'video.updated', 'video.deleted'];
 
     public function __construct(
@@ -48,10 +50,11 @@ class WebhookController
     }
 
     /**
-     * Public route, authenticated by the signature instead of a user; no CSRF token (the sender is
-     * a server).
+     * Public API route, authenticated by the signature instead of a user. An API route (not a
+     * storefront one) so the URL is the same for every sales channel domain, with or without a
+     * path, and for shops without the Storefront.
      */
-    #[Route(path: '/scalecommerce-vo/webhook', name: self::ROUTE, methods: ['POST'], defaults: ['_routeScope' => ['storefront'], 'csrf_protected' => false, '_httpCache' => false])]
+    #[Route(path: '/api/scalecommerce-vo/webhook', name: self::ROUTE, methods: ['POST'], defaults: ['_routeScope' => ['api'], 'auth_required' => false])]
     public function receive(Request $request): JsonResponse
     {
         $secret = trim($this->systemConfig->getString(self::SECRET_CONFIG_KEY));

@@ -35,9 +35,9 @@ Shopware.Component.register('scalecommerce-vo-video-filter', {
                 this.tags.length > 0 || Object.keys(this.metadata).length > 0
             );
         },
-        // Nothing to filter by yet: no tags in the organization and no filter in use.
-        visible() {
-            return this.available.length > 0 || this.active;
+        // The tag filter needs tags to choose from (or a chosen one to remove).
+        showTags() {
+            return this.available.length > 0 || this.tags.length > 0;
         },
     },
 

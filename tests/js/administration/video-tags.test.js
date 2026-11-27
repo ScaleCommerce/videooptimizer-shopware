@@ -123,6 +123,13 @@ describe('scalecommerce-vo-video-filter (#37)', () => {
         expect(ctx.$emit).toHaveBeenCalledWith('change', { tags: ['a'], metadata: { cms_id: '42' } });
     });
 
+    it('offers the tag filter only with tags to choose from, the metadata filter always', () => {
+        expect(filter.definition.computed.showTags.call({ available: [], tags: [] })).toBe(false);
+        expect(filter.definition.computed.showTags.call({ available: [{ name: 'a' }], tags: [] })).toBe(true);
+        expect(filter.definition.computed.showTags.call({ available: [], tags: ['a'] })).toBe(true);
+        expect(filter.definition.computed.visible).toBeUndefined();
+    });
+
     it('clears all filters', () => {
         const ctx = filter.context({ tags: ['a'], metadataKey: 'k', metadataValue: 'v', metadata: {} });
         ctx.onClear();

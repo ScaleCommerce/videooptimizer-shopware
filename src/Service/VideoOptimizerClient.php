@@ -418,11 +418,6 @@ class VideoOptimizerClient implements ResetInterface
     }
 
     /**
-     * The organization's subtitle languages (BCP 47 code, label, video count), in player order.
-     *
-     * @return list<array<string, mixed>>
-     */
-    /**
      * Savings compared to serving the original files: file-size reduction, CDN traffic and the
      * estimated bandwidth saved. For the whole organization, or one library or video; `from`/`to`
      * (UTC days, YYYY-MM-DD, at most 366 days) add a `range` next to `all_time`.
@@ -464,6 +459,11 @@ class VideoOptimizerClient implements ResetInterface
         return $this->listOf($this->requestData('GET', '/tags'));
     }
 
+    /**
+     * The organization's subtitle languages (BCP 47 code, label, video count), in player order.
+     *
+     * @return list<array<string, mixed>>
+     */
     public function listSubtitleLanguages(): array
     {
         return $this->listOf($this->requestData('GET', '/subtitle-languages'));
@@ -611,16 +611,6 @@ class VideoOptimizerClient implements ResetInterface
     }
 
     /**
-     * Videos of a library whose cached pages a library action has to invalidate. Only needed (and
-     * only requested) when cache invalidation is wired; a failing listing doesn't stop the action.
-     *
-     * @return list<string>
-     */
-    /**
-     * Language codes are BCP 47 tags (`de`, `en-US`, `de-x-simple`; the API normalizes case and
-     * `_`); only those characters can reach a URL path.
-     */
-    /**
      * Query parameters of the video list filters: `tags` (comma separated, all must match) and
      * `metadata[key]=value` (exact, case-sensitive).
      *
@@ -642,6 +632,10 @@ class VideoOptimizerClient implements ResetInterface
         return $query;
     }
 
+    /**
+     * Language codes are BCP 47 tags (`de`, `en-US`, `de-x-simple`; the API normalizes case and
+     * `_`); only those characters can reach a URL path.
+     */
     private function languageCode(string $code): string
     {
         $code = trim($code);
@@ -662,6 +656,12 @@ class VideoOptimizerClient implements ResetInterface
         return array_values(array_filter($data, 'is_array'));
     }
 
+    /**
+     * Videos of a library whose cached pages a library action has to invalidate. Only needed (and
+     * only requested) when cache invalidation is wired; a failing listing doesn't stop the action.
+     *
+     * @return list<string>
+     */
     private function libraryVideoUuids(string $id): array
     {
         if ($this->cacheInvalidator === null) {

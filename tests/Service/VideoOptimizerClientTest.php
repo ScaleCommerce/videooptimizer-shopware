@@ -1719,7 +1719,7 @@ class VideoOptimizerClientTest extends TestCase
 
     public function testSubtitleLanguageInUseCarriesDetails(): void
     {
-        $http = new MockHttpClient(new MockResponse('{"message":"in use","data":{"code":"subtitle_language_in_use","details":{"videos":4}}}', ['http_code' => 409]));
+        $http = new MockHttpClient(new MockResponse('{"message":"in use","data":{"code":"subtitle_language_in_use","videos":4}}', ['http_code' => 409]));
 
         try {
             $this->client($http)->deleteSubtitleLanguage('de');
@@ -1729,6 +1729,14 @@ class VideoOptimizerClientTest extends TestCase
             static::assertSame('subtitle_language_in_use', $e->getApiCode());
             static::assertSame(['videos' => 4], $e->getApiDetails());
         }
+    }
+
+    public function testApiDetailsAreReadNestedToo(): void
+    {
+        $e = VideoOptimizerApiException::fromResponse(409, '{"message":"x","data":{"code":"c","details":{"videos":2}}}');
+
+        static::assertSame(['videos' => 2], $e->getApiDetails());
+        static::assertSame('c', $e->getApiCode());
     }
 
     public function testUploadSubtitleSendsMultipartAndForgetsTheEmbed(): void

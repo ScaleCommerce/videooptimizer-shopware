@@ -214,6 +214,13 @@ Open **Content → VideoOptimizer**:
 
 </div>
 
+### Webhooks
+VideoOptimizer can report finished and failed videos, so cached embeds and pages refresh at once. In VideoOptimizer
+create a webhook (Integrations, Webhooks) with the URL shown in the module's *Webhook* card
+(`https://<your admin host>/api/scalecommerce-vo/webhook`) and enter its signing secret in the plugin setting
+*Webhook secret*. The route needs no login; every delivery is checked by its HMAC-SHA256 signature, deliveries older
+than five minutes and repeated deliveries are ignored.
+
 ### Shopping Experiences
 
 In a Shopping Experiences layout, add one of the five VideoOptimizer blocks from the **Video** category:

@@ -54,6 +54,23 @@ describe('videos that no longer exist (#35)', () => {
         });
     });
 
+    it('ignores a slow answer for a video that was replaced meanwhile', async () => {
+        let rejectOld;
+        const getVideo = vi.fn((uuid) => (uuid === 'old' ? new Promise((_, reject) => { rejectOld = reject; }) : Promise.resolve({ data: { uuid } })));
+        const ctx = { videoUuid: 'old', video: null, videoMissing: false, scalecommerceVoApiService: { getVideo } };
+        ctx.loadVideo = elementVideo.methods.loadVideo.bind(ctx);
+        vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        const first = ctx.loadVideo();
+        ctx.videoUuid = 'new';
+        await ctx.loadVideo();
+        rejectOld(notFound);
+        await first;
+
+        expect(ctx.video).toEqual({ uuid: 'new' });
+        expect(ctx.videoMissing).toBe(false);
+    });
+
     describe('selection in the gallery', () => {
         let gallery;
         beforeAll(async () => {

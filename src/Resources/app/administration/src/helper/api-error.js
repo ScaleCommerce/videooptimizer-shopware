@@ -58,3 +58,20 @@ export function subtitleLanguageInUse(error) {
 
     return Number.isInteger(first.meta?.videos) ? first.meta.videos : 0;
 }
+
+/**
+ * A download is requested as blob, so an error response body is a blob too: turns it back into
+ * the parsed JSON, so the API's message can be shown. Other errors are returned unchanged.
+ */
+export async function readBlobError(error) {
+    const data = error?.response?.data;
+    if (typeof Blob === 'undefined' || !(data instanceof Blob)) {
+        return error;
+    }
+    try {
+        error.response.data = JSON.parse(await data.text());
+    } catch {
+        // Not JSON: keep the generic message.
+    }
+    return error;
+}

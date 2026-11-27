@@ -487,7 +487,8 @@ class VideoOptimizerAdminController
             if ($value !== null && (!is_string($value) || mb_strlen(trim($value)) > self::MAX_METADATA_VALUE_LENGTH || preg_match('/[\x00-\x1F\x7F]/', $value) === 1)) {
                 throw new InvalidRequestException(sprintf('A metadata value must be a string of at most %d characters without control characters.', self::MAX_METADATA_VALUE_LENGTH));
             }
-            $result[$key] = $value === null ? null : trim($value);
+            // An empty value removes the key, like null.
+            $result[$key] = $value === null || trim($value) === '' ? null : trim($value);
         }
 
         return $result;

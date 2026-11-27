@@ -7,6 +7,7 @@ import {
 } from '../../../src/Resources/app/administration/src/helper/subtitles.js';
 import {
     apiErrorText,
+    readBlobError,
     subtitleLanguageInUse,
 } from '../../../src/Resources/app/administration/src/helper/api-error.js';
 
@@ -41,6 +42,21 @@ describe('subtitle helpers (#36)', () => {
         expect(apiErrorText({ response: { data: { errors: [{ detail: 'Nope' }] } }, message: 'm' }, 'f')).toBe('Nope');
         expect(apiErrorText(new Error('m'), 'f')).toBe('m');
         expect(apiErrorText({}, 'f')).toBe('f');
+    });
+});
+
+describe('blob error responses (#36)', () => {
+    it('parses the JSON body of a failed download', async () => {
+        const error = { response: { data: new Blob(['{"errors":[{"detail":"Subtitle not found"}]}']) } };
+
+        expect(apiErrorText(await readBlobError(error), 'f')).toBe('Subtitle not found');
+    });
+
+    it('keeps other errors and non-JSON bodies as they are', async () => {
+        const plain = new Error('x');
+        expect(await readBlobError(plain)).toBe(plain);
+        const html = { response: { data: new Blob(['<html>']) }, message: 'm' };
+        expect(apiErrorText(await readBlobError(html), 'f')).toBe('m');
     });
 });
 
