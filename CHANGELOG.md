@@ -5,6 +5,13 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Upgrade notes
+- **Storefront JavaScript:** the player, blocks and hero plugins are registered with a dynamic import, and hls.js is loaded as a separate chunk only when an HLS source is attached. Pages without a VideoOptimizer element no longer load the plugin's player code (about 340 KB). Theme overrides of the plugin's templates are not affected; code that relied on `ScalecommerceVoPlayer`/`ScalecommerceVoBlocks`/`ScalecommerceVoHero` being registered synchronously must use the `PluginManager` APIs that wait for async plugins. (#17)
+
+### Changed
+- Storefront: pages without video load only a 3 KB entry instead of 340 KB; the player plugins and hls.js load on demand, hls.js once per page (on facade and lightbox elements only after the click). (#17)
+- hls.js updated to 1.7 (storefront and administration). (#19)
+
 ## [1.1.0] - 2026-11-27
 
 Storefront performance and accessibility, resilient admin upload, permission-aware administration, per-video cache invalidation and Shopware 6.8 preparation (#3, #4, #6, #7, #8, #10, #11, #13, #15, #16). The plugin now identifies itself to the VideoOptimizer API with a User-Agent.

@@ -1,4 +1,12 @@
-import Hls from 'hls.js/dist/hls.light.mjs';
+// hls.js is loaded on demand, once per page, when the first HLS source is attached. A single
+// dynamic import keeps it in one shared chunk instead of a copy per storefront plugin.
+let hlsPromise = null;
+function loadHls() {
+    hlsPromise ??= import('hls.js/dist/hls.light.mjs')
+        .then((module) => module.default)
+        .catch(() => null);
+    return hlsPromise;
+}
 
 /**
  * Attaches a VideoOptimizer source to a <video>: hls.js (MSE), native HLS (Safari) or MP4.
@@ -9,7 +17,7 @@ import Hls from 'hls.js/dist/hls.light.mjs';
  * The hls.js instance is kept on the element (`video.__scvoHls`) so callers can destroy it
  * via destroyVideoSource() without tracking it themselves.
  */
-export function attachVideoSource(
+export async function attachVideoSource(
     video,
     { hls = null, mp4 = null },
     { autoplay = false, deferLoad = false, onUnplayable = () => {} } = {}
@@ -31,7 +39,14 @@ export function attachVideoSource(
         play();
     };
 
-    if (hls && Hls.isSupported()) {
+    // Set by destroyVideoSource(); the element may be torn down while hls.js is still loading.
+    video.__scvoDestroyed = false;
+    const Hls = hls ? await loadHls() : null;
+    if (video.__scvoDestroyed) {
+        return;
+    }
+
+    if (hls && Hls && Hls.isSupported()) {
         // hls.js ignores the video's preload hint and buffers right away; with deferLoad only the
         // playlists are fetched until playback starts. capLevelToPlayerSize keeps small tiles from
         // pulling the 4K rendition.
@@ -132,6 +147,7 @@ export function autoplayWhileVisible(video, observed = video) {
 }
 
 export function destroyVideoSource(video) {
+    video.__scvoDestroyed = true;
     if (video.__scvoHls) {
         video.__scvoHls.destroy();
         video.__scvoHls = null;
