@@ -4,6 +4,11 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-11-27
+
+### Fixed
+- `composer.json` carried the version 1.2.2 in the 2.0.0 tag, so Packagist did not publish 2.0.0; 2.0.1 is the same code with the correct version.
+
 ## [2.0.0] - 2026-11-27
 
 ### Upgrade
