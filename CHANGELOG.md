@@ -2,7 +2,7 @@
 
 All notable changes to this package. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [2.1.0] - 2026-11-28
 
 ### Upgrade
 - The lightbox element is a `<dialog class="scalecommerce-vo-lightbox">` instead of a `<div role="dialog">` (no manual `inert` on the page or `aria-modal`; the class names and the close button are unchanged); themes styling or querying it by tag or `role` need to adapt ([#32](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/32)).
