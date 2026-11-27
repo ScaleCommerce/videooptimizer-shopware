@@ -10,7 +10,7 @@
     </p>
     <div class="scalecommerce-vo-video-grid-component__items">
         <figure v-for="(tile, index) in tiles"
-                :key="tile.uuid || index"
+                :key="index + '-' + (tile.uuid || '')"
                 class="scalecommerce-vo-video-grid-component__item">
             <scalecommerce-vo-preview-surface
                 :poster-url="tile.posterUrl"

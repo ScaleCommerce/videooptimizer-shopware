@@ -1,6 +1,8 @@
 {
     "scalecommerce-vo": {
-        "general": { "mainMenuItemGeneral": "VideoOptimizer" },
+        "general": {
+            "mainMenuItemGeneral": "VideoOptimizer"
+        },
         "list": {
             "pageTitle": "VideoOptimizer",
             "selectLibrary": "Library",
@@ -54,7 +56,8 @@
                 "intro": "Intro",
                 "cta": "Button",
                 "label": "Label"
-            }
+            },
+            "embedBadge": "Embed"
         },
         "mediaSplit": {
             "label": "VideoOptimizer media split",
@@ -127,7 +130,11 @@
             "presentationDirect": "Embedded directly",
             "player": "Player",
             "playerNative": "Native player",
-            "playerEmbed": "VideoOptimizer embed"
+            "playerEmbed": "VideoOptimizer embed",
+            "changeVideo": "Change video {position}",
+            "moveUp": "Move up",
+            "moveDown": "Move down",
+            "remove": "Remove"
         },
         "gallery": {
             "upload": "Upload",
@@ -153,7 +160,15 @@
             "processingTimeout": "Processing is taking longer than expected; the list will refresh later.",
             "cancel": "Cancel",
             "confirmDeleteTitle": "Delete video?",
-            "confirmDeleteText": "“{title}” will be permanently deleted at VideoOptimizer. This cannot be undone."
+            "confirmDeleteText": "“{title}” will be permanently deleted at VideoOptimizer. This cannot be undone.",
+            "status": {
+                "ready": "ready",
+                "processing": "processing",
+                "pending": "pending",
+                "queued": "queued",
+                "uploading": "uploading",
+                "failed": "failed"
+            }
         },
         "detail": {
             "previewImage": "Preview image",

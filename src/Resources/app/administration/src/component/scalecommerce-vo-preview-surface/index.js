@@ -30,6 +30,19 @@ Shopware.Component.register('scalecommerce-vo-preview-surface', {
             }
             return { aspectRatio: this.aspect };
         },
+        statusLabel() {
+            const known = [
+                'ready',
+                'processing',
+                'pending',
+                'queued',
+                'uploading',
+                'failed',
+            ];
+            return known.includes(this.status)
+                ? this.$tc(`scalecommerce-vo.gallery.status.${this.status}`)
+                : this.status;
+        },
         statusVariant() {
             if (this.status === 'ready') {
                 return 'ready';

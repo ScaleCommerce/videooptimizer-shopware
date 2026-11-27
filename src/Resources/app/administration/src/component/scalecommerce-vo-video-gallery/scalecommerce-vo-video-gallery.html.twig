@@ -63,16 +63,12 @@
                         'is-selected': video.uuid === selectedUuid,
                         'is-selectable': video.status === 'ready'
                     }"
-                    :role="video.status === 'ready' ? 'button' : null"
-                    :tabindex="video.status === 'ready' ? 0 : null"
-                    @click="onSelect(video)"
-                    @keydown.enter="onSelect(video)"
-                    @keydown.space.prevent="onSelect(video)">
+                    @click="onSelect(video)">
                     <div class="scalecommerce-vo-gallery__poster">
-                        <img v-if="posterFor(video)" :src="posterFor(video)" :alt="video.title" />
+                        <img v-if="posterFor(video)" :src="posterFor(video)" alt="" @error="onPosterError(video)" />
                         <mt-icon v-else name="regular-play" size="32" />
                         <div class="scalecommerce-vo-gallery__tile-actions">
-                            <sw-context-button v-if="canUpdate || canDelete" @click.stop>
+                            <sw-context-button v-if="canUpdate || canDelete" @click.stop @keydown.stop>
                                 <sw-context-menu-item v-if="canUpdate" @click="onRename(video)">
                                     {{ $tc('scalecommerce-vo.gallery.rename') }}
                                 </sw-context-menu-item>
@@ -83,9 +79,16 @@
                         </div>
                     </div>
                     <div class="scalecommerce-vo-gallery__meta">
-                        <span class="scalecommerce-vo-gallery__title">{{ video.title || video.uuid }}</span>
+                        <button
+                            type="button"
+                            class="scalecommerce-vo-gallery__title"
+                            :disabled="video.status !== 'ready'"
+                            :aria-pressed="mode === 'select' ? String(video.uuid === selectedUuid) : null"
+                            @click.stop="onSelect(video)">
+                            {{ video.title || video.uuid }}
+                        </button>
                         <sw-label :variant="statusVariant(video.status)" size="small" :ghost="true">
-                            {{ video.status }}
+                            {{ statusLabel(video.status) }}
                         </sw-label>
                     </div>
                     <span v-if="metaLine(video)" class="scalecommerce-vo-gallery__meta-info">{{ metaLine(video) }}</span>
@@ -111,19 +114,22 @@
                     'is-selected': video.uuid === selectedUuid,
                     'is-selectable': mode === 'select' && video.status === 'ready'
                 }"
-                :role="mode === 'select' && video.status === 'ready' ? 'button' : null"
-                :tabindex="mode === 'select' && video.status === 'ready' ? 0 : null"
-                @click="onSelect(video)"
-                @keydown.enter="onSelect(video)"
-                @keydown.space.prevent="onSelect(video)">
+                @click="onSelect(video)">
                 <div class="scalecommerce-vo-gallery__poster">
-                    <img v-if="posterFor(video)" :src="posterFor(video)" :alt="video.title" />
+                    <img v-if="posterFor(video)" :src="posterFor(video)" alt="" @error="onPosterError(video)" />
                     <mt-icon v-else name="regular-play" size="32" />
                 </div>
                 <div class="scalecommerce-vo-gallery__meta">
-                    <span class="scalecommerce-vo-gallery__title">{{ video.title || video.uuid }}</span>
+                    <button
+                        type="button"
+                        class="scalecommerce-vo-gallery__title"
+                        :disabled="video.status !== 'ready'"
+                        :aria-pressed="mode === 'select' ? String(video.uuid === selectedUuid) : null"
+                        @click.stop="onSelect(video)">
+                        {{ video.title || video.uuid }}
+                    </button>
                     <sw-label :variant="statusVariant(video.status)" size="small" :ghost="true">
-                        {{ video.status }}
+                        {{ statusLabel(video.status) }}
                     </sw-label>
                 </div>
                 <span v-if="metaLine(video)" class="scalecommerce-vo-gallery__meta-info">{{ metaLine(video) }}</span>

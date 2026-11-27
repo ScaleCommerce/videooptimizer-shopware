@@ -1,6 +1,8 @@
 {
     "scalecommerce-vo": {
-        "general": { "mainMenuItemGeneral": "VideoOptimizer" },
+        "general": {
+            "mainMenuItemGeneral": "VideoOptimizer"
+        },
         "list": {
             "pageTitle": "VideoOptimizer",
             "selectLibrary": "Bibliothek",
@@ -54,7 +56,8 @@
                 "intro": "Einleitung",
                 "cta": "Button",
                 "label": "Beschriftung"
-            }
+            },
+            "embedBadge": "Embed"
         },
         "mediaSplit": {
             "label": "VideoOptimizer Media Split",
@@ -127,7 +130,11 @@
             "presentationDirect": "Direkt eingebettet",
             "player": "Player",
             "playerNative": "Nativer Player",
-            "playerEmbed": "VideoOptimizer-Embed"
+            "playerEmbed": "VideoOptimizer-Embed",
+            "changeVideo": "Video {position} ändern",
+            "moveUp": "Nach oben verschieben",
+            "moveDown": "Nach unten verschieben",
+            "remove": "Entfernen"
         },
         "gallery": {
             "upload": "Hochladen",
@@ -153,7 +160,15 @@
             "processingTimeout": "Die Verarbeitung dauert länger als erwartet. Die Liste wird später aktualisiert.",
             "cancel": "Abbrechen",
             "confirmDeleteTitle": "Video löschen?",
-            "confirmDeleteText": "„{title}“ wird dauerhaft bei VideoOptimizer gelöscht. Dies kann nicht rückgängig gemacht werden."
+            "confirmDeleteText": "„{title}“ wird dauerhaft bei VideoOptimizer gelöscht. Dies kann nicht rückgängig gemacht werden.",
+            "status": {
+                "ready": "bereit",
+                "processing": "in Verarbeitung",
+                "pending": "wartend",
+                "queued": "eingereiht",
+                "uploading": "wird hochgeladen",
+                "failed": "fehlgeschlagen"
+            }
         },
         "detail": {
             "previewImage": "Vorschaubild",

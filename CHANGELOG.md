@@ -23,6 +23,7 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - Native players load video segments only when playback starts; until then only the playlists are fetched. hls.js caps the rendition at the player size, so small tiles no longer pull 4K. The hero option "priority" now means "start buffering right away" (others load once visible). (#8)
 
 ### Fixed
+- Administration accessibility and translation: gallery cards no longer nest the context menu inside a button-like card (the title is the button; Enter on the menu no longer opens the video), the grid configuration's thumbnails and icon buttons are keyboard-accessible and labelled, block previews, the "Embed" badge and the video status are translated, low-contrast meta texts are darker, duplicate videos in the grid preview no longer collide, and videos that are not ready (e.g. a failed import) show a placeholder instead of a broken image. (#13)
 - Pages with several videos no longer wait for each embed lookup in turn: the CMS elements announce their videos in the collect phase, and all lookups that are not cached run concurrently. (#4)
 - Admin changes to a video (title, poster, thumbnail, deletion) now reach cached storefront pages: the pages are tagged per video and invalidated. (#3)
 - Accessibility: hosted-embed iframes have a `title` (video title or label), the player gets the focus after clicking a facade, and the lightbox is named, keeps the keyboard focus inside and makes the rest of the page inert while open. (#7)

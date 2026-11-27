@@ -24,6 +24,16 @@
         align-items: center;
         justify-content: center;
         cursor: pointer;
+        // Rendered as a <button> for keyboard access.
+        appearance: none;
+        border: 0;
+        padding: 0;
+        font: inherit;
+
+        &:focus-visible {
+            outline: 2px solid #189eff;
+            outline-offset: 2px;
+        }
 
         img {
             width: 100%;

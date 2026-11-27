@@ -37,6 +37,7 @@ Component.register('scalecommerce-vo-video-gallery', {
             confirmDeleteVideo: null,
             renameVideo: null,
             renameTitle: '',
+            brokenPosters: {},
         };
     },
 
@@ -160,8 +161,31 @@ Component.register('scalecommerce-vo-video-gallery', {
             }
         },
 
+        // Videos that are not ready (e.g. a failed import) have no usable thumbnail; their URL can
+        // redirect to something the browser blocks. Show the placeholder icon instead.
         posterFor(video) {
+            if (video.status !== 'ready' || this.brokenPosters[video.uuid]) {
+                return null;
+            }
             return video.poster_url || video.thumbnail_url || null;
+        },
+
+        onPosterError(video) {
+            this.brokenPosters = { ...this.brokenPosters, [video.uuid]: true };
+        },
+
+        statusLabel(status) {
+            const known = [
+                'ready',
+                'processing',
+                'pending',
+                'queued',
+                'uploading',
+                'failed',
+            ];
+            return known.includes(status)
+                ? this.$tc(`scalecommerce-vo.gallery.status.${status}`)
+                : status;
         },
 
         statusVariant(status) {
