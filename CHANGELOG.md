@@ -5,6 +5,10 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-27
+
+Storefront performance and accessibility, resilient admin upload, permission-aware administration, per-video cache invalidation and Shopware 6.8 preparation (#3, #4, #6, #7, #8, #10, #11, #13, #15, #16). The plugin now identifies itself to the VideoOptimizer API with a User-Agent.
+
 ### Upgrade notes
 - **Requests to the VideoOptimizer API** now identify the plugin with a `User-Agent` header, e.g. `VideoOptimizer-Shopware/1.1.0 (Shopware 6.6.10.4; PHP 8.3.14; +https://shop.example.com)`: plugin, Shopware and PHP version plus the shop's `APP_URL` (scheme, host, port and path only; left out when `APP_URL` is not set). VideoOptimizer uses it to show which plugin versions an organization runs. If a proxy or firewall between the shop and the API filters by User-Agent, allow `VideoOptimizer-Shopware/*`.
 - **Background hero markup:** the `<video>` no longer has the `autoplay` attribute (and an MP4-only hero no longer a `src`); the hero plugin starts playback when the hero is visible and motion is not reduced. The video carries `data-scalecommerce-vo-hero` plus `data-scalecommerce-vo-hero-hls`/`-mp4`/`-priority`, and a pause/play button follows it. Theme overrides of `cms-element-scalecommerce-vo-background-hero.html.twig` with the old markup keep playing the video, but without the button, and only HLS heroes in browsers using hls.js honour reduced motion there; adopt the new markup for full support. (#6)
