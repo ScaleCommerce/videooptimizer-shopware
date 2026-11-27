@@ -170,7 +170,8 @@
                 "failed": "fehlgeschlagen"
             },
             "uploadProgress": "Teil {done} von {total} hochgeladen",
-            "uploadCancelled": "Upload abgebrochen."
+            "uploadCancelled": "Upload abgebrochen.",
+            "loadMore": "Weitere Videos laden"
         },
         "detail": {
             "previewImage": "Vorschaubild",

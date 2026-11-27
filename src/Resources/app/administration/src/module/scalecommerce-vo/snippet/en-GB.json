@@ -170,7 +170,8 @@
                 "failed": "failed"
             },
             "uploadProgress": "Part {done} of {total} uploaded",
-            "uploadCancelled": "Upload cancelled."
+            "uploadCancelled": "Upload cancelled.",
+            "loadMore": "Load more videos"
         },
         "detail": {
             "previewImage": "Preview image",

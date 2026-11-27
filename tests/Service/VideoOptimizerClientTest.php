@@ -1047,4 +1047,63 @@ class VideoOptimizerClientTest extends TestCase
 
         $this->addToAssertionCount(1);
     }
+
+    /**
+     * The administration pages through a library instead of collecting everything in one
+     * request (issue #15).
+     */
+    public function testListVideosPageRequestsOnePageWithCursor(): void
+    {
+        $captured = null;
+        $http = new MockHttpClient(function (string $method, string $url) use (&$captured): MockResponse {
+            $captured = $url;
+
+            return new MockResponse(json_encode([
+                'data' => [['uuid' => 'v1'], ['uuid' => 'v2']],
+                'pagination' => ['next_cursor' => 'c2', 'has_more' => true],
+            ]));
+        });
+
+        $page = $this->client($http)->listVideosPage('lib-1', 'c1', 2);
+
+        static::assertStringContainsString('/libraries/lib-1/videos?', (string) $captured);
+        static::assertStringContainsString('limit=2', (string) $captured);
+        static::assertStringContainsString('cursor=c1', (string) $captured);
+        static::assertSame([['uuid' => 'v1'], ['uuid' => 'v2']], $page['items']);
+        static::assertSame(['next_cursor' => 'c2', 'has_more' => true], $page['pagination']);
+    }
+
+    public function testListVideosPageWithoutCursorAndLastPage(): void
+    {
+        $captured = null;
+        $http = new MockHttpClient(function (string $method, string $url) use (&$captured): MockResponse {
+            $captured = $url;
+
+            return new MockResponse(json_encode(['data' => [['uuid' => 'v1']]]));
+        });
+
+        $page = $this->client($http)->listVideosPage('lib-1', null, 60);
+
+        static::assertStringNotContainsString('cursor=', (string) $captured);
+        static::assertSame(['next_cursor' => null, 'has_more' => false], $page['pagination']);
+    }
+
+    public function testListingAllPagesLogsWhenTheListIsTruncated(): void
+    {
+        $page = 0;
+        $http = new MockHttpClient(function () use (&$page): MockResponse {
+            ++$page;
+
+            return new MockResponse(json_encode([
+                'data' => [['id' => 'l' . $page]],
+                'pagination' => ['next_cursor' => 'c' . $page, 'has_more' => true],
+            ]));
+        });
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(static::once())->method('warning')->with(static::stringContains('truncated'));
+
+        $items = (new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), $logger))->listLibraries();
+
+        static::assertCount(100, $items);
+    }
 }

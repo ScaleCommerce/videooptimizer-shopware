@@ -104,6 +104,12 @@
                 </div>
             </div>
 
+            <div v-if="nextCursor" class="scalecommerce-vo-gallery__more">
+                <mt-button variant="secondary" :is-loading="isLoadingMore" @click="loadMoreVideos">
+                    {{ $tc('scalecommerce-vo.gallery.loadMore') }}
+                </mt-button>
+            </div>
+
             <div v-if="!isLoading && !videos.length" class="scalecommerce-vo-gallery__empty">
                 {{ $tc('scalecommerce-vo.gallery.empty') }}
             </div>
@@ -174,6 +180,12 @@
             <sw-label :variant="statusVariant(selectedVideo.status)" size="small" :ghost="true">
                 {{ selectedVideo.status }}
             </sw-label>
+        </div>
+
+        <div v-if="nextCursor" class="scalecommerce-vo-gallery__more">
+            <mt-button size="small" variant="secondary" :is-loading="isLoadingMore" @click="loadMoreVideos">
+                {{ $tc('scalecommerce-vo.gallery.loadMore') }}
+            </mt-button>
         </div>
 
         <div v-if="!isLoading && !videos.length" class="scalecommerce-vo-gallery__empty">

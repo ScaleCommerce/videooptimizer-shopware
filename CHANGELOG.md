@@ -11,15 +11,18 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - **API outages:** after a transport error, server error or rate limit, embed lookups for all videos fail fast for 60 seconds instead of waiting for a timeout per video; the affected pages are cached briefly as in 1.0.2. (#4)
 - **Own code calling the admin proxy:** configuration errors (400) now carry an error `code`: `SCALECOMMERCE_VO__API_TOKEN_MISSING`, `SCALECOMMERCE_VO__INVALID_BASE_URL` or `SCALECOMMERCE_VO__INVALID_REQUEST`. (#11)
 - **User roles:** the administration hides actions the user's VideoOptimizer role doesn't allow (before, they failed with 403 after the click). CMS editors need the VideoOptimizer **Viewer** role to pick videos. (#11)
+- **Own code calling `GET /api/_action/scalecommerce-vo/libraries/{id}/videos`:** unchanged without parameters (full list). With `limit` (1–100) and optionally `cursor`, it returns one page plus `meta.next_cursor`/`meta.has_more`. (#15)
 - **`VideoOptimizerClient`:** new optional constructor argument `CacheInvalidator`, new public method `queueEmbed()`, and it is reset between requests (`kernel.reset`). (#3, #4)
 - **Autoplaying native players** (single video, media split, spotlight, grid with presentation "direct") start when they scroll into view and pause when they leave it, instead of all starting at page load. (#8)
 
 ### Added
+- Administration gallery: videos load in pages of 60 with a "Load more videos" button, instead of all videos of a library in one request. (#15)
 - Administration upload: progress per part ("Part 2 of 4 uploaded") and a cancel button. (#10)
 - Administration: when libraries can't be loaded, the module and every element configuration say why (no or rejected API token, invalid API URL, missing VideoOptimizer permission, API unavailable), with a link to the plugin configuration for users who may change it. (#11)
 - Background hero: a pause/play button for the looping video. With `prefers-reduced-motion` or the browser's data saver, the video doesn't start and nothing is preloaded; the poster stays. (#6)
 
 ### Changed
+- Lists that are still collected completely on the server (libraries, org-wide video listing) stop after a 20-second budget or 100 pages and log a warning instead of silently returning a partial list. (#15)
 - Administration upload: each part is retried up to three times with backoff instead of failing the whole upload. The upload form is released as soon as the file is transferred; processing is tracked in the background for about 30 minutes (the new video is selected in the CMS element once it is ready), and a longer processing time is a notice instead of an error. The VideoOptimizer API has no endpoint to abort a multipart upload, so incomplete uploads are still removed by the storage's lifecycle rule. (#10)
 - Administration: create, edit, upload, rename, poster, reprocess and delete actions are only shown to users with the matching VideoOptimizer role. (#11)
 - Native players load video segments only when playback starts; until then only the playlists are fetched. hls.js caps the rendition at the player size, so small tiles no longer pull 4K. The hero option "priority" now means "start buffering right away" (others load once visible). (#8)

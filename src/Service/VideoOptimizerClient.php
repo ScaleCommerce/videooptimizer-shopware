@@ -28,6 +28,10 @@ class VideoOptimizerClient implements ResetInterface
     private const EMBED_CACHE_TTL = 3600;
     private const EMBED_FAILURE_CACHE_TTL = 60;
     private const ADMIN_MAX_DURATION = 30.0;
+    /**
+     * Total time budget for collecting all pages of a list in one admin request.
+     */
+    private const LIST_TIME_BUDGET = 20.0;
     private const EMBED_MAX_DURATION = 3.0;
     private const EMBED_API_UNAVAILABLE_KEY = 'scalecommerce_vo_embed_api_unavailable';
 
@@ -110,6 +114,33 @@ class VideoOptimizerClient implements ResetInterface
     public function listVideos(string $libraryId): array
     {
         return $this->requestAllPages('/libraries/' . $this->pathId($libraryId) . '/videos');
+    }
+
+    /**
+     * One page of a library's videos; the administration pages with the cursor instead of loading
+     * every video in one request (issue #15).
+     *
+     * @return array{items: list<array<string, mixed>>, pagination: array{next_cursor: ?string, has_more: bool}}
+     */
+    public function listVideosPage(string $libraryId, ?string $cursor, int $limit): array
+    {
+        $query = ['limit' => max(1, min($limit, self::PAGE_LIMIT))];
+        if ($cursor !== null && $cursor !== '') {
+            $query['cursor'] = $cursor;
+        }
+        $response = $this->request('GET', '/libraries/' . $this->pathId($libraryId) . '/videos', ['query' => $query]);
+
+        $items = array_values(array_filter(is_array($response['data'] ?? null) ? $response['data'] : [], 'is_array'));
+        $pagination = is_array($response['pagination'] ?? null) ? $response['pagination'] : [];
+        $next = is_string($pagination['next_cursor'] ?? null) && $pagination['next_cursor'] !== '' ? $pagination['next_cursor'] : null;
+
+        return [
+            'items' => $items,
+            'pagination' => [
+                'next_cursor' => $next,
+                'has_more' => ($pagination['has_more'] ?? false) === true && $next !== null,
+            ],
+        ];
     }
 
     /**
@@ -445,8 +476,15 @@ class VideoOptimizerClient implements ResetInterface
         $items = [];
         $cursor = null;
         $previousCursor = null;
+        $started = microtime(true);
+        $truncated = false;
 
-        for ($page = 0; $page < self::MAX_PAGES; ++$page) {
+        for ($page = 0;; ++$page) {
+            if ($page >= self::MAX_PAGES || ($page > 0 && microtime(true) - $started > self::LIST_TIME_BUDGET)) {
+                $truncated = true;
+                break;
+            }
+
             $query = $extraQuery + ['limit' => self::PAGE_LIMIT];
             if ($cursor !== null) {
                 $query['cursor'] = $cursor;
@@ -474,6 +512,16 @@ class VideoOptimizerClient implements ResetInterface
                 break;
             }
             $previousCursor = $cursor;
+        }
+
+        if ($truncated) {
+            // The full list did not fit into one admin request; the administration pages through
+            // video lists itself (listVideosPage()), this only affects the remaining full listings.
+            $this->logger->warning('VideoOptimizer list was truncated.', [
+                'path' => $path,
+                'items' => count($items),
+                'seconds' => round(microtime(true) - $started, 1),
+            ]);
         }
 
         return $items;

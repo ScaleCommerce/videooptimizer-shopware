@@ -6,6 +6,9 @@ import {
     orientationKey,
 } from '../../helper/video-meta';
 
+// Videos per page in the gallery; further pages load on demand ("Load more videos").
+const PAGE_SIZE = 60;
+
 const { Component, Mixin } = Shopware;
 
 Component.register('scalecommerce-vo-video-gallery', {
@@ -39,6 +42,8 @@ Component.register('scalecommerce-vo-video-gallery', {
             renameVideo: null,
             renameTitle: '',
             brokenPosters: {},
+            nextCursor: null,
+            isLoadingMore: false,
         };
     },
 
@@ -128,26 +133,49 @@ Component.register('scalecommerce-vo-video-gallery', {
                 .join(' · ');
         },
 
+        // Loads the first page of the library; more pages via loadMoreVideos().
         async loadVideos() {
+            this.nextCursor = null;
             if (!this.libraryId) {
                 this.videos = [];
                 return;
             }
+            await this._loadPage(null);
+        },
+
+        async loadMoreVideos() {
+            if (!this.nextCursor || this.isLoadingMore) {
+                return;
+            }
+            await this._loadPage(this.nextCursor);
+        },
+
+        async _loadPage(cursor) {
             // Only the latest request may apply its result: with quick library switches an older,
             // slower response must not overwrite the list of the library selected now.
             const libraryId = this.libraryId;
             const request = (this._loadRequest = (this._loadRequest ?? 0) + 1);
-            this.isLoading = true;
+            if (cursor) {
+                this.isLoadingMore = true;
+            } else {
+                this.isLoading = true;
+            }
             try {
-                const response =
-                    await this.scalecommerceVoApiService.getVideos(libraryId);
+                const response = await this.scalecommerceVoApiService.getVideos(
+                    libraryId,
+                    { limit: PAGE_SIZE, cursor }
+                );
                 if (
                     request !== this._loadRequest ||
                     libraryId !== this.libraryId
                 ) {
                     return;
                 }
-                this.videos = response.data ?? response;
+                const items = response.data ?? [];
+                this.videos = cursor ? [...this.videos, ...items] : items;
+                this.nextCursor = response.meta?.has_more
+                    ? response.meta.next_cursor
+                    : null;
             } catch (error) {
                 if (request !== this._loadRequest) {
                     return;
@@ -158,6 +186,7 @@ Component.register('scalecommerce-vo-video-gallery', {
             } finally {
                 if (request === this._loadRequest) {
                     this.isLoading = false;
+                    this.isLoadingMore = false;
                 }
             }
         },

@@ -178,4 +178,10 @@
             min-width: 0;
         }
     }
+
+    &__more {
+        display: flex;
+        justify-content: center;
+        margin-top: 16px;
+    }
 }

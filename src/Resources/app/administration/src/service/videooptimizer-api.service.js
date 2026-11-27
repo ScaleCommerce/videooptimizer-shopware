@@ -63,11 +63,22 @@ export default class VideoOptimizerApiService extends ApiService {
             .then((response) => ApiService.handleResponse(response));
     }
 
-    getVideos(libraryId) {
+    /**
+     * With `limit` (and `cursor`), one page is returned as { data, meta: { next_cursor, has_more } };
+     * without, the full list.
+     */
+    getVideos(libraryId, { limit, cursor } = {}) {
+        const params = {};
+        if (limit) {
+            params.limit = limit;
+        }
+        if (cursor) {
+            params.cursor = cursor;
+        }
         return this.httpClient
             .get(
                 `${this.getApiBasePath()}/libraries/${encodeURIComponent(libraryId)}/videos`,
-                { headers: this.getBasicHeaders() }
+                { headers: this.getBasicHeaders(), params }
             )
             .then((response) => ApiService.handleResponse(response));
     }
