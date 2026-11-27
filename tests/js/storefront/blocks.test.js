@@ -49,7 +49,8 @@ describe('player theme (#41)', () => {
         const video = document.querySelector('.scalecommerce-vo-lightbox video');
         expect(video.loop).toBe(true);
         expect(video.muted).toBe(true);
-        expect(video.preload).toBe('auto');
+        // The theme's "auto" is capped: no video download before play.
+        expect(video.preload).toBe('metadata');
         expect(video.parentElement.classList.contains('scalecommerce-vo-video--static')).toBe(true);
         expect(document.querySelector('.scalecommerce-vo-lightbox').style.getPropertyValue('--vo-accent')).toBe('#C72876');
     });

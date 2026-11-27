@@ -235,7 +235,7 @@ via the gallery picker, then configure per element:
   with its own controls/autoplay/muted/loop options.
 - **Player theme and subtitles** — the native player applies the video's player theme from VideoOptimizer
   (controls, autoplay with muted start, loop, preload, non-interactive, no fullscreen/playback-rate/Picture-in-Picture,
-  play button shape and size, accent colour as `--vo-accent`) and shows its subtitle tracks. Control bar colour,
+  play button shape and size, accent colour as `--vo-accent`) and shows its subtitle tracks. The theme's `preload: auto` is capped to `metadata` for native players: video is only downloaded on play. Control bar colour,
   volume, time display and quality menu cannot be changed on the browser's native controls and are ignored;
   the hosted embed applies the whole theme itself.
 

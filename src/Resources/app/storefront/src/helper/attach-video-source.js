@@ -245,9 +245,8 @@ export function resolvePlayback(options = {}) {
         // Browsers block autoplay with sound, so an autoplaying video starts muted.
         muted: !!options.muted || theme.mutedStart === true || autoplay,
         loop: !!options.loop || theme.loopButton === true,
-        preload: ['auto', 'metadata', 'none'].includes(theme.preload)
-            ? theme.preload
-            : 'metadata',
+        // Capped at "metadata": video is downloaded only on play (the theme default is "auto").
+        preload: theme.preload === 'none' ? 'none' : 'metadata',
     };
 }
 

@@ -163,6 +163,11 @@ describe('player theme (#41)', () => {
         expect(el.classList.contains('scalecommerce-vo-video--static')).toBe(true);
     });
 
+    it('caps the theme preload at metadata', () => {
+        expect(setup({ mp4: 'https://cdn/v.mp4', theme: { preload: 'auto' } }).video.preload).toBe('metadata');
+        expect(setup({ mp4: 'https://cdn/v.mp4', theme: { preload: 'metadata' } }).video.preload).toBe('metadata');
+    });
+
     it('keeps the defaults without a theme', () => {
         const { video, el } = setup({ mp4: 'https://cdn/v.mp4' });
 
