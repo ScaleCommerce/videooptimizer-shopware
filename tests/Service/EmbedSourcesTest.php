@@ -53,4 +53,23 @@ class EmbedSourcesTest extends TestCase
         static::assertSame([], EmbedSources::theme(null));
         static::assertSame([], EmbedSources::theme('dark'));
     }
+
+    public function testTracksKeepRenderableEntries(): void
+    {
+        $tracks = EmbedSources::tracks([
+            ['src' => 'https://cdn/s/de.vtt?v=2', 'srclang' => 'de', 'label' => 'Deutsch', 'kind' => 'subtitles', 'default' => true],
+            ['src' => 'https://cdn/s/en-US.vtt', 'srclang' => 'en-US', 'label' => '', 'kind' => 'captions', 'default' => true],
+            ['src' => 'http://cdn/insecure.vtt', 'srclang' => 'fr'],
+            ['src' => 'https://cdn/x.vtt" onerror="x', 'srclang' => 'es'],
+            ['src' => 'https://cdn/y.vtt', 'srclang' => 'de"><script>'],
+            'junk',
+        ]);
+
+        static::assertSame([
+            ['src' => 'https://cdn/s/de.vtt?v=2', 'srclang' => 'de', 'label' => 'Deutsch', 'kind' => 'subtitles', 'default' => true],
+            // Label falls back to the language; only the first track stays default.
+            ['src' => 'https://cdn/s/en-US.vtt', 'srclang' => 'en-US', 'label' => 'en-US', 'kind' => 'captions', 'default' => false],
+        ], $tracks);
+        static::assertSame([], EmbedSources::tracks(null));
+    }
 }

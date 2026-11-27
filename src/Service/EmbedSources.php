@@ -94,6 +94,45 @@ final class EmbedSources
     }
 
     /**
+     * The subtitle `tracks` of a `GET /embed/{uuid}` response as `<track>` data: https WebVTT URL,
+     * BCP 47 language, label (defaults to the language), kind `subtitles` or `captions`, `default`.
+     * Entries that cannot be rendered safely are dropped.
+     *
+     * @return list<array{src: string, srclang: string, label: string, kind: string, default: bool}>
+     */
+    public static function tracks(mixed $tracks): array
+    {
+        if (!is_array($tracks)) {
+            return [];
+        }
+        $result = [];
+        $hasDefault = false;
+        foreach ($tracks as $track) {
+            if (!is_array($track)) {
+                continue;
+            }
+            $src = $track['src'] ?? null;
+            $lang = $track['srclang'] ?? null;
+            if (!is_string($src) || preg_match('#^https://[^\s"\'<>]+$#iD', $src) !== 1
+                || !is_string($lang) || preg_match('/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/D', $lang) !== 1) {
+                continue;
+            }
+            $label = is_string($track['label'] ?? null) ? trim($track['label']) : '';
+            $default = ($track['default'] ?? false) === true && !$hasDefault;
+            $hasDefault = $hasDefault || $default;
+            $result[] = [
+                'src' => $src,
+                'srclang' => $lang,
+                'label' => $label !== '' ? mb_substr($label, 0, 100) : $lang,
+                'kind' => ($track['kind'] ?? null) === 'captions' ? 'captions' : 'subtitles',
+                'default' => $default,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
      * @param array<mixed> $source
      */
     private static function src(array $source): ?string

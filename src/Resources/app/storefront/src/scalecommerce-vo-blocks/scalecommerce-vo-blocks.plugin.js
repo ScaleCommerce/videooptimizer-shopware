@@ -4,6 +4,7 @@ import {
     markUnavailable,
     resolvePlayback,
     applyPlayerTheme,
+    addTracks,
 } from '../helper/attach-video-source';
 
 // Only one lightbox may be open at a time across the whole page (there can be several
@@ -121,6 +122,7 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
             !!nativeOptions.muted || nativeOptions.theme?.mutedStart === true;
         video.preload = playback.preload;
         applyPlayerTheme(video, wrap, nativeOptions);
+        addTracks(video, nativeOptions.tracks);
         // Keeps the poster visible while loading and behind the "cannot be played" notice.
         if (nativeOptions.poster) {
             video.poster = nativeOptions.poster;

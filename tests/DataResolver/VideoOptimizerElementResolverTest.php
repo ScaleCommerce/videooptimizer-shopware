@@ -41,6 +41,7 @@ class VideoOptimizerElementResolverTest extends TestCase
             'duration' => '10',
             'resolution' => '1260x750',
             'theme' => ['accentColor' => '#C72876', 'loopButton' => true, 'preload' => 'bogus', 'x' => 1],
+            'tracks' => [['src' => 'https://cdn/de.vtt', 'srclang' => 'de', 'label' => 'Deutsch', 'kind' => 'captions', 'default' => true]],
         ]);
 
         $slot = $this->slotWithUuid('uuid-1');
@@ -59,6 +60,8 @@ class VideoOptimizerElementResolverTest extends TestCase
         static::assertSame('1260 / 750', $embed['aspectRatio']);
         // The theme is reduced to valid keys and values (#41).
         static::assertSame(['loopButton' => true, 'accentColor' => '#C72876'], $embed['theme']);
+        // Subtitle tracks for the <track> elements (#42).
+        static::assertSame([['src' => 'https://cdn/de.vtt', 'srclang' => 'de', 'label' => 'Deutsch', 'kind' => 'captions', 'default' => true]], $embed['tracks']);
     }
 
     /**

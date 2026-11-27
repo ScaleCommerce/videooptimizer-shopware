@@ -55,6 +55,40 @@ describe('player theme (#41)', () => {
     });
 });
 
+describe('subtitle tracks (#42)', () => {
+    it('adds the tracks to the player built from the facade and loads them cross-origin', () => {
+        const tracks = [
+            { src: 'https://cdn/de.vtt?v=2', srclang: 'de', label: 'Deutsch', kind: 'subtitles', default: true },
+            { src: 'https://cdn/en.vtt', srclang: 'en', label: 'English', kind: 'captions', default: false },
+        ];
+        document.body.innerHTML = `<div class="block" data-vo-player-mode="native" data-vo-title="D" data-vo-native-options='${JSON.stringify({ mp4: 'https://cdn/v.mp4', tracks })}'>
+            <button type="button" class="facade" data-vo-action="facade">Play</button></div>`;
+        new ScalecommerceVoBlocks(document.querySelector('.block'));
+
+        document.querySelector('.facade').click();
+
+        const video = document.querySelector('.block video');
+        expect(video.getAttribute('crossorigin')).toBe('anonymous');
+        const elements = [...video.querySelectorAll('track')];
+        expect(elements.map((track) => [track.kind, track.srclang, track.label, track.getAttribute('src'), track.default])).toEqual([
+            ['subtitles', 'de', 'Deutsch', 'https://cdn/de.vtt?v=2', true],
+            ['captions', 'en', 'English', 'https://cdn/en.vtt', false],
+        ]);
+    });
+
+    it('leaves a video without tracks alone', () => {
+        document.body.innerHTML = `<div class="block" data-vo-player-mode="native" data-vo-title="D" data-vo-native-options='${JSON.stringify({ mp4: 'https://cdn/v.mp4' })}'>
+            <button type="button" class="facade" data-vo-action="facade">Play</button></div>`;
+        new ScalecommerceVoBlocks(document.querySelector('.block'));
+
+        document.querySelector('.facade').click();
+
+        const video = document.querySelector('.block video');
+        expect(video.hasAttribute('crossorigin')).toBe(false);
+        expect(video.querySelector('track')).toBeNull();
+    });
+});
+
 describe('facade (#34)', () => {
     it('replaces the poster button with the native player and focuses it', () => {
         const { el, facade } = setup({ action: 'facade' });

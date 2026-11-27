@@ -13,6 +13,7 @@
         muted: opts.muted ?? false,
         loop: opts.loop ?? false,
         theme: theme,
+        tracks: embed.tracks ?? [],
         unavailableLabel: 'scalecommerce-vo.storefront.unavailable'|trans
     } %}
     <div class="scalecommerce-vo-surface" style="--scvo-aspect: {{ aspect }}{% if accent %}; --vo-accent: {{ accent }}{% endif %}"
@@ -31,8 +32,12 @@
             {% else %}
                 <div class="scalecommerce-vo-video scalecommerce-vo-fill" data-scalecommerce-vo-player="true"
                      data-scalecommerce-vo-player-options='{{ nativeOptions|json_encode }}'>
+                    {# crossorigin: the subtitle files come from the CDN, which allows any origin. #}
                     <video class="scalecommerce-vo-video__player" playsinline
-                           {% if embed.poster %}poster="{{ embed.poster }}"{% endif %}></video>
+                           {% if embed.tracks %}crossorigin="anonymous"{% endif %}
+                           {% if embed.poster %}poster="{{ embed.poster }}"{% endif %}>
+                        {% for track in embed.tracks ?? [] %}<track kind="{{ track.kind }}" srclang="{{ track.srclang }}" label="{{ track.label }}" src="{{ track.src }}"{% if track.default %} default{% endif %}>{% endfor %}
+                    </video>
                 </div>
             {% endif %}
         {% else %}

@@ -277,3 +277,25 @@ export function applyPlayerTheme(video, wrapper, options = {}) {
         wrapper.classList.add('scalecommerce-vo-video--static');
     }
 }
+
+/**
+ * Adds the subtitle tracks of a video as <track> children. The CDN allows any origin, so the
+ * <video> gets crossorigin="anonymous" (needed to load the files from another origin).
+ */
+export function addTracks(video, tracks = []) {
+    if (!Array.isArray(tracks) || !tracks.length) {
+        return;
+    }
+    video.setAttribute('crossorigin', 'anonymous');
+    tracks.forEach((track) => {
+        const element = document.createElement('track');
+        element.kind = track.kind === 'captions' ? 'captions' : 'subtitles';
+        element.srclang = track.srclang;
+        element.label = track.label || track.srclang;
+        element.src = track.src;
+        if (track.default) {
+            element.default = true;
+        }
+        video.appendChild(element);
+    });
+}

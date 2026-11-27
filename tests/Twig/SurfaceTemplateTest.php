@@ -60,4 +60,27 @@ class SurfaceTemplateTest extends TestCase
         static::assertStringNotContainsString('--vo-accent', $html);
         static::assertStringContainsString('scalecommerce-vo-surface__play--round scalecommerce-vo-surface__play--medium"', $html);
     }
+
+    public function testDirectPlayerRendersTracksAndCrossorigin(): void
+    {
+        $html = $this->render([
+            'mp4' => 'https://cdn/v.mp4',
+            'tracks' => [
+                ['src' => 'https://cdn/de.vtt?v=2', 'srclang' => 'de', 'label' => 'Deutsch', 'kind' => 'subtitles', 'default' => true],
+                ['src' => 'https://cdn/en.vtt', 'srclang' => 'en', 'label' => 'English', 'kind' => 'captions', 'default' => false],
+            ],
+        ]);
+
+        static::assertStringContainsString('crossorigin="anonymous"', $html);
+        static::assertStringContainsString('<track kind="subtitles" srclang="de" label="Deutsch" src="https://cdn/de.vtt?v=2" default>', $html);
+        static::assertStringContainsString('<track kind="captions" srclang="en" label="English" src="https://cdn/en.vtt">', $html);
+    }
+
+    public function testNoTracksNoCrossorigin(): void
+    {
+        $html = $this->render(['mp4' => 'https://cdn/v.mp4']);
+
+        static::assertStringNotContainsString('crossorigin', $html);
+        static::assertStringNotContainsString('<track', $html);
+    }
 }
