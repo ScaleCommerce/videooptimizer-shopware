@@ -12,6 +12,7 @@ use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
 use ScaleCommerce\VideoOptimizer\Service\EmbedAvailability;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
+use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -881,5 +882,169 @@ class VideoOptimizerClientTest extends TestCase
         }
 
         static::assertSame($degraded, $availability->isDegraded());
+    }
+
+    private function playable(string $uuid): MockResponse
+    {
+        return new MockResponse(json_encode(['data' => ['uuid' => $uuid, 'sources' => [['src' => "https://cdn/$uuid.mp4", 'type' => 'video/mp4', 'size' => 1]]]]));
+    }
+
+    /**
+     * Lookups queued during the CMS collect phase start together on the first getEmbed(), instead
+     * of one after another with 3 s each (issue #4).
+     */
+    public function testQueuedEmbedsAreRequestedConcurrently(): void
+    {
+        $requested = [];
+        $http = new MockHttpClient(function (string $method, string $url) use (&$requested): MockResponse {
+            $uuid = basename(parse_url($url, PHP_URL_PATH));
+            $requested[] = $uuid;
+
+            return $this->playable($uuid);
+        });
+        $client = $this->client($http);
+
+        $client->queueEmbed('a1');
+        $client->queueEmbed('b2');
+        $client->queueEmbed('c3');
+        $client->queueEmbed('a1');
+
+        static::assertSame('a1', $client->getEmbed('a1')['uuid']);
+        static::assertSame(['a1', 'b2', 'c3'], $requested, 'all queued lookups start with the first getEmbed()');
+
+        static::assertSame('b2', $client->getEmbed('b2')['uuid']);
+        static::assertSame('c3', $client->getEmbed('c3')['uuid']);
+        static::assertCount(3, $requested);
+    }
+
+    public function testQueuedEmbedAlreadyCachedIsNotRequestedAgain(): void
+    {
+        $requested = [];
+        $http = new MockHttpClient(function (string $method, string $url) use (&$requested): MockResponse {
+            $uuid = basename(parse_url($url, PHP_URL_PATH));
+            $requested[] = $uuid;
+
+            return $this->playable($uuid);
+        });
+        $client = $this->client($http);
+        $client->getEmbed('a1');
+
+        $client->queueEmbed('a1');
+        $client->queueEmbed('b2');
+        $client->getEmbed('b2');
+
+        static::assertSame(['a1', 'b2'], $requested);
+    }
+
+    /**
+     * @return iterable<string, array{MockResponse, bool}>
+     */
+    public static function unavailabilityCases(): iterable
+    {
+        yield 'transport error' => [new MockResponse('', ['error' => 'Connection reset']), true];
+        yield 'server error' => [new MockResponse('{}', ['http_code' => 503]), true];
+        yield 'rate limited' => [new MockResponse('{}', ['http_code' => 429]), true];
+        yield 'video not found' => [new MockResponse('{}', ['http_code' => 404]), false];
+    }
+
+    /**
+     * Once the API is unavailable, further lookups fail fast for 60 s without waiting for another
+     * timeout per video; a missing (deleted) video does not count.
+     */
+    #[DataProvider('unavailabilityCases')]
+    public function testUnavailableApiFailsFastForOtherVideos(MockResponse $first, bool $failFast): void
+    {
+        $count = 0;
+        $http = new MockHttpClient(function () use (&$count, $first): MockResponse {
+            ++$count;
+
+            return $count === 1 ? $first : $this->playable('b2');
+        });
+        $client = $this->client($http);
+
+        try {
+            $client->getEmbed('a1');
+        } catch (VideoOptimizerApiException) {
+        }
+
+        if ($failFast) {
+            try {
+                $client->getEmbed('b2');
+                static::fail('Expected a fast failure');
+            } catch (VideoOptimizerApiException $e) {
+                static::assertSame(503, $e->getStatusCode());
+            }
+            static::assertSame(1, $count);
+
+            return;
+        }
+
+        static::assertSame('b2', $client->getEmbed('b2')['uuid']);
+        static::assertSame(2, $count);
+    }
+
+    /**
+     * Admin changes to a video invalidate the pages that show it (issue #3).
+     */
+    public function testForgetEmbedInvalidatesTheVideoCacheTag(): void
+    {
+        $invalidator = $this->createMock(CacheInvalidator::class);
+        $invalidator->expects(static::once())->method('invalidate')->with(['scalecommerce-vo-video-v1']);
+
+        $client = new VideoOptimizerClient(new MockHttpClient(), $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedAvailability(), $invalidator);
+        $client->forgetEmbed('v1');
+    }
+
+    public function testGetEmbedRecordsTheRenderedVideo(): void
+    {
+        $availability = new EmbedAvailability();
+        $client = new VideoOptimizerClient(new MockHttpClient($this->playable('v1')), $this->config(), new ArrayAdapter(), new NullLogger(), $availability);
+
+        $client->getEmbed('v1');
+
+        static::assertSame(['scalecommerce-vo-video-v1'], $availability->cacheTags());
+    }
+
+    public function testResetDropsQueuedLookups(): void
+    {
+        $count = 0;
+        $http = new MockHttpClient(function (string $method, string $url) use (&$count): MockResponse {
+            ++$count;
+
+            return $this->playable(basename(parse_url($url, PHP_URL_PATH)));
+        });
+        $client = $this->client($http);
+        $client->queueEmbed('a1');
+        $client->queueEmbed('b2');
+        $client->reset();
+
+        $client->getEmbed('c3');
+
+        static::assertSame(1, $count);
+    }
+
+    /**
+     * With the API down, the concurrently started lookups that are not read anymore must not throw
+     * when they are destroyed at the end of the request.
+     */
+    public function testUnreadFailedLookupsDoNotThrowWhenDestroyed(): void
+    {
+        $http = new MockHttpClient(fn (): MockResponse => new MockResponse('', ['error' => 'Could not resolve host']));
+        $client = $this->client($http);
+        foreach (['a1', 'b2', 'c3'] as $uuid) {
+            $client->queueEmbed($uuid);
+        }
+
+        foreach (['a1', 'b2'] as $uuid) {
+            try {
+                $client->getEmbed($uuid);
+            } catch (VideoOptimizerApiException) {
+            }
+        }
+        $client->reset();
+        unset($client, $http);
+        gc_collect_cycles();
+
+        $this->addToAssertionCount(1);
     }
 }

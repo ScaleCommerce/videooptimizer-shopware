@@ -9,6 +9,8 @@
             <argument type="service" id="cache.object"/>
             <argument type="service" id="logger"/>
             <argument type="service" id="ScaleCommerce\VideoOptimizer\Service\EmbedAvailability"/>
+            <argument type="service" id="Shopware\Core\Framework\Adapter\Cache\CacheInvalidator"/>
+            <tag name="kernel.reset" method="reset"/>
         </service>
 
         <service id="ScaleCommerce\VideoOptimizer\Service\EmbedAvailability">
@@ -18,6 +20,7 @@
         <service id="ScaleCommerce\VideoOptimizer\Subscriber\DegradedEmbedCacheSubscriber">
             <argument type="service" id="ScaleCommerce\VideoOptimizer\Service\EmbedAvailability"/>
             <argument type="service" id="Shopware\Core\Framework\Adapter\Cache\CacheInvalidator"/>
+            <argument type="service" id="event_dispatcher"/>
             <tag name="kernel.event_subscriber"/>
         </service>
 

@@ -3,19 +3,22 @@
 namespace ScaleCommerce\VideoOptimizer\Service;
 
 use Psr\Log\LoggerInterface;
+use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\NullLogger;
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidRequestException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
+use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
+use Symfony\Contracts\Service\ResetInterface;
 
-class VideoOptimizerClient
+class VideoOptimizerClient implements ResetInterface
 {
     private const DEFAULT_BASE_URL = 'https://api.videooptimizer.eu/api/v1';
     private const DEFAULT_EMBED_BASE_URL = 'https://player.videooptimizer.eu';
@@ -25,6 +28,21 @@ class VideoOptimizerClient
     private const EMBED_CACHE_TTL = 3600;
     private const EMBED_FAILURE_CACHE_TTL = 60;
     private const ADMIN_MAX_DURATION = 30.0;
+    private const EMBED_MAX_DURATION = 3.0;
+    private const EMBED_API_UNAVAILABLE_KEY = 'scalecommerce_vo_embed_api_unavailable';
+
+    /**
+     * Embed lookups announced by the CMS resolvers' collect() phase, started together on the
+     * first getEmbed() of the request.
+     *
+     * @var array<string, true>
+     */
+    private array $queuedEmbeds = [];
+
+    /**
+     * @var array<string, ResponseInterface>
+     */
+    private array $inflightEmbeds = [];
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
@@ -32,7 +50,30 @@ class VideoOptimizerClient
         private readonly CacheInterface $cache,
         private readonly LoggerInterface $logger = new NullLogger(),
         private readonly EmbedAvailability $availability = new EmbedAvailability(),
+        private readonly ?CacheInvalidator $cacheInvalidator = null,
     ) {
+    }
+
+    /**
+     * Announces a video whose embed will be needed while rendering the current page. All
+     * announced lookups that are not cached yet start concurrently on the first getEmbed(), so a
+     * page with several videos waits for the slowest lookup instead of the sum of all (issue #4).
+     */
+    public function queueEmbed(string $uuid): void
+    {
+        if (preg_match('/^[A-Za-z0-9_-]+$/D', $uuid) === 1) {
+            $this->queuedEmbeds[$uuid] = true;
+        }
+    }
+
+    public function reset(): void
+    {
+        $this->queuedEmbeds = [];
+        // Unread responses that failed would throw when destroyed; cancel them explicitly.
+        foreach ($this->inflightEmbeds as $response) {
+            $response->cancel();
+        }
+        $this->inflightEmbeds = [];
     }
 
     public function listLibraries(): array
@@ -153,6 +194,8 @@ class VideoOptimizerClient
     {
         // The UUID comes from CMS slot config; validate it before it can reach the cache or a URL.
         $this->pathId($uuid);
+        $this->availability->markRendered($uuid);
+        $this->startQueuedEmbeds();
 
         // Set only when the callback below actually ran (i.e. this call missed the cache), so we
         // can tell "fresh failure" (propagate the real upstream exception) apart from "served from
@@ -164,8 +207,21 @@ class VideoOptimizerClient
             $this->embedCacheKey($uuid),
             function (ItemInterface $item) use ($uuid, &$freshFailure): array {
                 try {
-                    $data = $this->requestData('GET', '/embed/' . $this->pathId($uuid), ['max_duration' => 3.0], false, false);
+                    $inflight = $this->inflightEmbeds[$uuid] ?? null;
+                    unset($this->inflightEmbeds[$uuid]);
+                    if ($this->embedApiUnavailable()) {
+                        // An unread failed response would throw when destroyed.
+                        $inflight?->cancel();
+
+                        throw new VideoOptimizerApiException(503, 'VideoOptimizer API temporarily unavailable (cached failure).');
+                    }
+                    $data = $inflight !== null
+                        ? $this->decodeData($inflight, 'GET', $this->embedUrl($uuid))
+                        : $this->requestData('GET', '/embed/' . $this->pathId($uuid), ['max_duration' => self::EMBED_MAX_DURATION], false, false);
                 } catch (\Throwable $e) {
+                    if ($this->indicatesApiUnavailable($e)) {
+                        $this->markEmbedApiUnavailable();
+                    }
                     // Store the sentinel instead of throwing here - Symfony's CacheInterface::get()
                     // never persists a value when the callback throws, which is exactly what we
                     // don't want for a failure we intend to cache.
@@ -213,6 +269,75 @@ class VideoOptimizerClient
     public function forgetEmbed(string $uuid): void
     {
         $this->cache->delete($this->embedCacheKey($uuid));
+        // Called after a successful admin call, so the API is reachable again.
+        $this->cache->delete(self::EMBED_API_UNAVAILABLE_KEY);
+        // Pages showing this video were tagged while rendering (DegradedEmbedCacheSubscriber).
+        $this->cacheInvalidator?->invalidate([EmbedAvailability::cacheTag($uuid)]);
+    }
+
+    private function embedUrl(string $uuid): string
+    {
+        return $this->baseUrl() . '/embed/' . $this->pathId($uuid);
+    }
+
+    /**
+     * Starts all queued, not yet cached embed lookups at once; HttpClient sends them concurrently
+     * and getEmbed() consumes each response from $inflightEmbeds.
+     */
+    private function startQueuedEmbeds(): void
+    {
+        if ($this->queuedEmbeds === []) {
+            return;
+        }
+        $uuids = array_keys($this->queuedEmbeds);
+        $this->queuedEmbeds = [];
+        if (!$this->cache instanceof CacheItemPoolInterface || $this->embedApiUnavailable()) {
+            return;
+        }
+
+        foreach ($uuids as $uuid) {
+            if (isset($this->inflightEmbeds[$uuid]) || $this->cache->hasItem($this->embedCacheKey($uuid))) {
+                continue;
+            }
+            try {
+                $this->inflightEmbeds[$uuid] = $this->httpClient->request('GET', $this->embedUrl($uuid), [
+                    'headers' => $this->buildHeaders(false, 'application/json'),
+                    'max_duration' => self::EMBED_MAX_DURATION,
+                ]);
+            } catch (\Throwable) {
+                // Falls back to a regular lookup in getEmbed().
+            }
+        }
+    }
+
+    /**
+     * Transport errors, server errors and rate limiting mean the API as a whole is unavailable;
+     * a 4xx for a single video (e.g. 404 for a deleted one) does not.
+     */
+    private function indicatesApiUnavailable(\Throwable $e): bool
+    {
+        if (!$e instanceof VideoOptimizerApiException) {
+            return false;
+        }
+
+        return $e->getStatusCode() >= 500 || $e->getStatusCode() === 429;
+    }
+
+    private function embedApiUnavailable(): bool
+    {
+        return $this->cache instanceof CacheItemPoolInterface
+            && $this->cache->hasItem(self::EMBED_API_UNAVAILABLE_KEY);
+    }
+
+    private function markEmbedApiUnavailable(): void
+    {
+        if (!$this->cache instanceof CacheItemPoolInterface) {
+            return;
+        }
+        $item = $this->cache->getItem(self::EMBED_API_UNAVAILABLE_KEY);
+        $item->set(true);
+        $item->expiresAfter(self::EMBED_FAILURE_CACHE_TTL);
+        $this->cache->save($item);
     }
 
     public function listThumbnails(string $uuid): array
@@ -372,18 +497,34 @@ class VideoOptimizerClient
         try {
             for ($attempt = 0;; ++$attempt) {
                 $response = $this->httpClient->request($method, $url, $options);
-                $status = $response->getStatusCode();
 
                 // Respect Retry-After once; paginated loops can trip the rate limit. Skipped entirely
                 // for calls that opt out (e.g. getEmbed() during storefront rendering), where a
                 // blocking sleep() would hold the response open.
-                if ($status === 429 && $attempt === 0 && $retryOnRateLimit) {
+                if ($response->getStatusCode() === 429 && $attempt === 0 && $retryOnRateLimit) {
                     sleep($this->retryAfterSeconds($response));
                     continue;
                 }
                 break;
             }
+        } catch (TransportExceptionInterface $e) {
+            throw $this->unreachable($method, $url, $e);
+        }
 
+        return $this->decode($response, $method, $url);
+    }
+
+    private function decodeData(ResponseInterface $response, string $method, string $url): array
+    {
+        $payload = $this->decode($response, $method, $url)['data'] ?? null;
+
+        return is_array($payload) ? $payload : [];
+    }
+
+    private function decode(ResponseInterface $response, string $method, string $url): array
+    {
+        try {
+            $status = $response->getStatusCode();
             if ($status < 200 || $status >= 300) {
                 throw VideoOptimizerApiException::fromResponse($status, $response->getContent(false));
             }

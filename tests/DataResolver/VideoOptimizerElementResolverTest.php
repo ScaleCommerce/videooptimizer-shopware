@@ -75,6 +75,14 @@ class VideoOptimizerElementResolverTest extends TestCase
         static::assertTrue($slot->getData()->hasError());
     }
 
+    public function testCollectQueuesTheVideo(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('queueEmbed')->with('uuid-1');
+
+        static::assertNull($this->resolver($client)->collect($this->slotWithUuid('uuid-1'), $this->createStub(ResolverContext::class)));
+    }
+
     public function testEnrichHandlesApiErrorGracefully(): void
     {
         $client = $this->createStub(VideoOptimizerClient::class);

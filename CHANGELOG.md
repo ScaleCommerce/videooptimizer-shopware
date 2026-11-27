@@ -7,6 +7,9 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Upgrade notes
 - **Background hero markup:** the `<video>` no longer has the `autoplay` attribute (and an MP4-only hero no longer a `src`); the hero plugin starts playback when the hero is visible and motion is not reduced. The video carries `data-scalecommerce-vo-hero` plus `data-scalecommerce-vo-hero-hls`/`-mp4`/`-priority`, and a pause/play button follows it. Theme overrides of `cms-element-scalecommerce-vo-background-hero.html.twig` keep working (the plugin still picks up `data-scalecommerce-vo-hero-hls`), but only the new markup respects reduced motion and shows the button. (#6)
+- **Page cache tags:** pages showing a video are tagged `scalecommerce-vo-video-<uuid>` (HTTP cache; on Shopware 6.6 also the Store API route cache). Changing, re-postering or deleting a video in the administration invalidates these pages, following the shop's cache invalidation settings. Changes made directly in the VideoOptimizer dashboard still show up after the cache lifetime. (#3)
+- **API outages:** after a transport error, server error or rate limit, embed lookups for all videos fail fast for 60 seconds instead of waiting for a timeout per video; the affected pages are cached briefly as in 1.0.2. (#4)
+- **`VideoOptimizerClient`:** new optional constructor argument `CacheInvalidator`, new public method `queueEmbed()`, and it is reset between requests (`kernel.reset`). (#3, #4)
 - **Autoplaying native players** (single video, media split, spotlight, grid with presentation "direct") start when they scroll into view and pause when they leave it, instead of all starting at page load. (#8)
 
 ### Added
@@ -16,6 +19,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - Native players load video segments only when playback starts; until then only the playlists are fetched. hls.js caps the rendition at the player size, so small tiles no longer pull 4K. The hero option "priority" now means "start buffering right away" (others load once visible). (#8)
 
 ### Fixed
+- Pages with several videos no longer wait for each embed lookup in turn: the CMS elements announce their videos in the collect phase, and all lookups that are not cached run concurrently. (#4)
+- Admin changes to a video (title, poster, thumbnail, deletion) now reach cached storefront pages: the pages are tagged per video and invalidated. (#3)
 - Accessibility: hosted-embed iframes have a `title` (video title or label), the player gets the focus after clicking a facade, and the lightbox is named, keeps the keyboard focus inside and makes the rest of the page inert while open. (#7)
 
 ## [1.0.2] - 2026-11-27
