@@ -1,0 +1,51 @@
+{% import "@ScaleVideoOptimizer/storefront/element/_scalecommerce-vo-surface.html.twig" as vo %}
+{% block element_scalecommerce_vo_video_list %}
+    {% set data = element.data %}
+    {% set config = element.config %}
+    {% set surfaceOptions = {
+        controls: config.showControls.value ?? true,
+        muted: config.muted.value ?? false,
+        posterSizes: '(min-width: 992px) 33vw, (min-width: 600px) 50vw, 100vw'
+    } %}
+    {% if data and not data.hasError and data.items|length > 0 %}
+        {% set detailUrl = data.detailCategoryId ? seoUrl('frontend.navigation.page', { navigationId: data.detailCategoryId }) : null %}
+        <div class="scalecommerce-vo-video-list">
+            {% if data.headline %}<h2 class="scalecommerce-vo-video-list__headline">{{ data.headline }}</h2>{% endif %}
+            {% if data.intro %}<p class="scalecommerce-vo-video-list__intro">{{ data.intro|nl2br }}</p>{% endif %}
+            <ul class="scalecommerce-vo-video-list__items">
+                {% for item in data.items %}
+                    <li class="scalecommerce-vo-video-list__item">
+                        {% block element_scalecommerce_vo_video_list_card %}
+                            {% if detailUrl %}
+                                <a class="scalecommerce-vo-video-list__card" href="{{ detailUrl }}?vo_video={{ item.videoUuid|url_encode }}">
+                                    <span class="scalecommerce-vo-video-list__thumb">
+                                        {% if item.embed.poster %}<img src="{{ item.embed.poster }}"
+                                             {% if item.embed.posterSrcsetAttr %}srcset="{{ item.embed.posterSrcsetAttr }}" sizes="{{ surfaceOptions.posterSizes }}"{% endif %}
+                                             alt="" width="640" height="360" loading="lazy" decoding="async">{% endif %}
+                                        <span class="scalecommerce-vo-surface__play scalecommerce-vo-surface__play--round scalecommerce-vo-surface__play--medium" aria-hidden="true">▶</span>
+                                    </span>
+                                    <span class="scalecommerce-vo-video-list__title">{{ item.title ?: ('scalecommerce-vo.storefront.video'|trans) }}</span>
+                                    {% if item.durationLabel %}<span class="scalecommerce-vo-video-list__duration">{{ item.durationLabel }}</span>{% endif %}
+                                </a>
+                            {% else %}
+                                {{ vo.surface(item.embed, 'lightbox', item.playerMode, item.embedUrl, item.title, surfaceOptions) }}
+                                <span class="scalecommerce-vo-video-list__title">{{ item.title ?: ('scalecommerce-vo.storefront.video'|trans) }}</span>
+                                {% if item.durationLabel %}<span class="scalecommerce-vo-video-list__duration">{{ item.durationLabel }}</span>{% endif %}
+                            {% endif %}
+                        {% endblock %}
+                    </li>
+                {% endfor %}
+            </ul>
+            {% block element_scalecommerce_vo_video_list_pagination %}
+                {% if data.nextCursor or data.cursor %}
+                    {# The links keep the other query parameters of the page (filters, other lists, ...). #}
+                    {% set query = (app.request.query.all ?? {})|filter((value, key) => key != data.cursorParam) %}
+                    <nav class="scalecommerce-vo-video-list__pagination" aria-label="{{ 'scalecommerce-vo.storefront.listPagination'|trans }}">
+                        {% if data.cursor %}<a class="scalecommerce-vo-video-list__page" href="?{{ query|url_encode }}">{{ 'scalecommerce-vo.storefront.listFirst'|trans }}</a>{% endif %}
+                        {% if data.nextCursor %}<a class="scalecommerce-vo-video-list__page" rel="next" href="?{{ query|merge({ (data.cursorParam): data.nextCursor })|url_encode }}">{{ 'scalecommerce-vo.storefront.listNext'|trans }}</a>{% endif %}
+                    </nav>
+                {% endif %}
+            {% endblock %}
+        </div>
+    {% endif %}
+{% endblock %}

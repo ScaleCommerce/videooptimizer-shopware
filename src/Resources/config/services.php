@@ -8,7 +8,9 @@ use ScaleCommerce\VideoOptimizer\DataResolver\BackgroundHeroElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\MediaSplitElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\SpotlightElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\VideoChaptersElementResolver;
+use ScaleCommerce\VideoOptimizer\DataResolver\VideoDetailElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\VideoGridElementResolver;
+use ScaleCommerce\VideoOptimizer\DataResolver\VideoListElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\VideoOptimizerElementResolver;
 use ScaleCommerce\VideoOptimizer\DependencyInjection\HttpProxyConfiguredPass;
 use ScaleCommerce\VideoOptimizer\Service\EmbedRenderState;
@@ -16,6 +18,7 @@ use ScaleCommerce\VideoOptimizer\Service\GuardedHttpClient;
 use ScaleCommerce\VideoOptimizer\Service\PluginUserAgent;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use ScaleCommerce\VideoOptimizer\Subscriber\EmbedPageCacheSubscriber;
+use ScaleCommerce\VideoOptimizer\Subscriber\VideoDetailMetaSubscriber;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
 use Shopware\Core\Framework\Util\HtmlSanitizer;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
@@ -70,6 +73,9 @@ return static function (ContainerConfigurator $container): void {
         ])
         ->tag('kernel.event_subscriber');
 
+    $services->set(VideoDetailMetaSubscriber::class)
+        ->tag('kernel.event_subscriber');
+
     $services->set(VideoOptimizerAdminController::class)
         ->public()
         ->args([service(VideoOptimizerClient::class)]);
@@ -111,6 +117,14 @@ return static function (ContainerConfigurator $container): void {
         ->tag('shopware.cms.data_resolver');
 
     $services->set(VideoChaptersElementResolver::class)
+        ->args([service(VideoOptimizerClient::class), service('logger')])
+        ->tag('shopware.cms.data_resolver');
+
+    $services->set(VideoListElementResolver::class)
+        ->args([service(VideoOptimizerClient::class), service('logger')])
+        ->tag('shopware.cms.data_resolver');
+
+    $services->set(VideoDetailElementResolver::class)
         ->args([service(VideoOptimizerClient::class), service('logger')])
         ->tag('shopware.cms.data_resolver');
 

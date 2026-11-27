@@ -9,7 +9,12 @@
             "heroPlay": "Play background video",
             "scenes": "Scenes",
             "scene": "Scene %number%",
-            "sceneAria": "%label% · %time%"
+            "sceneAria": "%label% · %time%",
+            "videoNotFound": "This video was not found.",
+            "listPagination": "More videos",
+            "listNext": "More videos",
+            "listFirst": "Back to the first videos",
+            "videoUnavailable": "This video is temporarily unavailable."
         }
     }
 }

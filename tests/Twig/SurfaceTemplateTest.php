@@ -4,12 +4,15 @@ namespace ScaleCommerce\VideoOptimizer\Tests\Twig;
 
 use PHPUnit\Framework\TestCase;
 use ScaleCommerce\VideoOptimizer\DataResolver\Struct\VideoChaptersStruct;
+use ScaleCommerce\VideoOptimizer\DataResolver\Struct\VideoDetailStruct;
+use ScaleCommerce\VideoOptimizer\DataResolver\Struct\VideoListStruct;
 use ScaleCommerce\VideoOptimizer\DataResolver\Struct\VideoOptimizerVideoStruct;
 use Twig\Environment;
 use Twig\Loader\ArrayLoader;
 use Twig\Loader\ChainLoader;
 use Twig\Loader\FilesystemLoader;
 use Twig\TwigFilter;
+use Twig\TwigFunction;
 
 /**
  * Renders the shared surface macro with the real template file (without Shopware's Twig extensions;
@@ -196,6 +199,129 @@ class SurfaceTemplateTest extends TestCase
 
         static::assertStringContainsString('scalecommerce-vo-chapters__player', $html);
         static::assertStringNotContainsString('scalecommerce-vo-scenes', $html);
+    }
+
+    /**
+     * @param array<string, mixed> $query
+     */
+    private function renderList(VideoListStruct $data, array $query = []): string
+    {
+        $views = new FilesystemLoader();
+        $views->addPath(dirname(__DIR__, 2) . '/src/Resources/views', 'ScaleVideoOptimizer');
+        $twig = new Environment($views, ['autoescape' => 'html']);
+        $twig->addFilter(new TwigFilter('trans', static fn (string $key): string => $key));
+        $twig->addFunction(new TwigFunction('seoUrl', static fn (string $route, array $params): string => '/detail/' . $params['navigationId']));
+
+        return $twig->render('@ScaleVideoOptimizer/storefront/element/cms-element-scalecommerce-vo-video-list.html.twig', [
+            'element' => ['data' => $data, 'config' => []],
+            'app' => ['request' => ['query' => ['all' => $query]]],
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function card(string $uuid = 'abc'): array
+    {
+        return [
+            'videoUuid' => $uuid,
+            'title' => 'Tour <1>',
+            'durationLabel' => '1:05',
+            'playerMode' => 'embed',
+            'embedUrl' => 'https://player.example/embed/' . $uuid . '?x=1',
+            'embed' => ['poster' => 'https://p/a.jpg', 'posterSrcsetAttr' => 'https://p/480.jpg 480w', 'aspectRatio' => '16 / 9', 'theme' => [], 'tracks' => []],
+        ];
+    }
+
+    public function testListCardsLinkToTheDetailPageWithTheVideoInTheUrl(): void
+    {
+        $data = new VideoListStruct();
+        $data->setPresentation('detail');
+        $data->setDetailCategoryId('0123456789abcdef0123456789abcdef');
+        $data->setItems([self::card()]);
+
+        $html = $this->renderList($data);
+
+        static::assertStringContainsString('href="/detail/0123456789abcdef0123456789abcdef?vo_video=abc"', $html);
+        static::assertStringContainsString('srcset="https://p/480.jpg 480w"', $html);
+        static::assertStringContainsString('Tour &lt;1&gt;', $html);
+        static::assertStringContainsString('scalecommerce-vo-video-list__duration">1:05<', $html);
+        static::assertStringNotContainsString('data-vo-action', $html);
+    }
+
+    public function testListCardsOpenTheHostedPlayerInTheLightboxWithoutADetailPage(): void
+    {
+        $data = new VideoListStruct();
+        $data->setItems([self::card('a'), self::card('b')]);
+
+        $html = $this->renderList($data);
+
+        static::assertSame(2, substr_count($html, 'data-vo-action="lightbox"'));
+        static::assertStringContainsString('data-vo-player-mode="embed"', $html);
+        static::assertStringContainsString('data-vo-embed-url="https://player.example/embed/b?x=1"', $html);
+    }
+
+    public function testListPaginationKeepsTheOtherQueryParameters(): void
+    {
+        $data = new VideoListStruct();
+        $data->setItems([self::card()]);
+        $data->setCursorParam('vo_cursor_s1');
+        $data->setCursor('cur_1');
+        $data->setNextCursor('cur_2');
+
+        $html = $this->renderList($data, ['color' => 'red', 'vo_cursor_s1' => 'cur_1', 'vo_cursor_other' => 'x']);
+
+        static::assertStringContainsString('rel="next" href="?color=red&amp;vo_cursor_other=x&amp;vo_cursor_s1=cur_2"', $html);
+        static::assertStringContainsString('href="?color=red&amp;vo_cursor_other=x">scalecommerce-vo.storefront.listFirst', $html);
+    }
+
+    public function testListWithoutMoreVideosHasNoPagination(): void
+    {
+        $data = new VideoListStruct();
+        $data->setItems([self::card()]);
+
+        static::assertStringNotContainsString('pagination', $this->renderList($data));
+        static::assertSame('', trim($this->renderList(new VideoListStruct())));
+    }
+
+    private function renderDetail(VideoDetailStruct $data): string
+    {
+        $views = new FilesystemLoader();
+        $views->addPath(dirname(__DIR__, 2) . '/src/Resources/views', 'ScaleVideoOptimizer');
+        $twig = new Environment($views, ['autoescape' => 'html']);
+        $twig->addFilter(new TwigFilter('trans', static fn (string $key): string => $key));
+
+        return $twig->render('@ScaleVideoOptimizer/storefront/element/cms-element-scalecommerce-vo-video-detail.html.twig', ['element' => ['data' => $data, 'config' => []]]);
+    }
+
+    public function testDetailShowsTitleAndPlayer(): void
+    {
+        $data = new VideoDetailStruct();
+        $data->setVideoUuid('abc');
+        $data->setTitle('Product <tour>');
+        $data->setDurationLabel('1:05');
+        $data->setPlayerMode('native');
+        $data->setEmbed(['mp4' => 'https://cdn/v.mp4', 'aspectRatio' => '16 / 9', 'jsonLd' => '{"@type":"VideoObject"}']);
+
+        $html = $this->renderDetail($data);
+
+        static::assertStringContainsString('<h1 class="scalecommerce-vo-video-detail__title">Product &lt;tour&gt;</h1>', $html);
+        static::assertStringContainsString('data-scalecommerce-vo-player="true"', $html);
+        static::assertStringContainsString('ld+json', $html);
+        static::assertStringContainsString('__meta">1:05<', $html);
+    }
+
+    public function testDetailNotFoundIsNeutral(): void
+    {
+        $data = new VideoDetailStruct();
+        $data->setNotFound(true);
+
+        $html = $this->renderDetail($data);
+
+        static::assertStringContainsString('role="status"', $html);
+        static::assertStringContainsString('scalecommerce-vo.storefront.videoNotFound', $html);
+        static::assertStringNotContainsString('<video', $html);
+        static::assertStringNotContainsString('<iframe', $html);
     }
 
     public function testThemeIsPassedToThePlayerOptionsAndAccentIsACustomProperty(): void

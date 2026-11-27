@@ -1,0 +1,33 @@
+{% import "@ScaleVideoOptimizer/storefront/element/_scalecommerce-vo-surface.html.twig" as vo %}
+{% block element_scalecommerce_vo_video_detail %}
+    {% set data = element.data %}
+    {% set config = element.config %}
+    {% set surfaceOptions = {
+        controls: config.showControls.value ?? true,
+        autoplay: config.autoplay.value ?? false,
+        muted: config.muted.value ?? false,
+        loop: config.loop.value ?? false,
+        posterSizes: '(min-width: 1280px) 1280px, 100vw',
+        layout: data.layout ?? {}
+    } %}
+    {% if data and data.notFound %}
+        {# Neutral answer for an invalid, unknown or foreign video: no details about why. #}
+        <div class="scalecommerce-vo-video-detail scalecommerce-vo-video-detail--missing" role="status">
+            <p>{{ 'scalecommerce-vo.storefront.videoNotFound'|trans }}</p>
+        </div>
+    {% elseif data and data.unavailable %}
+        <div class="scalecommerce-vo-video-detail scalecommerce-vo-video-detail--unavailable" role="status">
+            <p>{{ 'scalecommerce-vo.storefront.videoUnavailable'|trans }}</p>
+        </div>
+    {% elseif data and data.videoUuid and not data.hasError and (data.playerMode == 'embed' or data.embed) %}
+        <div class="scalecommerce-vo-video-detail">
+            {% block element_scalecommerce_vo_video_detail_title %}
+                {% if data.title %}<h1 class="scalecommerce-vo-video-detail__title">{{ data.title }}</h1>{% endif %}
+            {% endblock %}
+            {{ vo.surface(data.embed, 'direct', data.playerMode, data.embedUrl, data.title, surfaceOptions) }}
+            {% block element_scalecommerce_vo_video_detail_meta %}
+                {% if data.durationLabel %}<p class="scalecommerce-vo-video-detail__meta">{{ data.durationLabel }}</p>{% endif %}
+            {% endblock %}
+        </div>
+    {% endif %}
+{% endblock %}

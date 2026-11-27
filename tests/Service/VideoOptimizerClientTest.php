@@ -50,6 +50,307 @@ class VideoOptimizerClientTest extends TestCase
         return new VideoOptimizerClient($http, $config ?? $this->config(), $cache ?? new ArrayAdapter());
     }
 
+    public function testStorefrontVideoPageKeepsReadyVideosPassesTheFiltersAndIsCached(): void
+    {
+        $urls = [];
+        $http = new MockHttpClient(function (string $method, string $url) use (&$urls): MockResponse {
+            $urls[] = $url;
+
+            return new MockResponse(json_encode([
+                'data' => [
+                    ['uuid' => 'a', 'status' => 'ready', 'title' => 'A'],
+                    ['uuid' => 'b', 'status' => 'processing'],
+                    ['uuid' => 'c', 'status' => 'failed'],
+                    'junk',
+                ],
+                'pagination' => ['next_cursor' => 'cur_2', 'has_more' => true],
+            ]));
+        });
+        $client = $this->client($http);
+
+        $page = $client->storefrontVideoPage('lib-1', null, 1, ['promo', '', 'new']);
+        $again = $client->storefrontVideoPage('lib-1', null, 1, ['promo', '', 'new']);
+
+        static::assertSame(['a'], array_column($page['items'], 'uuid'));
+        static::assertSame('cur_2', $page['nextCursor']);
+        static::assertFalse($page['failed']);
+        static::assertSame($page, $again);
+        static::assertCount(1, $urls);
+        static::assertStringContainsString('/libraries/lib-1/videos?', $urls[0]);
+        static::assertStringContainsString('limit=1&', $urls[0]);
+        static::assertStringContainsString('tags=promo%2Cnew', $urls[0]);
+    }
+
+    public function testStorefrontVideoPageDropsAnInvalidCursorAndTheNextCursorOfTheLastPage(): void
+    {
+        $urls = [];
+        $http = new MockHttpClient(function (string $method, string $url) use (&$urls): MockResponse {
+            $urls[] = $url;
+
+            return new MockResponse(json_encode(['data' => [], 'pagination' => ['next_cursor' => 'bad cursor!', 'has_more' => true]]));
+        });
+
+        $page = $this->client($http)->storefrontVideoPage('lib-1', 'bad cursor!', 500);
+
+        static::assertStringNotContainsString('cursor', $urls[0]);
+        static::assertStringContainsString('limit=100', $urls[0]);
+        static::assertNull($page['nextCursor']);
+    }
+
+    public function testStorefrontVideoPageReportsAFailureWithoutThrowingAndCachesIt(): void
+    {
+        $count = 0;
+        $http = new MockHttpClient(function () use (&$count): MockResponse {
+            ++$count;
+
+            return new MockResponse('', ['http_code' => 503]);
+        });
+        $state = new EmbedRenderState();
+        $client = new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), $state);
+
+        $page = $client->storefrontVideoPage('lib-1', null, 12);
+        $client->storefrontVideoPage('lib-1', null, 12);
+        // Fail fast for other pages while the API is flagged unavailable.
+        $other = $client->storefrontVideoPage('lib-2', null, 12);
+
+        static::assertTrue($page['failed']);
+        static::assertSame([], $page['items']);
+        static::assertTrue($other['failed']);
+        static::assertSame(1, $count);
+        static::assertTrue($state->isDegraded());
+    }
+
+    public function testStorefrontVideoOwnerReadsAndCachesTheLibraryWithTheToken(): void
+    {
+        $count = 0;
+        $auth = null;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$count, &$auth): MockResponse {
+            ++$count;
+            foreach ($options['headers'] ?? [] as $header) {
+                if (str_starts_with((string) $header, 'Authorization:')) {
+                    $auth = $header;
+                }
+            }
+
+            return new MockResponse(json_encode(['data' => ['uuid' => 'v1', 'library_id' => 'lib-1']]));
+        });
+        $client = $this->client($http);
+
+        static::assertSame(['status' => 'ok', 'library' => 'lib-1'], $client->storefrontVideoOwner('v1'));
+        static::assertSame(['status' => 'ok', 'library' => 'lib-1'], $client->storefrontVideoOwner('v1'));
+        static::assertSame(1, $count);
+        static::assertSame('Authorization: Bearer vp_test', $auth);
+    }
+
+    public function testStorefrontVideoOwnerReportsForeignOrUnknownVideosAsMissingAndCachesThat(): void
+    {
+        $count = 0;
+        $http = new MockHttpClient(function () use (&$count): MockResponse {
+            ++$count;
+
+            return new MockResponse('', ['http_code' => 404]);
+        });
+        $client = $this->client($http);
+
+        static::assertSame('missing', $client->storefrontVideoOwner('gone')['status']);
+        static::assertSame('missing', $client->storefrontVideoOwner('gone')['status']);
+        static::assertSame(1, $count);
+    }
+
+    public function testStorefrontVideoOwnerReportsAnOutageAsUnavailableWithoutTrippingTheFailFast(): void
+    {
+        $urls = [];
+        $http = new MockHttpClient(function (string $method, string $url) use (&$urls): MockResponse {
+            $urls[] = $url;
+
+            return str_contains($url, '/videos/down')
+                ? new MockResponse('', ['http_code' => 503])
+                : new MockResponse(json_encode(['data' => ['library_id' => 'lib-1']]));
+        });
+        $state = new EmbedRenderState();
+        $client = new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), $state);
+
+        static::assertSame('unavailable', $client->storefrontVideoOwner('down')['status']);
+        static::assertTrue($state->isDegraded());
+        // A query-driven lookup does not flag the whole API as down: another video is still asked for.
+        static::assertSame('ok', $client->storefrontVideoOwner('other')['status']);
+        static::assertCount(2, $urls);
+    }
+
+    public function testStorefrontVideoOwnerLimitsUncachedLookups(): void
+    {
+        $count = 0;
+        $http = new MockHttpClient(function () use (&$count): MockResponse {
+            ++$count;
+
+            return new MockResponse('', ['http_code' => 404]);
+        });
+        $client = $this->client($http);
+
+        for ($i = 0; $i < 30; ++$i) {
+            static::assertSame('missing', $client->storefrontVideoOwner('v' . $i)['status']);
+        }
+        // Over the budget: temporary, no API call, nothing cached.
+        static::assertSame('unavailable', $client->storefrontVideoOwner('v31')['status']);
+        static::assertSame('unavailable', $client->storefrontVideoOwner('v31')['status']);
+
+        static::assertSame(30, $count);
+    }
+
+    public function testTheOwnershipCacheIsScopedByTokenAndDroppedWhenTheVideoChanges(): void
+    {
+        $count = 0;
+        $http = new MockHttpClient(function () use (&$count): MockResponse {
+            ++$count;
+
+            return new MockResponse(json_encode(['data' => ['library_id' => 'lib-1']]));
+        });
+        $cache = new ArrayAdapter();
+        $client = $this->client($http, null, $cache);
+        $other = $this->client($http, $this->config(token: 'vp_other'), $cache);
+
+        $client->storefrontVideoOwner('v1');
+        $client->storefrontVideoOwner('v1');
+        // Another token never reads the first token's answer.
+        $other->storefrontVideoOwner('v1');
+        static::assertSame(2, $count);
+
+        // A change of the video (webhook, admin) drops the answer.
+        $client->forgetEmbed('v1');
+        $client->storefrontVideoOwner('v1');
+        static::assertSame(3, $count);
+    }
+
+    public function testPeekEmbedOnlyReadsTheCache(): void
+    {
+        $count = 0;
+        $http = new MockHttpClient(function () use (&$count): MockResponse {
+            ++$count;
+
+            return new MockResponse(json_encode(['data' => ['title' => 'T', 'sources' => []]]));
+        });
+        $client = $this->client($http);
+
+        static::assertNull($client->peekEmbed('v1'));
+        static::assertSame(0, $count);
+
+        $client->getEmbed('v1');
+        static::assertSame('T', $client->peekEmbed('v1')['title']);
+        static::assertNull($client->peekEmbed('bad id/../'));
+    }
+
+    public function testPeekEmbedIgnoresACachedFailure(): void
+    {
+        $http = new MockHttpClient(new MockResponse('', ['http_code' => 500]));
+        $client = $this->client($http);
+        try {
+            $client->getEmbed('v1');
+        } catch (VideoOptimizerApiException) {
+        }
+
+        static::assertNull($client->peekEmbed('v1'));
+    }
+
+    public function testMarkVideoRenderedTagsThePage(): void
+    {
+        $state = new EmbedRenderState();
+        $client = new VideoOptimizerClient(new MockHttpClient(), $this->config(), new ArrayAdapter(), new NullLogger(), $state);
+
+        $client->markVideoRendered('v1');
+        $client->markVideoRendered('bad id');
+
+        static::assertSame([EmbedRenderState::cacheTag('v1')], $state->cacheTags());
+    }
+
+    public function testAnUnknownVideoDoesNotBlockAListOrEmbedLookupAfterwards(): void
+    {
+        $http = new MockHttpClient(function (string $method, string $url): MockResponse {
+            return str_contains($url, '/videos/gone')
+                ? new MockResponse('', ['http_code' => 404])
+                : new MockResponse(json_encode(['data' => [], 'pagination' => ['has_more' => false]]));
+        });
+        $client = $this->client($http);
+
+        static::assertSame('missing', $client->storefrontVideoOwner('gone')['status']);
+        static::assertFalse($client->storefrontVideoPage('lib-1', null, 12)['failed']);
+    }
+
+    public function testStorefrontVideoPageFillsUpWithReadyVideosFromFurtherApiPages(): void
+    {
+        $urls = [];
+        $responses = [
+            new MockResponse(json_encode(['data' => [['uuid' => 'p1', 'status' => 'processing']], 'pagination' => ['next_cursor' => 'c1', 'has_more' => true]])),
+            new MockResponse(json_encode(['data' => [['uuid' => 'a', 'status' => 'ready'], ['uuid' => 'x', 'status' => 'failed']], 'pagination' => ['next_cursor' => 'c2', 'has_more' => true]])),
+            new MockResponse(json_encode(['data' => [['uuid' => 'b', 'status' => 'ready']], 'pagination' => ['next_cursor' => 'c3', 'has_more' => true]])),
+        ];
+        $http = new MockHttpClient(function (string $method, string $url) use (&$urls, &$responses): MockResponse {
+            $urls[] = $url;
+
+            return array_shift($responses);
+        });
+
+        $page = $this->client($http)->storefrontVideoPage('lib-1', null, 2);
+
+        // Three API calls at most; the cursor continues after the last page read.
+        static::assertCount(3, $urls);
+        static::assertStringContainsString('cursor=c2', $urls[2]);
+        // Follow-up calls ask for the missing count only: 2, then 2 (none ready yet), then 1.
+        static::assertMatchesRegularExpression('/limit=2(&|$)/', $urls[0]);
+        static::assertMatchesRegularExpression('/limit=2(&|$)/', $urls[1]);
+        static::assertMatchesRegularExpression('/limit=1(&|$)/', $urls[2]);
+        static::assertSame(['a', 'b'], array_column($page['items'], 'uuid'));
+        static::assertSame('c3', $page['nextCursor']);
+    }
+
+    public function testStorefrontVideoPageStopsAfterThreeApiCallsEvenWithoutAnyReadyVideo(): void
+    {
+        $count = 0;
+        $http = new MockHttpClient(function () use (&$count): MockResponse {
+            ++$count;
+
+            return new MockResponse(json_encode(['data' => [['uuid' => 'p', 'status' => 'processing']], 'pagination' => ['next_cursor' => 'c' . $count, 'has_more' => true]]));
+        });
+
+        $page = $this->client($http)->storefrontVideoPage('lib-1', null, 12);
+
+        static::assertSame(3, $count);
+        static::assertSame([], $page['items']);
+        static::assertSame('c3', $page['nextCursor']);
+    }
+
+    public function testACursorDrivenListFailureDoesNotFlagTheApiAsDown(): void
+    {
+        $count = 0;
+        $http = new MockHttpClient(function () use (&$count): MockResponse {
+            ++$count;
+
+            return new MockResponse('', ['http_code' => 503]);
+        });
+        $client = $this->client($http);
+
+        static::assertTrue($client->storefrontVideoPage('lib-1', 'abc=', 12)['failed']);
+        static::assertTrue($client->storefrontVideoPage('lib-2', 'def=', 12)['failed']);
+
+        static::assertSame(2, $count);
+    }
+
+    public function testListCursorsAreValidatedStrictly(): void
+    {
+        $urls = [];
+        $http = new MockHttpClient(function (string $method, string $url) use (&$urls): MockResponse {
+            $urls[] = $url;
+
+            return new MockResponse(json_encode(['data' => []]));
+        });
+        $client = $this->client($http);
+
+        $client->storefrontVideoPage('lib-1', str_repeat('a', 201), 12);
+        $client->storefrontVideoPage('lib-2', 'MjAyNi0wOC0wNlQwODo1OToyMS45MzNafDc1', 12);
+
+        static::assertStringNotContainsString('cursor', $urls[0]);
+        static::assertStringContainsString('cursor=MjAyNi0wOC0wNlQwODo1OToyMS45MzNafDc1', $urls[1]);
+    }
+
     public function testThumbnailUrlUsesTheConfiguredApiBaseOnceAndClampsTheIndex(): void
     {
         $client = $this->client(new MockHttpClient(), $this->config(baseUrl: 'https://api.example.com/api/v1/'));

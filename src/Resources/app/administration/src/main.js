@@ -24,6 +24,10 @@ import './module/sw-cms/elements/scalecommerce-vo-video-grid';
 import './module/sw-cms/blocks/video/scalecommerce-vo-video-grid';
 import './module/sw-cms/elements/scalecommerce-vo-chapters';
 import './module/sw-cms/blocks/video/scalecommerce-vo-chapters';
+import './module/sw-cms/elements/scalecommerce-vo-video-list';
+import './module/sw-cms/blocks/video/scalecommerce-vo-video-list';
+import './module/sw-cms/elements/scalecommerce-vo-video-detail';
+import './module/sw-cms/blocks/video/scalecommerce-vo-video-detail';
 
 Shopware.Service().register('scalecommerceVoApiService', (container) => {
     const initContainer = Shopware.Application.getContainer('init');

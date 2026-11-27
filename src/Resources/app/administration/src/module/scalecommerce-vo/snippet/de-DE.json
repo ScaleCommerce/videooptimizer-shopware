@@ -79,7 +79,7 @@
             "focalY": "Bildausschnitt vertikal (%)",
             "focalHint": "Welcher Teil sichtbar bleibt, wenn das Video beschnitten wird. Wird vom gehosteten Embed nicht unterstützt.",
             "miniPlayer": "Schwebender Mini-Player",
-            "miniPlayerHint": "Läuft das Video und scrollt aus dem Bild, wird es unten rechts angeheftet (Bildschirme ab 600 px). Passt nicht zu \"Autoplay\", das ein Video beim Verlassen des Bildes pausiert."
+            "miniPlayerHint": "Hat ein Besucher das Video gestartet (per Klick oder durch Ton an/Spulen bei einem Autoplay-Video) und scrollt es aus dem Bild, wird es unten rechts angeheftet (Bildschirme ab 600 px)."
         },
         "mediaSplit": {
             "label": "VideoOptimizer Media Split",
@@ -346,6 +346,25 @@
             "sceneTitles": "Szenentitel",
             "sceneTitlesHint": "Ein Titel pro Zeile, in der Reihenfolge der Szenen. Leere Zeilen behalten \"Szene n\". Die Vorschaubilder sind die zehn automatischen Thumbnails des Videos, gleichmäßig verteilt.",
             "scene": "Szene {number}"
+        },
+        "videoList": {
+            "label": "VideoOptimizer Videoliste",
+            "blockLabel": "VideoOptimizer Videoliste",
+            "headline": "Überschrift",
+            "intro": "Einleitung",
+            "pageSize": "Videos pro Seite (3-48)",
+            "tags": "Nur Videos mit diesen Tags",
+            "detailPage": "Detailseite",
+            "detailPageHelp": "Seite mit einem Element \"VideoOptimizer Videodetail\"; eine Karte verlinkt dorthin, das Video steht in der URL. Ohne Seite öffnet eine Karte den gehosteten Player in einer Lightbox.",
+            "libraryHint": "Es werden nur fertige Videos der Bibliothek gelistet.",
+            "cardsPlaceholder": "Video"
+        },
+        "videoDetail": {
+            "label": "VideoOptimizer Videodetail",
+            "blockLabel": "VideoOptimizer Videodetail",
+            "defaultVideo": "Standardvideo",
+            "libraryHint": "Das gezeigte Video kommt aus der URL (?vo_video=...) und muss zu Ihrer VideoOptimizer-Organisation gehören (und zu dieser Bibliothek, falls eine gewählt ist); ohne Video in der URL wird das Standardvideo gezeigt.",
+            "titlePlaceholder": "Videotitel"
         }
     },
     "sw-privileges": {

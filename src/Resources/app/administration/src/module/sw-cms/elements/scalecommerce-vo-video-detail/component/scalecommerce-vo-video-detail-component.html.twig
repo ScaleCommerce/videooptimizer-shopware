@@ -1,0 +1,20 @@
+{% block element_scalecommerce_vo_video_detail %}
+<div class="scalecommerce-vo-video-detail-component">
+    <p class="scalecommerce-vo-video-detail-component__title"
+       :class="{ 'scvo-preview-placeholder': !title }">
+        {{ title || $tc('scalecommerce-vo.videoDetail.titlePlaceholder') }}
+    </p>
+    <scalecommerce-vo-preview-surface
+        :aspect="formatAspect"
+        :poster-url="posterUrl"
+        presentation="direct"
+        :player-mode="playerMode"
+        :controls="showControls"
+        :status="video ? video.status : null"
+        :meta="metaLine()"
+        :has-video="!!video"
+        :missing="videoMissing"
+        :tooltip="video ? (video.title || video.uuid) : null"
+    />
+</div>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% block element_config_scalecommerce_vo_video_list %}
+<div class="scalecommerce-vo-video-list-config">
+    <scalecommerce-vo-api-notice :error="librariesError" />
+
+    <mt-select
+        :label="$tc('scalecommerce-vo.cms.library')"
+        :options="libraryOptions"
+        :model-value="selectedLibraryId"
+        @update:model-value="onLibraryChange" />
+    <p>{{ $tc('scalecommerce-vo.videoList.libraryHint') }}</p>
+
+    <scalecommerce-vo-tag-picker
+        :model-value="tags"
+        :available="availableTags"
+        :label="$tc('scalecommerce-vo.videoList.tags')"
+        @update:model-value="onTagsChange" />
+
+    <mt-number-field
+        :label="$tc('scalecommerce-vo.videoList.pageSize')"
+        :min="3" :max="48" :step="1"
+        v-model="element.config.pageSize.value" />
+
+    <sw-entity-single-select
+        entity="category"
+        :label="$tc('scalecommerce-vo.videoList.detailPage')"
+        :help-text="$tc('scalecommerce-vo.videoList.detailPageHelp')"
+        :value="element.config.detailCategoryId.value"
+        @update:value="onDetailPageChange" />
+
+    <mt-text-field
+        :label="$tc('scalecommerce-vo.videoList.headline')"
+        v-model="element.config.headline.value" />
+    <mt-textarea
+        :label="$tc('scalecommerce-vo.videoList.intro')"
+        v-model="element.config.intro.value" />
+</div>
+{% endblock %}
