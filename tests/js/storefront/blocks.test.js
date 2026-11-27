@@ -232,3 +232,101 @@ describe('lightbox (#34)', () => {
         expect(video.hasAttribute('src')).toBe(false);
     });
 });
+
+describe('lightbox as a native dialog (#32)', () => {
+    let showModal;
+    let close;
+
+    // jsdom has no showModal(): this stand-in opens and closes the dialog like a browser does (the
+    // close event is dispatched by the browser when Escape closes a modal dialog).
+    beforeEach(() => {
+        showModal = vi.fn(function open() {
+            this.setAttribute('open', '');
+        });
+        close = vi.fn(function closeDialog() {
+            this.removeAttribute('open');
+            this.dispatchEvent(new Event('close'));
+        });
+        window.HTMLDialogElement.prototype.showModal = showModal;
+        window.HTMLDialogElement.prototype.close = close;
+    });
+
+    afterEach(() => {
+        // Closes the dialog while the stand-in still exists (the top-level hook runs after this one).
+        if (overlay()) {
+            key('Escape');
+        }
+        delete window.HTMLDialogElement.prototype.showModal;
+        delete window.HTMLDialogElement.prototype.close;
+    });
+
+    it('opens a <dialog> with showModal() and leaves focus and inert to the browser', () => {
+        const { facade } = setup();
+
+        facade.click();
+
+        expect(overlay().tagName).toBe('DIALOG');
+        expect(showModal).toHaveBeenCalledTimes(1);
+        expect(overlay().hasAttribute('open')).toBe(true);
+        expect(overlay().getAttribute('aria-label')).toBe('Demo');
+        // The browser provides role and modality; no manual inert or aria-modal.
+        expect(overlay().hasAttribute('role')).toBe(false);
+        expect(document.getElementById('page').hasAttribute('inert')).toBe(false);
+        expect(document.activeElement).toBe(overlay().querySelector('.scalecommerce-vo-lightbox__close'));
+    });
+
+    it('closes when the browser closes the dialog on Escape (focus inside the native controls)', () => {
+        const { facade } = setup();
+        facade.click();
+        const dialog = overlay();
+
+        // Escape while the <video> controls or the embed iframe hold the focus never reaches the
+        // page as a key event; the browser closes the dialog and fires "close".
+        dialog.dispatchEvent(new Event('close'));
+
+        expect(overlay()).toBeNull();
+        expect(document.body.classList.contains('scalecommerce-vo-lightbox-open')).toBe(false);
+        expect(document.activeElement).toBe(facade);
+        // The guard is released.
+        facade.click();
+        expect(overlay()).not.toBeNull();
+    });
+
+    it('closes with the close button, Escape and a backdrop click, and closes the dialog once', () => {
+        const { facade } = setup();
+
+        facade.click();
+        overlay().querySelector('.scalecommerce-vo-lightbox__close').click();
+        expect(overlay()).toBeNull();
+        expect(close).toHaveBeenCalledTimes(1);
+
+        facade.click();
+        key('Escape');
+        expect(overlay()).toBeNull();
+
+        facade.click();
+        overlay().click();
+        expect(overlay()).toBeNull();
+        expect(close).toHaveBeenCalledTimes(3);
+    });
+
+    it('does not trap Tab itself while the browser keeps the focus in the modal dialog', () => {
+        const { facade } = setup({ mode: 'embed' });
+        facade.click();
+
+        const tab = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
+        document.dispatchEvent(tab);
+
+        expect(tab.defaultPrevented).toBe(false);
+    });
+
+    it('closes the dialog when the plugin is destroyed', () => {
+        const { plugin, facade } = setup();
+        facade.click();
+
+        plugin.destroy();
+
+        expect(overlay()).toBeNull();
+        expect(close).toHaveBeenCalledTimes(1);
+    });
+});

@@ -38,7 +38,7 @@ YouTube, Vimeo and self-hosting — the API token stays server-side, proxied thr
 - 🖼️ **Video detail overlay** — pick the poster from 10 auto-generated frames, or upload a custom one (from disk or the Shopware media library); shows dimensions, duration and orientation.
 - 🧱 **Five CMS elements/blocks** — `Video`, `Media split`, `Background hero`, `Spotlight` and `Video grid`, each with a presentation mode (poster/facade, lightbox, or embedded directly) and a player mode (native adaptive HLS via hls.js, or the hosted VideoOptimizer embed).
 - ⚡ **Storefront performance** — the player code and hls.js (light build) load only on pages with a video, and segments only once playback starts; autoplaying videos run only while visible. Embed lookups of a page run concurrently and are cached per video.
-- ♿ **Accessible** — titled embeds, keyboard-friendly facade and lightbox (focus trap, inert background), a pause button for the background hero and no autoplay with `prefers-reduced-motion`.
+- ♿ **Accessible** — titled embeds, keyboard-friendly facade and a lightbox built on a native modal `<dialog>` (focus stays inside, inert background, Escape), a pause button for the background hero and no autoplay with `prefers-reduced-motion`.
 - 🗂️ **Cache-aware** — pages are tagged per video, so changes in the administration invalidate exactly the affected storefront pages; a page rendered during an API outage is cached for 60 seconds only.
 - 🔐 **Token never touches the browser** — stored server-side in the plugin configuration; all admin and storefront traffic to VideoOptimizer is proxied through Shopware. The administration only offers the actions a user's role allows and explains a missing token or permission.
 - 🧩 **Runs on 6.6 and 6.7** — compiled administration (6.6 webpack + 6.7 Vite) and storefront assets are shipped, no build step required.
@@ -168,6 +168,7 @@ Under **Settings → System → Plugins → VideoOptimizer**:
 | `apiToken` | Your VideoOptimizer API token (`vp_...`). |
 | `apiBaseUrl` | API base URL, must be `https://`. Default: `https://api.videooptimizer.eu/api/v1`. |
 | `embedBaseUrl` | Public host serving the hosted embed player, must be `https://`. Default: `https://player.videooptimizer.eu`. Existing installations that still use `https://videooptimizer.eu` keep working. |
+| `jsonLd` | Output a schema.org `VideoObject` (JSON-LD) once per video on a page (default on). Switch off if your theme or SEO plugin already outputs one. |
 | `blockPrivateNetworks` | Refuse connections to private, loopback and link-local addresses, also behind host names and redirects (default on). Switch off for a self-hosted VideoOptimizer on a private network; not applied behind an outbound proxy. |
 
 ### Permissions (ACL)
@@ -232,6 +233,11 @@ via the gallery picker, then configure per element:
   visitors with `prefers-reduced-motion` or the browser's data saver; "priority" starts buffering right away).
 - **Player mode** — native adaptive HLS player (hls.js) or the hosted VideoOptimizer embed (iframe), each
   with its own controls/autoplay/muted/loop options.
+- **Player theme and subtitles** — the native player applies the video's player theme from VideoOptimizer
+  (controls, autoplay with muted start, loop, preload, non-interactive, no fullscreen/playback-rate/Picture-in-Picture,
+  play button shape and size, accent colour as `--vo-accent`) and shows its subtitle tracks. Control bar colour,
+  volume, time display and quality menu cannot be changed on the browser's native controls and are ignored;
+  the hosted embed applies the whole theme itself.
 
 <div align="center">
 
@@ -253,7 +259,7 @@ via the gallery picker, then configure per element:
 | Videos **disappear for about a minute** | The VideoOptimizer API was unreachable or rate-limited; uncached videos fail fast for 60 seconds | Nothing to do; pages rendered meanwhile are cached for 60 seconds only and recover automatically |
 | Requests to VideoOptimizer are **blocked by a proxy/firewall** | Outgoing requests carry the `User-Agent` `VideoOptimizer-Shopware/<version> (…)` | Allow that User-Agent and the hosts `api.videooptimizer.eu` / `player.videooptimizer.eu` |
 | Requests fail and the log shows **`Host "…" is blocked`** or **`IP "…" is blocked`** | The private network guard refused the connection: the API host resolves to a private address (self-hosted VideoOptimizer), or the shop server cannot resolve the host name (DNS failure, or a proxy-only network without an outbound proxy configured) | Self-hosted on a private network: switch off **Block private networks** in the plugin configuration. DNS failure: fix name resolution on the shop server. Proxy-only network: configure `HTTPS_PROXY` (the guard is then not applied) |
-| In the **lightbox**, Tab/Esc stop working after the focus entered the player | While the browser's native video controls or the cross-origin embed iframe hold the focus, the browser does not pass key events to the page, so the lightbox cannot handle them | Click outside the player (or on the close button) to move the focus back; a reworked lightbox is planned |
+| In the **lightbox**, Tab/Esc seem not to work while the native controls or the embed iframe have the focus | The browser does not pass key events to the page there. The lightbox is a native modal `<dialog>`, so the browser itself keeps the focus inside and closes it on Escape as far as it allows | If a browser does not close it, click outside the player or on the close button |
 | The admin still shows the **old UI after an update** | The browser served the previous cached admin bundle | Hard-reload the administration (`Cmd+Shift+R` / `Ctrl+Shift+R`) |
 
 ## Upgrading

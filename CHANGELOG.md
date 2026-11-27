@@ -5,6 +5,7 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 ## [Unreleased]
 
 ### Upgrade
+- The lightbox element is a `<dialog class="scalecommerce-vo-lightbox">` instead of a `<div role="dialog">` (no manual `inert` on the page or `aria-modal`; the class names and the close button are unchanged); themes styling or querying it by tag or `role` need to adapt ([#32](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/32)).
 - Pages with videos now contain a `<script type="application/ld+json">` VideoObject; switch off the plugin setting `jsonLd` if your theme or SEO plugin already outputs one. The upload date needs one extra `GET /videos/{id}` per video (cached 1 hour, needs the token's `library:view`; without it the field is left out) ([#44](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/44)).
 - The background hero renders its poster as `<img class="scalecommerce-vo-hero__poster">` behind the video (the `<video>` carries no `poster` attribute then); templates overriding the hero should adopt it or keep the single `poster` ([#43](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/43)).
 - A native `<video>` with subtitle tracks is loaded with `crossorigin="anonymous"` (the CDN allows any origin); a self-hosted VideoOptimizer must send `Access-Control-Allow-Origin` for the video and subtitle files ([#42](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/42)).
@@ -12,6 +13,7 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 - The `data-vo-native-options` and player options JSON carry a new `theme` key and the facade play button gets shape/size modifier classes (`scalecommerce-vo-surface__play--round|rectangle|small|medium|large|hidden`); themes overriding these templates keep working without them ([#41](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/41)).
 
 ### Added
+- The lightbox is a native `<dialog>` opened with `showModal()`: the browser keeps the focus inside, makes the page inert and closes it on Escape, also while the native controls or the embed iframe have the focus as far as the browser allows; browsers without `showModal()` keep the previous behaviour ([#32](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/32)).
 - schema.org `VideoObject` (JSON-LD: name, description, thumbnailUrl, uploadDate, duration, contentUrl, embedUrl) for every video on a page, once per video; the plugin setting `jsonLd` (default on) switches it off ([#44](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/44)).
 - Responsive posters: the facade poster and the background hero poster use `posterSrcset` (`srcset` and `sizes`, lazy loaded); a hero with "priority" preloads its poster (`<link rel="preload">`, `fetchpriority="high"`) ([#43](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/43)).
 - Subtitle tracks of the video (`tracks` of `GET /embed`) become `<track>` elements in the native player (direct, facade and lightbox); the `<video>` gets `crossorigin="anonymous"` when there are tracks ([#42](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/42)).

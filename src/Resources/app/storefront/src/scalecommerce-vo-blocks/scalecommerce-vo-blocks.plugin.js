@@ -188,6 +188,10 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
         video.load();
     }
 
+    // The lightbox is a native <dialog> opened with showModal(): the browser keeps the focus inside,
+    // makes the page behind inert and closes it on Escape (also with the focus in the native
+    // controls or the hosted player, as far as the browser allows). Without showModal() (very old
+    // browsers) it falls back to an open dialog with manual focus trap, inert and Escape handling.
     _openLightbox(playerMode, embedUrl, nativeOptions) {
         if (lightboxOpen) {
             return;
@@ -196,7 +200,8 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
 
         const closeLabel =
             this.el.getAttribute('data-vo-label-close') || 'Close';
-        const overlay = document.createElement('div');
+        const overlay = document.createElement('dialog');
+        const modal = typeof overlay.showModal === 'function';
         overlay.className = 'scalecommerce-vo-lightbox';
         if (nativeOptions.theme?.accentColor) {
             overlay.style.setProperty(
@@ -204,9 +209,11 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
                 nativeOptions.theme.accentColor
             );
         }
-        overlay.setAttribute('role', 'dialog');
-        overlay.setAttribute('aria-modal', 'true');
         overlay.setAttribute('aria-label', this._title());
+        if (!modal) {
+            overlay.setAttribute('role', 'dialog');
+            overlay.setAttribute('aria-modal', 'true');
+        }
         const stage = document.createElement('div');
         stage.className = 'scalecommerce-vo-lightbox__stage';
         const close = document.createElement('button');
@@ -224,46 +231,71 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
         overlay.appendChild(close);
         overlay.appendChild(stage);
 
-        const dismiss = (event) => {
-            if (event.target === overlay || event.currentTarget === close) {
-                stage
-                    .querySelectorAll('video')
-                    .forEach((video) => this._destroyVideo(video));
-                overlay.remove();
-                inertSiblings.forEach((element) =>
-                    element.removeAttribute('inert')
-                );
-                document.removeEventListener('keydown', onKey);
-                document.body.classList.remove(
-                    'scalecommerce-vo-lightbox-open'
-                );
-                lightboxOpen = false;
-                this._closeLightbox = null;
-                this.facade.focus();
+        let closed = false;
+        const inertSiblings = [];
+        // Idempotent: the close button, Escape, a backdrop click, the dialog's own close event and
+        // destroy() all end up here.
+        const cleanup = () => {
+            if (closed) {
+                return;
             }
+            closed = true;
+            overlay.removeEventListener('close', cleanup);
+            document.removeEventListener('keydown', onKey);
+            stage
+                .querySelectorAll('video')
+                .forEach((video) => this._destroyVideo(video));
+            if (modal && overlay.open) {
+                overlay.close();
+            }
+            overlay.remove();
+            inertSiblings.forEach((element) =>
+                element.removeAttribute('inert')
+            );
+            document.body.classList.remove('scalecommerce-vo-lightbox-open');
+            lightboxOpen = false;
+            this._closeLightbox = null;
+            this.facade.focus();
         };
         const onKey = (event) => {
             if (event.key === 'Escape') {
-                dismiss({ currentTarget: close });
+                cleanup();
                 return;
             }
-            if (event.key === 'Tab') {
+            if (!modal && event.key === 'Tab') {
                 this._trapFocus(event, overlay, close);
             }
         };
-        overlay.addEventListener('click', dismiss);
-        close.addEventListener('click', dismiss);
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) {
+                cleanup();
+            }
+        });
+        close.addEventListener('click', cleanup);
+        // Escape handled by the browser (cancel -> close) while the focus is in the native controls.
+        overlay.addEventListener('close', cleanup);
         document.addEventListener('keydown', onKey);
         document.body.classList.add('scalecommerce-vo-lightbox-open');
-        // Everything behind the dialog becomes inert, so neither Tab nor screen readers leave it.
-        const inertSiblings = [...document.body.children].filter(
-            (element) =>
-                !element.hasAttribute('inert') &&
-                !['SCRIPT', 'STYLE', 'LINK'].includes(element.tagName)
-        );
-        inertSiblings.forEach((element) => element.setAttribute('inert', ''));
+        if (!modal) {
+            // Everything behind the dialog becomes inert, so neither Tab nor screen readers leave it.
+            inertSiblings.push(
+                ...[...document.body.children].filter(
+                    (element) =>
+                        !element.hasAttribute('inert') &&
+                        !['SCRIPT', 'STYLE', 'LINK'].includes(element.tagName)
+                )
+            );
+            inertSiblings.forEach((element) =>
+                element.setAttribute('inert', '')
+            );
+        }
         document.body.appendChild(overlay);
+        if (modal) {
+            overlay.showModal();
+        } else {
+            overlay.setAttribute('open', '');
+        }
         close.focus();
-        this._closeLightbox = () => dismiss({ currentTarget: close });
+        this._closeLightbox = cleanup;
     }
 }
