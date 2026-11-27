@@ -1276,4 +1276,32 @@ class VideoOptimizerClientTest extends TestCase
 
         static::assertSame(['GET', 'DELETE'], $calls);
     }
+
+    /**
+     * After changing `encoding_quality`, finished renditions are only re-encoded with `force`.
+     */
+    public function testReprocessLibrarySendsForceOnlyWhenRequested(): void
+    {
+        $bodies = [];
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$bodies): MockResponse {
+            $bodies[] = $options['body'] ?? '';
+
+            return new MockResponse(json_encode(['data' => ['queued' => 1]]));
+        });
+        $client = $this->client($http);
+
+        $client->reprocessLibrary('lib-1');
+        $client->reprocessLibrary('lib-1', true);
+
+        static::assertSame('', $bodies[0]);
+        static::assertSame(['force' => true], json_decode((string) $bodies[1], true));
+    }
+
+    public function testApiErrorCodeIsExposed(): void
+    {
+        $e = VideoOptimizerApiException::fromResponse(400, '{"message":"No.","data":{"code":"source_url_video_platform"}}');
+
+        static::assertSame('source_url_video_platform', $e->getApiCode());
+        static::assertNull(VideoOptimizerApiException::fromResponse(500, 'oops')->getApiCode());
+    }
 }

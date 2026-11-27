@@ -36,6 +36,9 @@ Component.register('scalecommerce-vo-list', {
             formDescription: '',
             selectedCodecs: [],
             selectedResolutions: [],
+            formQuality: 'performance',
+            forceReprocess: false,
+            forceReprocessSuggested: false,
             isSaving: false,
             confirmDeleteLibrary: false,
             isReprocessing: false,
@@ -124,6 +127,21 @@ Component.register('scalecommerce-vo-list', {
         // so the "reprocess videos" hint only appears when it is actually relevant. Both sides go
         // through _ladderValue() so a stored value whose order merely differs from the /encodings
         // catalog order doesn't look "changed".
+        qualityOptions() {
+            return ['performance', 'quality'].map((value) => ({
+                value,
+                label: this.$tc(`scalecommerce-vo.library.quality_${value}`),
+            }));
+        },
+        // The stored quality differs from the form: after saving, finished renditions are only
+        // re-encoded by a forced reprocess.
+        qualityChanged() {
+            const library = this.activeLibrary;
+            return (
+                !!library &&
+                (library.encoding_quality || 'performance') !== this.formQuality
+            );
+        },
         ladderChanged() {
             const library = this.activeLibrary;
             if (!library) {
@@ -214,8 +232,10 @@ Component.register('scalecommerce-vo-list', {
                 this.formDescription = '';
                 this.selectedCodecs = [];
                 this.selectedResolutions = [];
+                this.formQuality = 'performance';
                 return;
             }
+            this.formQuality = library.encoding_quality || 'performance';
             this.formName = library.name || '';
             this.formDescription = library.description || '';
             this.selectedCodecs = this._splitKeys(library.codec);
@@ -234,6 +254,7 @@ Component.register('scalecommerce-vo-list', {
             this.formDescription = '';
             this.selectedCodecs = [];
             this.selectedResolutions = [];
+            this.formQuality = 'performance';
         },
 
         onCancelCreate() {
@@ -320,7 +341,10 @@ Component.register('scalecommerce-vo-list', {
                 );
 
                 if (this.mode === 'create') {
-                    const payload = { name };
+                    const payload = {
+                        name,
+                        encoding_quality: this.formQuality,
+                    };
                     if (this.formDescription.trim()) {
                         payload.description = this.formDescription.trim();
                     }
@@ -345,6 +369,7 @@ Component.register('scalecommerce-vo-list', {
                         message: this.$tc('scalecommerce-vo.library.created'),
                     });
                 } else {
+                    const qualityChanged = this.qualityChanged;
                     await this.scalecommerceVoApiService.updateLibrary(
                         this.selectedLibraryId,
                         {
@@ -352,6 +377,7 @@ Component.register('scalecommerce-vo-list', {
                             description: this.formDescription.trim(),
                             codec,
                             resolutions,
+                            encoding_quality: this.formQuality,
                         }
                     );
                     await this.loadLibraries();
@@ -359,6 +385,15 @@ Component.register('scalecommerce-vo-list', {
                     this.createNotificationSuccess({
                         message: this.$tc('scalecommerce-vo.library.saved'),
                     });
+                    if (qualityChanged) {
+                        // Existing videos keep their renditions until a forced reprocess.
+                        this.forceReprocessSuggested = true;
+                        this.createNotificationInfo({
+                            message: this.$tc(
+                                'scalecommerce-vo.library.qualityReprocessHint'
+                            ),
+                        });
+                    }
                 }
             } catch (error) {
                 this.createNotificationError({
@@ -394,6 +429,7 @@ Component.register('scalecommerce-vo-list', {
         },
 
         onReprocessLibraryClick() {
+            this.forceReprocess = this.forceReprocessSuggested;
             this.confirmReprocessLibrary = true;
         },
 
@@ -406,8 +442,12 @@ Component.register('scalecommerce-vo-list', {
             try {
                 const response =
                     await this.scalecommerceVoApiService.reprocessLibrary(
-                        this.selectedLibraryId
+                        this.selectedLibraryId,
+                        { force: this.forceReprocess }
                     );
+                if (this.forceReprocess) {
+                    this.forceReprocessSuggested = false;
+                }
                 const data = response.data ?? response;
                 // Fallback to 0 so a malformed/omitted `queued` field can't render "undefined videos ...".
                 this.createNotificationSuccess({

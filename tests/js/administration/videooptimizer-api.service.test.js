@@ -64,6 +64,15 @@ describe('VideoOptimizerApiService', () => {
         expect(httpClient.get.mock.calls[0][1].params).toEqual({});
     });
 
+    it('sends force only when a forced reprocess is requested', async () => {
+        httpClient.post = vi.fn(() => Promise.resolve({ data: { data: { queued: 2 } } }));
+        await service.reprocessLibrary('lib-1');
+        await service.reprocessLibrary('lib-1', { force: true });
+
+        expect(httpClient.post.mock.calls[0][1]).toEqual({});
+        expect(httpClient.post.mock.calls[1][1]).toEqual({ force: true });
+    });
+
     it('uploads parts in order, reports progress and returns the ETags', async () => {
         globalThis.fetch = vi.fn(() => Promise.resolve(response()));
         const progress = [];

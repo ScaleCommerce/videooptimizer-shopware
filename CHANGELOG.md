@@ -4,6 +4,13 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Added
+- Library encoding quality (performance/quality) and forced reprocess ([#22](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/22)).
+
+### Fixed
+- Custom poster upload no longer sends a redundant poster selection ([#23](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/23)).
+- URL import explains rejected YouTube links ([#24](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/24)).
+
 ## [1.2.0] - 2026-11-27
 
 ### Breaking

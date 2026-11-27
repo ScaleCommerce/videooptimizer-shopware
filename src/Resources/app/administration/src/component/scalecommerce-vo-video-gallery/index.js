@@ -89,9 +89,22 @@ Component.register('scalecommerce-vo-video-gallery', {
                 : '';
         },
 
+        // The API refuses video platform page links (YouTube) for URL import; say so before sending.
+        ingestUrlIsPlatform() {
+            try {
+                const host = new URL(this.ingestUrl).hostname.toLowerCase();
+                return ['youtube.com', 'youtu.be', 'youtube-nocookie.com'].some(
+                    (domain) => host === domain || host.endsWith(`.${domain}`)
+                );
+            } catch {
+                return false;
+            }
+        },
+
         canIngest() {
             return (
                 this.ingestUrl.startsWith('https://') &&
+                !this.ingestUrlIsPlatform &&
                 !!this.libraryId &&
                 !this.isUploading &&
                 !this.isIngesting
@@ -402,8 +415,14 @@ Component.register('scalecommerce-vo-video-gallery', {
                 this.ingestTitle = '';
                 this._watchProcessing(video.uuid, context);
             } catch (error) {
+                const code = error?.response?.data?.errors?.[0]?.code;
                 this.createNotificationError({
-                    message: this._errorText(error),
+                    message:
+                        code === 'SCALECOMMERCE_VO__SOURCE_URL_VIDEO_PLATFORM'
+                            ? this.$tc(
+                                  'scalecommerce-vo.gallery.ingestPlatform'
+                              )
+                            : this._errorText(error),
                 });
             } finally {
                 this.isIngesting = false;

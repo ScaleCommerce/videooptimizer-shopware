@@ -45,7 +45,14 @@
                 </div>
 
                 <div class="scalecommerce-vo-gallery__ingest-form">
-                    <mt-text-field v-model="ingestUrl" :label="$tc('scalecommerce-vo.gallery.ingestUrl')" placeholder="https://…" />
+                    <mt-text-field
+                        v-model="ingestUrl"
+                        :label="$tc('scalecommerce-vo.gallery.ingestUrl')"
+                        :help-text="$tc('scalecommerce-vo.gallery.ingestUrlHelp')"
+                        placeholder="https://…" />
+                    <mt-banner v-if="ingestUrlIsPlatform" variant="attention" class="scalecommerce-vo-gallery__ingest-hint">
+                        {{ $tc('scalecommerce-vo.gallery.ingestPlatform') }}
+                    </mt-banner>
                     <mt-text-field v-model="ingestTitle" :label="$tc('scalecommerce-vo.gallery.uploadTitle')" />
                     <mt-button
                         variant="primary"
@@ -166,7 +173,15 @@
                 </div>
 
                 <span class="scalecommerce-vo-gallery__upload-heading">{{ $tc('scalecommerce-vo.gallery.ingestHeading') }}</span>
-                <mt-text-field v-model="ingestUrl" :label="$tc('scalecommerce-vo.gallery.ingestUrl')" placeholder="https://…" size="small" />
+                <mt-text-field
+                    v-model="ingestUrl"
+                    :label="$tc('scalecommerce-vo.gallery.ingestUrl')"
+                    :help-text="$tc('scalecommerce-vo.gallery.ingestUrlHelp')"
+                    placeholder="https://…"
+                    size="small" />
+                <mt-banner v-if="ingestUrlIsPlatform" variant="attention" class="scalecommerce-vo-gallery__ingest-hint">
+                    {{ $tc('scalecommerce-vo.gallery.ingestPlatform') }}
+                </mt-banner>
                 <mt-text-field v-model="ingestTitle" :label="$tc('scalecommerce-vo.gallery.uploadTitle')" size="small" />
                 <mt-button size="small" variant="primary" :disabled="!canIngest" @click="onIngest">
                     {{ $tc('scalecommerce-vo.gallery.ingest') }}
