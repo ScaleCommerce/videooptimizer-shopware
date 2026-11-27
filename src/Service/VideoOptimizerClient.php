@@ -55,6 +55,7 @@ class VideoOptimizerClient implements ResetInterface
         private readonly LoggerInterface $logger = new NullLogger(),
         private readonly EmbedAvailability $availability = new EmbedAvailability(),
         private readonly ?CacheInvalidator $cacheInvalidator = null,
+        private readonly PluginUserAgent $userAgent = new PluginUserAgent(),
     ) {
     }
 
@@ -620,7 +621,8 @@ class VideoOptimizerClient implements ResetInterface
 
     /**
      * @return list<string> "Name: Value" header lines, the shape Symfony's HttpClient and our
-     *                      own request()/getThumbnailImage() calls agree on.
+     *                      own request()/getThumbnailImage() calls agree on. Every request carries
+     *                      the plugin's User-Agent, with or without token.
      */
     private function buildHeaders(bool $withToken, string $accept): array
     {
@@ -629,6 +631,7 @@ class VideoOptimizerClient implements ResetInterface
             $headers[] = 'Authorization: Bearer ' . $this->token();
         }
         $headers[] = 'Accept: ' . $accept;
+        $headers[] = 'User-Agent: ' . $this->userAgent->value();
 
         return $headers;
     }

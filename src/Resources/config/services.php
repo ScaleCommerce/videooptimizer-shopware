@@ -9,6 +9,7 @@ use ScaleCommerce\VideoOptimizer\DataResolver\SpotlightElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\VideoGridElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\VideoOptimizerElementResolver;
 use ScaleCommerce\VideoOptimizer\Service\EmbedAvailability;
+use ScaleCommerce\VideoOptimizer\Service\PluginUserAgent;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use ScaleCommerce\VideoOptimizer\Subscriber\DegradedEmbedCacheSubscriber;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
@@ -28,8 +29,13 @@ return static function (ContainerConfigurator $container): void {
             service('logger'),
             service(EmbedAvailability::class),
             service(CacheInvalidator::class),
+            service(PluginUserAgent::class),
         ])
         ->tag('kernel.reset', ['method' => 'reset']);
+
+    // User-Agent for all API requests: plugin, Shopware and PHP version plus the shop URL.
+    $services->set(PluginUserAgent::class)
+        ->args(['%kernel.shopware_version%', '%env(default::APP_URL)%']);
 
     $services->set(EmbedAvailability::class)
         ->tag('kernel.reset', ['method' => 'reset']);

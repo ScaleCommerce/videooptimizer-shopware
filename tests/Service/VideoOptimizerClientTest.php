@@ -11,6 +11,7 @@ use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidRequestException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
 use ScaleCommerce\VideoOptimizer\Service\EmbedAvailability;
+use ScaleCommerce\VideoOptimizer\Service\PluginUserAgent;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
@@ -334,7 +335,39 @@ class VideoOptimizerClientTest extends TestCase
 
         // Same list-of-"Name: Value"-strings shape as request() uses, not a mix of list and
         // assoc keys.
-        static::assertSame(['Authorization: Bearer vp_test', 'Accept: image/*'], $capturedOptions['headers']);
+        static::assertSame(
+            ['Authorization: Bearer vp_test', 'Accept: image/*', 'User-Agent: ' . (new PluginUserAgent())->value()],
+            $capturedOptions['headers'],
+        );
+    }
+
+    /**
+     * VideoOptimizer shows which plugin versions an organization runs, so every request - with or
+     * without token - identifies the plugin.
+     */
+    public function testEveryRequestSendsThePluginUserAgent(): void
+    {
+        $userAgents = [];
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$userAgents): MockResponse {
+            $userAgents[parse_url($url, \PHP_URL_PATH)] = $options['normalized_headers']['user-agent'] ?? null;
+
+            return str_contains($url, '/thumbnails/')
+                ? new MockResponse('IMG', ['response_headers' => ['content-type' => 'image/jpeg']])
+                : new MockResponse(json_encode(['data' => ['sources' => [['type' => 'hls', 'src' => 'https://cdn/x.m3u8']]]]));
+        });
+        $userAgent = new PluginUserAgent('6.7.16.2', 'https://shop.example.com', '1.0.3');
+        $client = new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedAvailability(), null, $userAgent);
+
+        $client->listLibraries();
+        $client->getEmbed('vid-1');
+        $client->getThumbnailImage('vid-1', 2);
+
+        $expected = ['User-Agent: VideoOptimizer-Shopware/1.0.3 (Shopware 6.7.16.2; PHP ' . \PHP_VERSION . '; +https://shop.example.com)'];
+        static::assertSame([
+            '/api/v1/libraries' => $expected,
+            '/api/v1/embed/vid-1' => $expected,
+            '/api/v1/videos/vid-1/thumbnails/2' => $expected,
+        ], $userAgents);
     }
 
     public function testNonHttpsApiBaseUrlThrows(): void
