@@ -1097,4 +1097,14 @@ class VideoOptimizerAdminControllerTest extends TestCase
 
         static::assertSame(400, $response->getStatusCode());
     }
+
+    public function testSavingsPassesTheScope(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('getSavings')->with('2026-10-01', '2026-10-31', self::UUID, null)->willReturn(['traffic_available' => true]);
+
+        $response = (new VideoOptimizerAdminController($client))->getSavings(new Request(['from' => '2026-10-01', 'to' => '2026-10-31', 'libraryId' => self::UUID]));
+
+        static::assertSame(['data' => ['traffic_available' => true]], json_decode((string) $response->getContent(), true));
+    }
 }

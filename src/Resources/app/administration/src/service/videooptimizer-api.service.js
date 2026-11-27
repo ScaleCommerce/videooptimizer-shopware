@@ -18,6 +18,27 @@ export default class VideoOptimizerApiService extends ApiService {
             .then((response) => ApiService.handleResponse(response));
     }
 
+    // scope: { from, to (YYYY-MM-DD), libraryId, videoUuid }, all optional
+    getSavings({ from, to, libraryId, videoUuid } = {}) {
+        const params = {};
+        if (from && to) {
+            params.from = from;
+            params.to = to;
+        }
+        if (libraryId) {
+            params.libraryId = libraryId;
+        }
+        if (videoUuid) {
+            params.videoUuid = videoUuid;
+        }
+        return this.httpClient
+            .get(`${this.getApiBasePath()}/savings`, {
+                headers: this.getBasicHeaders(),
+                params,
+            })
+            .then((response) => ApiService.handleResponse(response));
+    }
+
     getTags() {
         return this.httpClient
             .get(`${this.getApiBasePath()}/tags`, {

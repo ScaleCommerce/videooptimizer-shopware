@@ -279,6 +279,33 @@
             "metadataKey": "Metadaten-Schlüssel",
             "metadataValue": "Metadaten-Wert (exakt)",
             "clear": "Filter zurücksetzen"
+        },
+        "savings": {
+            "title": "Einsparungen",
+            "subtitle": "Was VideoOptimizer gegenüber der Auslieferung deiner Originaldateien spart.",
+            "period": "Zeitraum",
+            "scope": "Umfang",
+            "scopeOrganization": "Gesamte Organisation",
+            "scopeLibrary": "Nur ausgewählte Bibliothek",
+            "preset_all": "Seit Beginn der Erfassung",
+            "preset_7d": "Letzte 7 Tage",
+            "preset_30d": "Letzte 30 Tage",
+            "preset_90d": "Letzte 90 Tage",
+            "preset_month": "Dieser Monat (UTC)",
+            "loading": "Lädt ...",
+            "compressionTitle": "Dateigröße",
+            "compressionHint": "{count} Video verglichen. | {count} Videos verglichen.",
+            "original": "Originaldateien",
+            "encoded": "Größte ausgelieferte Version",
+            "reduced": "Größenreduktion",
+            "trafficTitle": "Traffic",
+            "noTraffic": "Es liegen noch keine CDN-Trafficdaten vor.",
+            "noRange": "Keine Trafficdaten für diesen Zeitraum.",
+            "delivered": "Über das CDN ausgeliefert",
+            "estimatedOriginal": "Geschätzter Traffic mit den Originaldateien",
+            "saved": "Geschätzte eingesparte Bandbreite",
+            "savedPercent": "Geschätzte Einsparung",
+            "estimate": "Bandbreitenwerte sind Schätzungen; Video-Traffic wird seit Oktober 2026 erfasst."
         }
     },
     "sw-privileges": {

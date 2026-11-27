@@ -279,6 +279,33 @@
             "metadataKey": "Metadata key",
             "metadataValue": "Metadata value (exact)",
             "clear": "Clear filters"
+        },
+        "savings": {
+            "title": "Savings",
+            "subtitle": "What VideoOptimizer saves compared to serving your original files.",
+            "period": "Period",
+            "scope": "Scope",
+            "scopeOrganization": "Whole organization",
+            "scopeLibrary": "Selected library only",
+            "preset_all": "Since tracking began",
+            "preset_7d": "Last 7 days",
+            "preset_30d": "Last 30 days",
+            "preset_90d": "Last 90 days",
+            "preset_month": "This month (UTC)",
+            "loading": "Loading...",
+            "compressionTitle": "File size",
+            "compressionHint": "{count} video compared. | {count} videos compared.",
+            "original": "Original files",
+            "encoded": "Largest delivered version",
+            "reduced": "Size reduction",
+            "trafficTitle": "Traffic",
+            "noTraffic": "No CDN traffic data is available yet.",
+            "noRange": "No traffic data for this period.",
+            "delivered": "Delivered via the CDN",
+            "estimatedOriginal": "Estimated traffic with the original files",
+            "saved": "Estimated bandwidth saved",
+            "savedPercent": "Estimated saving",
+            "estimate": "Bandwidth figures are estimates; video traffic is tracked since October 2026."
         }
     },
     "sw-privileges": {

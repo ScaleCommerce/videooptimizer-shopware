@@ -7,6 +7,7 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 ### Added
 - Subtitles per video (list, upload .vtt/.srt, download, delete) in the video detail and management of the organization's subtitle languages (list, add, delete; 409 shows how many videos still use a language) in the module ([#36](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/36)).
 - Tags and metadata (key/value, e.g. CMS IDs) editable in the video detail; the video lists filter by tag and by metadata value ([#37](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/37)).
+- Savings card in the module: file-size reduction and estimated bandwidth saved, for the organization or a library and a period ([#38](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/38)).
 
 ## [1.2.2] - 2026-11-27
 

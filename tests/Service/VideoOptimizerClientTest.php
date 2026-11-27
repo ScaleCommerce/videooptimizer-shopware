@@ -1815,4 +1815,43 @@ class VideoOptimizerClientTest extends TestCase
         static::assertSame('{"tags":["promo"],"metadata":{"cms_id":"42"}}', $body);
         static::assertFalse($cache->hasItem('scalecommerce_vo_embed_vid-1'));
     }
+
+    public function testGetSavingsSendsRangeAndScope(): void
+    {
+        $url = null;
+        $http = new MockHttpClient(function (string $method, string $u) use (&$url): MockResponse {
+            $url = urldecode($u);
+
+            return new MockResponse('{"data":{"traffic_available":true,"compression":{"videos":2,"reduced_percent":84.5},"range":null,"all_time":null}}');
+        });
+
+        $savings = $this->client($http)->getSavings('2026-10-01', '2026-10-31', 'lib-1');
+
+        static::assertSame('https://api.videooptimizer.eu/api/v1/savings?from=2026-10-01&to=2026-10-31&library_id=lib-1', $url);
+        static::assertSame(84.5, $savings['compression']['reduced_percent']);
+
+        $this->client($http)->getSavings();
+        static::assertSame('https://api.videooptimizer.eu/api/v1/savings', $url);
+    }
+
+    /**
+     * @return iterable<string, array{?string, ?string, ?string, ?string}>
+     */
+    public static function invalidSavingsArguments(): iterable
+    {
+        yield 'not a date' => ['yesterday', '2026-10-31', null, null];
+        yield 'impossible date' => ['2026-02-30', '2026-03-01', null, null];
+        yield 'from without to' => ['2026-10-01', null, null, null];
+        yield 'path trick in library' => [null, null, '../x', null];
+        yield 'path trick in video' => [null, null, null, 'a/b'];
+    }
+
+    #[DataProvider('invalidSavingsArguments')]
+    public function testGetSavingsRejectsInvalidArguments(?string $from, ?string $to, ?string $library, ?string $video): void
+    {
+        $http = new MockHttpClient(static fn (): MockResponse => throw new \LogicException('No request expected.'));
+
+        $this->expectException(InvalidRequestException::class);
+        $this->client($http)->getSavings($from, $to, $library, $video);
+    }
 }

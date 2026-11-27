@@ -190,3 +190,16 @@ describe('tag and metadata calls (#37)', () => {
         expect(httpClient.get.mock.calls[1][0]).toBe('/api/_action/scalecommerce-vo/tags');
     });
 });
+
+describe('savings call (#38)', () => {
+    it('sends the period only as a pair and the scope by id', async () => {
+        const httpClient = { get: vi.fn(() => Promise.resolve({ data: { data: {} } })) };
+        const service = new VideoOptimizerApiService(httpClient, {});
+
+        await service.getSavings({ from: '2026-10-01', to: '2026-10-31', libraryId: 'lib' });
+        await service.getSavings({ from: '2026-10-01' });
+
+        expect(httpClient.get.mock.calls[0][1].params).toEqual({ from: '2026-10-01', to: '2026-10-31', libraryId: 'lib' });
+        expect(httpClient.get.mock.calls[1][1].params).toEqual({});
+    });
+});

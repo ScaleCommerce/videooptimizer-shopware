@@ -145,6 +145,18 @@ class VideoOptimizerAdminController
         return $this->wrap(fn () => $this->client->listTags());
     }
 
+    #[Route(path: '/api/_action/scalecommerce-vo/savings', name: 'api.action.scalecommerce-vo.savings', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
+    public function getSavings(Request $request): JsonResponse
+    {
+        $param = static function (string $name) use ($request): ?string {
+            $value = $request->query->get($name);
+
+            return is_string($value) && $value !== '' ? $value : null;
+        };
+
+        return $this->wrap(fn () => $this->client->getSavings($param('from'), $param('to'), $param('libraryId'), $param('videoUuid')));
+    }
+
     #[Route(path: '/api/_action/scalecommerce-vo/encodings', name: 'api.action.scalecommerce-vo.encodings.list', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
     public function listEncodings(): JsonResponse
     {

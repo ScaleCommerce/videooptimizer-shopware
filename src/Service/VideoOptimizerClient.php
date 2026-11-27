@@ -423,6 +423,38 @@ class VideoOptimizerClient implements ResetInterface
      * @return list<array<string, mixed>>
      */
     /**
+     * Savings compared to serving the original files: file-size reduction, CDN traffic and the
+     * estimated bandwidth saved. For the whole organization, or one library or video; `from`/`to`
+     * (UTC days, YYYY-MM-DD, at most 366 days) add a `range` next to `all_time`.
+     *
+     * @return array{traffic_available?: bool, compression?: array<string, mixed>, range?: ?array<string, mixed>, all_time?: ?array<string, mixed>}
+     */
+    public function getSavings(?string $from = null, ?string $to = null, ?string $libraryId = null, ?string $videoUuid = null): array
+    {
+        $query = [];
+        foreach (['from' => $from, 'to' => $to] as $name => $day) {
+            if ($day === null || $day === '') {
+                continue;
+            }
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/D', $day) !== 1 || \DateTimeImmutable::createFromFormat('!Y-m-d', $day) === false || \DateTimeImmutable::createFromFormat('!Y-m-d', $day)->format('Y-m-d') !== $day) {
+                throw new InvalidRequestException(sprintf('"%s" must be a date in the form YYYY-MM-DD.', $name));
+            }
+            $query[$name] = $day;
+        }
+        if (isset($query['from']) !== isset($query['to'])) {
+            throw new InvalidRequestException('"from" and "to" must be sent together.');
+        }
+        if ($libraryId !== null && $libraryId !== '') {
+            $query['library_id'] = $this->pathId($libraryId);
+        }
+        if ($videoUuid !== null && $videoUuid !== '') {
+            $query['video_uuid'] = $this->pathId($videoUuid);
+        }
+
+        return $this->requestData('GET', '/savings', $query === [] ? [] : ['query' => $query]);
+    }
+
+    /**
      * The organization's tags with the number of videos carrying each, alphabetically.
      *
      * @return list<array{name: string, video_count: int}>
