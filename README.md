@@ -244,6 +244,7 @@ via the gallery picker, then configure per element:
 | The administration shows **"No VideoOptimizer API token is configured"** or **"…lacks the View permission"** | Token missing/rejected, or the admin user has no VideoOptimizer role | Save a valid token (users allowed to change plugin settings get a link), or grant the **Viewer** role under **Settings → Users & permissions → Roles** |
 | Videos **disappear for about a minute** | The VideoOptimizer API was unreachable or rate-limited; uncached videos fail fast for 60 seconds | Nothing to do; pages rendered meanwhile are cached for 60 seconds only and recover automatically |
 | Requests to VideoOptimizer are **blocked by a proxy/firewall** | Outgoing requests carry the `User-Agent` `VideoOptimizer-Shopware/<version> (…)` | Allow that User-Agent and the hosts `api.videooptimizer.eu` / `player.videooptimizer.eu` |
+| In the **lightbox**, Tab/Esc stop working after the focus entered the player | While the browser's native video controls or the cross-origin embed iframe hold the focus, the browser does not pass key events to the page, so the lightbox cannot handle them | Click outside the player (or on the close button) to move the focus back; a reworked lightbox is planned |
 | The admin still shows the **old UI after an update** | The browser served the previous cached admin bundle | Hard-reload the administration (`Cmd+Shift+R` / `Ctrl+Shift+R`) |
 
 ## Upgrading
