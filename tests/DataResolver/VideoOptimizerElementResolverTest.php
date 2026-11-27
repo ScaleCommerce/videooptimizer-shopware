@@ -158,17 +158,17 @@ class VideoOptimizerElementResolverTest extends TestCase
 
     public function testEmbedCarriesTheVideoObjectJsonLdOncePerVideo(): void
     {
-        $client = $this->createMock(VideoOptimizerClient::class);
+        $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getEmbed')->willReturn([
             'sources' => [['src' => 'https://cdn/master.m3u8', 'type' => 'application/vnd.apple.mpegurl', 'codec' => 'hls']],
             'poster' => 'https://cdn/p.jpg',
             'title' => 'Demo',
             'duration' => 65,
+            'uploadDate' => '2026-03-01T10:00:00Z',
         ]);
         $client->method('jsonLdEnabled')->willReturn(true);
         $client->method('embedBaseUrl')->willReturn('https://player.example');
         $client->method('claimVideoJsonLd')->willReturnOnConsecutiveCalls(true, false);
-        $client->expects(static::once())->method('getVideoCreatedAt')->with('uuid-1')->willReturn('2026-03-01T10:00:00Z');
         $resolver = $this->resolver($client);
 
         $first = $this->slotWithUuid('uuid-1');
@@ -183,13 +183,26 @@ class VideoOptimizerElementResolverTest extends TestCase
         static::assertNull($second->getData()->getEmbed()['jsonLd']);
     }
 
+    public function testJsonLdOmitsUploadDateWhenTheEmbedHasNone(): void
+    {
+        $client = $this->createStub(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willReturn(['sources' => [['src' => 'https://cdn/master.m3u8', 'codec' => 'hls']], 'title' => 'Demo', 'uploadDate' => null]);
+        $client->method('jsonLdEnabled')->willReturn(true);
+        $client->method('claimVideoJsonLd')->willReturn(true);
+        $client->method('embedBaseUrl')->willReturn('https://player.example');
+
+        $slot = $this->slotWithUuid('uuid-1');
+        $this->resolver($client)->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
+
+        static::assertArrayNotHasKey('uploadDate', json_decode($slot->getData()->getEmbed()['jsonLd'], true));
+    }
+
     public function testNoJsonLdWhenSwitchedOff(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
         $client->method('getEmbed')->willReturn(['sources' => [['src' => 'https://cdn/master.m3u8', 'codec' => 'hls']], 'title' => 'Demo']);
         $client->method('jsonLdEnabled')->willReturn(false);
         $client->expects(static::never())->method('claimVideoJsonLd');
-        $client->expects(static::never())->method('getVideoCreatedAt');
 
         $slot = $this->slotWithUuid('uuid-1');
         $this->resolver($client)->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());

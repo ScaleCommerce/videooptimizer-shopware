@@ -79,7 +79,7 @@ trait VideoSurfaceTrait
             return null;
         }
 
-        return VideoJsonLd::build($embed, $embedUrl, $client->getVideoCreatedAt($uuid));
+        return VideoJsonLd::build($embed, $embedUrl, is_string($embed['uploadDate'] ?? null) ? $embed['uploadDate'] : null);
     }
 
     /**
@@ -152,6 +152,7 @@ trait VideoSurfaceTrait
             'posterSrcset' => $posterSrcset,
             'posterSrcsetAttr' => EmbedSources::srcsetAttribute($posterSrcset),
             'title' => $embed['title'] ?? null,
+            'uploadDate' => is_string($embed['uploadDate'] ?? null) && $embed['uploadDate'] !== '' ? $embed['uploadDate'] : null,
             'theme' => EmbedSources::theme($embed['theme'] ?? null),
             'tracks' => EmbedSources::tracks($embed['tracks'] ?? null),
             'duration' => $embed['duration'] ?? null,

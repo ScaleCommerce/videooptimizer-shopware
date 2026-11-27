@@ -362,37 +362,6 @@ class VideoOptimizerClient implements ResetInterface
     }
 
     /**
-     * The upload date (`created_at`) of a video for schema.org data; the embed config does not carry
-     * it. Cached for 1 hour (60 s on failure) and never throws: without it the structured data just
-     * omits `uploadDate`. Skipped while the API is flagged unavailable.
-     */
-    public function getVideoCreatedAt(string $uuid): ?string
-    {
-        $this->pathId($uuid);
-        if ($this->embedApiUnavailable()) {
-            return null;
-        }
-        $result = $this->cache->get(
-            'scalecommerce_vo_video_created_' . rawurlencode($uuid),
-            function (ItemInterface $item) use ($uuid): array {
-                try {
-                    $data = $this->requestData('GET', '/videos/' . $this->pathId($uuid), ['max_duration' => self::EMBED_MAX_DURATION], true, false);
-                } catch (\Throwable) {
-                    $item->expiresAfter(self::EMBED_FAILURE_CACHE_TTL);
-
-                    return ['createdAt' => null];
-                }
-                $createdAt = $data['created_at'] ?? null;
-                $item->expiresAfter(is_string($createdAt) ? self::EMBED_CACHE_TTL : self::EMBED_FAILURE_CACHE_TTL);
-
-                return ['createdAt' => is_string($createdAt) && $createdAt !== '' ? $createdAt : null];
-            }
-        );
-
-        return $result['createdAt'] ?? null;
-    }
-
-    /**
      * Invalidates the cached getEmbed() result for a video, so a title/poster/thumbnail change or
      * deletion made through the admin is reflected on the storefront without waiting out the TTL.
      * A no-op if nothing is cached for this UUID (e.g. it was never rendered, or already expired).
