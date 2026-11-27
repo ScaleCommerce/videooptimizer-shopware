@@ -104,7 +104,8 @@ class VideoOptimizerAdminController
         // Optional {"force": true}: re-encode finished renditions too (needed after changing encoding_quality).
         return $this->wrap(function () use ($id, $request): array {
             $payload = $this->payload($request);
-            if (\array_key_exists('force', $payload) && !\is_bool($payload['force'])) {
+            // null counts as absent; any other non-boolean is a client error.
+            if (isset($payload['force']) && !\is_bool($payload['force'])) {
                 throw new InvalidRequestException('force must be a boolean.');
             }
 

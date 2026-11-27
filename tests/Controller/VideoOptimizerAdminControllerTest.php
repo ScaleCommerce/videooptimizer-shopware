@@ -858,6 +858,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
         yield 'no body' => ['', false];
         yield 'force' => ['{"force":true}', true];
         yield 'force false' => ['{"force":false}', false];
+        yield 'force null counts as absent' => ['{"force":null}', false];
     }
 
     #[DataProvider('reprocessBodies')]
@@ -878,7 +879,6 @@ class VideoOptimizerAdminControllerTest extends TestCase
     {
         yield 'string' => ['{"force":"true"}'];
         yield 'int' => ['{"force":1}'];
-        yield 'null' => ['{"force":null}'];
     }
 
     #[DataProvider('invalidForceBodies')]
