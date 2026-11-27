@@ -98,6 +98,32 @@ describe('attachVideoSource', () => {
         expect(video.play).toHaveBeenCalledOnce();
     });
 
+    it('continues at the same position on the MP4 fallback', async () => {
+        const video = fakeVideo();
+        video.currentTime = 0;
+        await attachVideoSource(video, { hls: 'https://cdn/master.m3u8', mp4: 'https://cdn/1080p.mp4' });
+        video.play();
+        video.currentTime = 12.5;
+
+        Hls.instances[0].emit(Hls.Events.ERROR, { fatal: true });
+        // The new source has no position yet; it is applied once the metadata is known.
+        video.currentTime = 0;
+        video.dispatchEvent(new Event('loadedmetadata'));
+
+        expect(video.currentTime).toBe(12.5);
+    });
+
+    it('does not seek when the fallback starts from the beginning', async () => {
+        const video = fakeVideo();
+        video.currentTime = 0;
+        await attachVideoSource(video, { hls: 'https://cdn/master.m3u8', mp4: 'https://cdn/1080p.mp4' });
+
+        Hls.instances[0].emit(Hls.Events.ERROR, { fatal: true });
+        video.dispatchEvent(new Event('loadedmetadata'));
+
+        expect(video.currentTime).toBe(0);
+    });
+
     it('keeps a paused video paused on the MP4 fallback', async () => {
         const video = fakeVideo();
         await attachVideoSource(video, { hls: 'https://cdn/master.m3u8', mp4: 'https://cdn/1080p.mp4' });

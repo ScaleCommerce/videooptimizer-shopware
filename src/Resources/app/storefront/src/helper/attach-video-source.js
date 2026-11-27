@@ -44,13 +44,23 @@ export async function attachVideoSource(
         video.addEventListener('error', () => onUnplayable(), { once: true });
     // `wasPlaying` is read before the failed source is torn down: switching the source pauses the
     // element, and nothing else would start it again.
-    const useMp4 = (wasPlaying = false) => {
+    // `resumeAt` is the position of the failed source; the MP4 continues there instead of restarting.
+    const useMp4 = (wasPlaying = false, resumeAt = 0) => {
         if (!mp4) {
             onUnplayable();
             return;
         }
         failOnError();
         video.src = mp4;
+        if (resumeAt > 0) {
+            video.addEventListener(
+                'loadedmetadata',
+                () => {
+                    video.currentTime = resumeAt;
+                },
+                { once: true }
+            );
+        }
         if (wasPlaying) {
             video.play().catch(() => {});
         } else {
@@ -75,17 +85,22 @@ export async function attachVideoSource(
                 attachHlsJs(Hls, video, hls, deferLoad, play, useMp4);
             } catch {
                 const wasPlaying = !video.paused;
+                const resumeAt = video.currentTime || 0;
                 destroyVideoSource(video);
-                useMp4(wasPlaying);
+                useMp4(wasPlaying, resumeAt);
             }
             return;
         }
     }
 
     if (hls && video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.addEventListener('error', () => useMp4(!video.paused), {
-            once: true,
-        });
+        video.addEventListener(
+            'error',
+            () => useMp4(!video.paused, video.currentTime || 0),
+            {
+                once: true,
+            }
+        );
         video.src = hls;
         play();
         return;
@@ -123,8 +138,9 @@ function attachHlsJs(Hls, video, hls, deferLoad, play, useMp4) {
             return;
         }
         const wasPlaying = !video.paused;
+        const resumeAt = video.currentTime || 0;
         destroyVideoSource(video);
-        useMp4(wasPlaying);
+        useMp4(wasPlaying, resumeAt);
     });
     player.on(Hls.Events.MANIFEST_PARSED, () => {
         play();

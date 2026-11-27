@@ -71,6 +71,23 @@ describe('hero play button', () => {
         expect(video.play).toHaveBeenCalled();
     });
 
+    it('does not restart an off-screen hero on a later fatal error (#28)', async () => {
+        const { video, toggle } = setup();
+        new ScalecommerceVoHero(video);
+        toggle.click();
+        await vi.waitFor(() => expect(Hls.instances).toHaveLength(1));
+        Hls.instances[0].emit(Hls.Events.MANIFEST_PARSED);
+        expect(video.play).toHaveBeenCalled();
+
+        // Scrolled out of view: autoplay-while-visible pauses it (not the visitor).
+        video.pause();
+        video.play.mockClear();
+        Hls.instances[0].emit(Hls.Events.ERROR, { fatal: true });
+
+        expect(video.src).toBe('https://cdn/1080p.mp4');
+        expect(video.play).not.toHaveBeenCalled();
+    });
+
     it('a second early click cancels the request', async () => {
         const { video, toggle } = setup();
         new ScalecommerceVoHero(video);

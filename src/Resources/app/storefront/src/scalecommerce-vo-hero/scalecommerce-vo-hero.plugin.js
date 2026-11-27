@@ -36,7 +36,13 @@ export default class ScalecommerceVoHero extends window.PluginBaseClass {
                 deferLoad:
                     motionReduced ||
                     !video.hasAttribute('data-scalecommerce-vo-hero-priority'),
-                shouldPlay: () => this._playRequested,
+                // Consumed once: a later source change must not restart a hero that was paused
+                // (e.g. scrolled out of view) in the meantime.
+                shouldPlay: () => {
+                    const requested = this._playRequested;
+                    this._playRequested = false;
+                    return requested;
+                },
                 onUnplayable: () => {
                     video.removeAttribute('src');
                     this.toggle?.setAttribute('hidden', '');
