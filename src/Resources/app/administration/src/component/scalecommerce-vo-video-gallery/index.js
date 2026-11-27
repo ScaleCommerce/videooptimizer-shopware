@@ -42,6 +42,8 @@ Component.register('scalecommerce-vo-video-gallery', {
 
     watch: {
         libraryId() {
+            // Don't leave the previous library's videos visible and clickable while loading.
+            this.videos = [];
             this.loadVideos();
         },
     },
@@ -119,18 +121,32 @@ Component.register('scalecommerce-vo-video-gallery', {
                 this.videos = [];
                 return;
             }
+            // Only the latest request may apply its result: with quick library switches an older,
+            // slower response must not overwrite the list of the library selected now.
+            const libraryId = this.libraryId;
+            const request = (this._loadRequest = (this._loadRequest ?? 0) + 1);
             this.isLoading = true;
             try {
-                const response = await this.scalecommerceVoApiService.getVideos(
-                    this.libraryId
-                );
+                const response =
+                    await this.scalecommerceVoApiService.getVideos(libraryId);
+                if (
+                    request !== this._loadRequest ||
+                    libraryId !== this.libraryId
+                ) {
+                    return;
+                }
                 this.videos = response.data ?? response;
             } catch (error) {
+                if (request !== this._loadRequest) {
+                    return;
+                }
                 this.createNotificationError({
                     message: this._errorText(error),
                 });
             } finally {
-                this.isLoading = false;
+                if (request === this._loadRequest) {
+                    this.isLoading = false;
+                }
             }
         },
 

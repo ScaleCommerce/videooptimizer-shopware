@@ -59,6 +59,7 @@
     <sw-media-modal-v2
         v-if="mediaModalOpen"
         :allow-multi-select="false"
+        file-accept="image/jpeg,image/png,image/webp"
         entity-context="product"
         @media-modal-selection-change="onMediaSelected"
         @modal-close="onMediaModalClose" />

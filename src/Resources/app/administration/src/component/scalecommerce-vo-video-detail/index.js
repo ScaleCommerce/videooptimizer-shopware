@@ -6,6 +6,9 @@ import {
     orientationKey,
 } from '../../helper/video-meta';
 
+// Mirrors the poster upload proxy's allowlist (VideoOptimizerAdminController).
+const POSTER_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
 const { Component, Mixin } = Shopware;
 
 Component.register('scalecommerce-vo-video-detail', {
@@ -244,7 +247,7 @@ Component.register('scalecommerce-vo-video-detail', {
                             resolve();
                             return;
                         }
-                        if (predicate(video)) {
+                        if (predicate(video, attempt)) {
                             this.video = video;
                             this.cacheBust += 1;
                             resolve();
@@ -288,12 +291,26 @@ Component.register('scalecommerce-vo-video-detail', {
 
         onFileSelected(event) {
             const file = event.target.files[0];
+            // Reset so that choosing the same file again fires "change" again.
+            event.target.value = '';
             if (file) {
                 this._uploadPoster(file);
             }
         },
 
         async _uploadPoster(blob) {
+            if (!POSTER_CONTENT_TYPES.includes(blob.type)) {
+                this.createNotificationError({
+                    message: this.$tc(
+                        'scalecommerce-vo.detail.posterInvalidType'
+                    ),
+                });
+                return;
+            }
+            // An earlier custom poster may still report "ready" on the first poll after
+            // completing the new upload; wait for "processing" (or a few polls) first.
+            const previousStatus = this.video?.poster?.custom_status;
+            let sawProcessing = !['ready', 'failed'].includes(previousStatus);
             this.busy = true;
             this.statusText = this.$tc('scalecommerce-vo.detail.uploading');
             try {
@@ -317,9 +334,17 @@ Component.register('scalecommerce-vo-video-detail', {
                 this.statusText = this.$tc(
                     'scalecommerce-vo.detail.processing'
                 );
-                await this._pollPoster((video) =>
-                    ['ready', 'failed'].includes(video.poster?.custom_status)
-                );
+                await this._pollPoster((video, attempt) => {
+                    const status = video.poster?.custom_status;
+                    if (status === 'processing') {
+                        sawProcessing = true;
+                        return false;
+                    }
+                    return (
+                        ['ready', 'failed'].includes(status) &&
+                        (sawProcessing || attempt >= 3)
+                    );
+                });
                 if (this.video.poster?.custom_status === 'failed') {
                     throw new Error(
                         this.$tc('scalecommerce-vo.detail.posterFailed')
@@ -375,16 +400,23 @@ Component.register('scalecommerce-vo-video-detail', {
             if (!url) {
                 return;
             }
+            let blob;
             try {
-                const blob = await fetch(url).then((response) =>
-                    response.blob()
-                );
-                await this._uploadPoster(blob);
-            } catch (error) {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(String(response.status));
+                }
+                blob = await response.blob();
+            } catch {
+                // HTTP error, or media served from another origin without CORS headers.
                 this.createNotificationError({
-                    message: this._errorText(error),
+                    message: this.$tc(
+                        'scalecommerce-vo.detail.mediaFetchFailed'
+                    ),
                 });
+                return;
             }
+            await this._uploadPoster(blob);
         },
 
         onClose() {

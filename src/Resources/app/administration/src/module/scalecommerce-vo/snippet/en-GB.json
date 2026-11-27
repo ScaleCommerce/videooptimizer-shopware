@@ -172,7 +172,9 @@
             "orientation_portrait": "portrait",
             "orientation_landscape": "landscape",
             "orientation_square": "square",
-            "playerUnavailable": "The video cannot be played here."
+            "playerUnavailable": "The video cannot be played here.",
+            "posterInvalidType": "Please choose a JPEG, PNG or WebP image.",
+            "mediaFetchFailed": "The image could not be loaded from the media library."
         }
     },
     "sw-privileges": {

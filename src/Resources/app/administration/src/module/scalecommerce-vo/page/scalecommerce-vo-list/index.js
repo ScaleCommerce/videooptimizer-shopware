@@ -65,7 +65,13 @@ Component.register('scalecommerce-vo-list', {
             return !library || library.media_managed !== false;
         },
         canSave() {
-            return !!this.formName.trim() && !this.isSaving;
+            // In edit mode there must be a library to save to (none exist, or the last one was
+            // just deleted); create mode is entered automatically in that case, see loadLibraries().
+            return (
+                !!this.formName.trim() &&
+                !this.isSaving &&
+                (this.mode === 'create' || !!this.selectedLibraryId)
+            );
         },
         storageLabel() {
             return this.activeLibrary
@@ -145,8 +151,15 @@ Component.register('scalecommerce-vo-list', {
                 const response =
                     await this.scalecommerceVoApiService.getLibraries();
                 this.libraries = response.data ?? response;
-                if (this.libraries.length && !this.selectedLibraryId) {
-                    this.selectedLibraryId = this.libraries[0].id;
+                const selectedExists = this.libraries.some(
+                    (library) => library.id === this.selectedLibraryId
+                );
+                if (!selectedExists) {
+                    this.selectedLibraryId = this.libraries[0]?.id ?? null;
+                }
+                // Without any library there is nothing to edit: offer the "new library" form.
+                if (!this.selectedLibraryId) {
+                    this.mode = 'create';
                 }
             } catch (error) {
                 this.createNotificationError({
@@ -212,6 +225,10 @@ Component.register('scalecommerce-vo-list', {
         },
 
         onCancelCreate() {
+            if (!this.selectedLibraryId) {
+                // Nothing to go back to while no library exists.
+                return;
+            }
             this.mode = 'edit';
             this._loadForm();
         },

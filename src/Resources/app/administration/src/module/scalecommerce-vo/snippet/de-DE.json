@@ -172,7 +172,9 @@
             "orientation_portrait": "hochkant",
             "orientation_landscape": "quer",
             "orientation_square": "quadratisch",
-            "playerUnavailable": "Das Video kann hier nicht abgespielt werden."
+            "playerUnavailable": "Das Video kann hier nicht abgespielt werden.",
+            "posterInvalidType": "Bitte ein JPEG-, PNG- oder WebP-Bild wählen.",
+            "mediaFetchFailed": "Das Bild aus der Mediathek konnte nicht geladen werden."
         }
     },
     "sw-privileges": {
