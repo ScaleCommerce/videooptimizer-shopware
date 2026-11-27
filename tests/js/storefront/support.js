@@ -53,8 +53,8 @@ export function installObserver() {
             this.disconnected = true;
         }
 
-        show(isIntersecting) {
-            this.callback([{ isIntersecting }]);
+        show(isIntersecting, intersectionRatio = isIntersecting ? 1 : 0) {
+            this.callback([{ isIntersecting, intersectionRatio }]);
         }
     };
     return observers;

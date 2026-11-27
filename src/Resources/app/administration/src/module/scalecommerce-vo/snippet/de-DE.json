@@ -77,7 +77,9 @@
             "formatHint": "Ein festes Format beschneidet das Video so, dass es die Fläche füllt (Hochformate sind auf 420 px Breite begrenzt).",
             "focalX": "Bildausschnitt horizontal (%)",
             "focalY": "Bildausschnitt vertikal (%)",
-            "focalHint": "Welcher Teil sichtbar bleibt, wenn das Video beschnitten wird. Wird vom gehosteten Embed nicht unterstützt."
+            "focalHint": "Welcher Teil sichtbar bleibt, wenn das Video beschnitten wird. Wird vom gehosteten Embed nicht unterstützt.",
+            "miniPlayer": "Schwebender Mini-Player",
+            "miniPlayerHint": "Läuft das Video und scrollt aus dem Bild, wird es unten rechts angeheftet (Bildschirme ab 600 px). Passt nicht zu \"Autoplay\", das ein Video beim Verlassen des Bildes pausiert."
         },
         "mediaSplit": {
             "label": "VideoOptimizer Media Split",

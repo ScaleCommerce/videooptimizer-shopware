@@ -16,7 +16,8 @@
                 {% if data.headline %}<h2 class="scalecommerce-vo-chapters__headline">{{ data.headline }}</h2>{% endif %}
             {% endblock %}
             {% block element_scalecommerce_vo_chapters_player %}
-                <div class="scalecommerce-vo-chapters__player">
+                {# Floating mini player: the player area stays in the flow as the placeholder (scalecommerce-vo-mini plugin). #}
+                <div class="scalecommerce-vo-chapters__player"{% if data.layout.mini ?? false %} data-scalecommerce-vo-mini="true" data-vo-label-close="{{ 'scalecommerce-vo.storefront.close'|trans }}"{% endif %}>
                     {{ vo.surface(data.embed, 'direct', data.playerMode, data.embedUrl, data.headline, surfaceOptions) }}
                 </div>
             {% endblock %}

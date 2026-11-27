@@ -77,7 +77,9 @@
             "formatHint": "A fixed format crops the video to fill the area (portrait formats are limited to 420 px width).",
             "focalX": "Focal point horizontal (%)",
             "focalY": "Focal point vertical (%)",
-            "focalHint": "Which part stays visible when the video is cropped. Not supported by the hosted embed."
+            "focalHint": "Which part stays visible when the video is cropped. Not supported by the hosted embed.",
+            "miniPlayer": "Floating mini player",
+            "miniPlayerHint": "While the video plays and scrolls out of view it is pinned bottom right (screens from 600 px). Does not combine with \"Autoplay\", which pauses a video that leaves the view."
         },
         "mediaSplit": {
             "label": "VideoOptimizer media split",

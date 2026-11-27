@@ -106,6 +106,35 @@ class SurfaceTemplateTest extends TestCase
         static::assertStringNotContainsString('--portrait', $html);
     }
 
+    public function testSingleVideoMiniPlayerIsOptIn(): void
+    {
+        $on = $this->renderSingle('native', ['mini' => true]);
+        $off = $this->renderSingle('native', ['mini' => false]);
+
+        static::assertStringContainsString('data-scalecommerce-vo-mini="true" data-vo-label-close="scalecommerce-vo.storefront.close"', $on);
+        static::assertStringNotContainsString('data-scalecommerce-vo-mini', $off);
+        static::assertStringContainsString('data-scalecommerce-vo-mini', $this->renderSingle('embed', ['mini' => true]));
+    }
+
+    public function testChaptersMiniPlayerWrapsOnlyThePlayerNotTheScenes(): void
+    {
+        $data = new VideoChaptersStruct();
+        $data->setVideoUuid('abc');
+        $data->setPlayerMode('native');
+        $data->setEmbed(['mp4' => 'https://cdn/v.mp4']);
+        $data->setLayout(['mini' => true]);
+        $data->setScenes([['index' => 0, 'start' => 5, 'time' => '0:05', 'thumb' => 'https://x/0', 'title' => '']]);
+        $views = new FilesystemLoader();
+        $views->addPath(dirname(__DIR__, 2) . '/src/Resources/views', 'ScaleVideoOptimizer');
+        $twig = new Environment($views, ['autoescape' => 'html']);
+        $twig->addFilter(new TwigFilter('trans', static fn (string $key): string => $key));
+
+        $html = $twig->render('@ScaleVideoOptimizer/storefront/element/cms-element-scalecommerce-vo-chapters.html.twig', ['element' => ['data' => $data, 'config' => []]]);
+
+        static::assertSame(1, substr_count($html, 'data-scalecommerce-vo-mini'));
+        static::assertLessThan(strpos($html, 'scalecommerce-vo-scenes'), strpos($html, 'data-scalecommerce-vo-mini'));
+    }
+
     public function testSingleVideoWithoutLayoutKeepsTheVideoRatio(): void
     {
         $html = $this->renderSingle('native', [], ['mp4' => 'https://cdn/v.mp4', 'aspectRatio' => '1260 / 750']);

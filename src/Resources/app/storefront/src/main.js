@@ -44,3 +44,8 @@ PluginManager.register(
     ),
     '[data-scalecommerce-vo-chapters]'
 );
+PluginManager.register(
+    'ScalecommerceVoMini',
+    load(() => import('./scalecommerce-vo-mini/scalecommerce-vo-mini.plugin')),
+    '[data-scalecommerce-vo-mini]'
+);

@@ -22,5 +22,6 @@ Shopware.Service('cmsService').registerCmsElement({
         format: { source: 'static', value: 'original' },
         focalX: { source: 'static', value: 50 },
         focalY: { source: 'static', value: 50 },
+        miniPlayer: { source: 'static', value: false },
     },
 });

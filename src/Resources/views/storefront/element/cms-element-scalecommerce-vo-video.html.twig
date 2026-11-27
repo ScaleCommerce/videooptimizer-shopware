@@ -9,7 +9,7 @@
         {% set sizedClass = 'scalecommerce-vo-video scalecommerce-vo-video--sized' ~ (layout.portrait ?? false ? ' scalecommerce-vo-video--portrait' : '') %}
         {% if videoData.embed.jsonLd ?? null %}<script type="application/ld+json">{{ videoData.embed.jsonLd|raw }}</script>{% endif %}
         {% if videoData.playerMode == 'embed' %}
-            <div class="cms-element-scalecommerce-vo-video">
+            <div class="cms-element-scalecommerce-vo-video"{% if layout.mini ?? false %} data-scalecommerce-vo-mini="true" data-vo-label-close="{{ 'scalecommerce-vo.storefront.close'|trans }}"{% endif %}>
                 <div class="{{ sizedClass }}" style="{{ sizedStyle }}">
                     <iframe src="{{ videoData.embedUrl }}"
                             title="{{ (videoData.embed.title ?? null) ?: ('scalecommerce-vo.storefront.video'|trans) }}"
@@ -21,7 +21,7 @@
                 </div>
             </div>
         {% elseif videoData.embed and not videoData.hasError %}
-            <div class="cms-element-scalecommerce-vo-video">
+            <div class="cms-element-scalecommerce-vo-video"{% if layout.mini ?? false %} data-scalecommerce-vo-mini="true" data-vo-label-close="{{ 'scalecommerce-vo.storefront.close'|trans }}"{% endif %}>
                 <div class="{{ sizedClass }}"
                      data-scalecommerce-vo-player="true"
                      data-scalecommerce-vo-player-options='{{ {
