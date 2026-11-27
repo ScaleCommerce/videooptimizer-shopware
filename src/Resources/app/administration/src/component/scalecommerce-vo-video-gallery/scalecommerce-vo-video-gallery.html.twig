@@ -104,7 +104,7 @@
                             @click.stop="onSelect(video)">
                             {{ video.title || video.uuid }}
                         </button>
-                        <sw-label :variant="statusVariant(video.status)" size="small" :ghost="true">
+                        <sw-label :variant="statusVariant(video.status)" size="small" :ghost="true" :title="statusLabel(video.status)">
                             {{ statusLabel(video.status) }}
                         </sw-label>
                     </div>
@@ -150,10 +150,11 @@
                         class="scalecommerce-vo-gallery__title"
                         :disabled="video.status !== 'ready'"
                         :aria-pressed="mode === 'select' ? String(video.uuid === selectedUuid) : null"
+                        :title="video.title || video.uuid"
                         @click.stop="onSelect(video)">
                         {{ video.title || video.uuid }}
                     </button>
-                    <sw-label :variant="statusVariant(video.status)" size="small" :ghost="true">
+                    <sw-label :variant="statusVariant(video.status)" size="small" :ghost="true" :title="statusLabel(video.status)">
                         {{ statusLabel(video.status) }}
                     </sw-label>
                 </div>
@@ -163,7 +164,21 @@
             <div v-if="canCreate" class="scalecommerce-vo-gallery__card scalecommerce-vo-gallery__upload">
                 <span class="scalecommerce-vo-gallery__upload-heading">{{ $tc('scalecommerce-vo.gallery.uploadHeading') }}</span>
                 <mt-text-field v-model="uploadTitle" :label="$tc('scalecommerce-vo.gallery.uploadTitle')" size="small" />
-                <input type="file" accept="video/*" ref="fileInput" @change="onFileSelected" />
+                <input
+                    type="file"
+                    accept="video/*"
+                    ref="fileInput"
+                    class="scalecommerce-vo-gallery__file-input"
+                    :aria-label="$tc('scalecommerce-vo.gallery.chooseFile')"
+                    @change="onFileSelected" />
+                <div class="scalecommerce-vo-gallery__file-row">
+                    <mt-button size="small" variant="secondary" @click="$refs.fileInput.click()">
+                        {{ $tc('scalecommerce-vo.gallery.chooseFile') }}
+                    </mt-button>
+                    <span class="scalecommerce-vo-gallery__file-name" :title="uploadFile ? uploadFile.name : null">
+                        {{ uploadFile ? uploadFile.name : $tc('scalecommerce-vo.gallery.noFile') }}
+                    </span>
+                </div>
                 <mt-button size="small" variant="primary" :is-loading="isUploading" :disabled="!uploadFile || isUploading || !libraryId" @click="onUpload">
                     {{ $tc('scalecommerce-vo.gallery.upload') }}
                 </mt-button>

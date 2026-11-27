@@ -70,7 +70,8 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 8px;
+        flex-wrap: wrap;
+        gap: 4px 8px;
     }
 
     // A real button (keyboard and screen readers) styled as the card title; the card itself is
@@ -134,6 +135,11 @@
 
     &__upload {
         justify-content: center;
+
+        .scalecommerce-vo-gallery__file-row {
+            flex-wrap: wrap;
+            gap: 4px 8px;
+        }
     }
 
     &__upload-heading {

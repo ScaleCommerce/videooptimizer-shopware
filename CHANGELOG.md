@@ -7,6 +7,7 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 ### Fixed
 - The reprocess route rejects a `force` that is not a boolean with 400 instead of treating it as false ([#51](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/51)).
 - The library form shows a permanent note that a changed quality mode applies to existing videos only after a reprocess with "Re-encode all qualities" ([#50](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/50)).
+- The gallery selection mode opens the file picker from a button like the management mode (hidden input with an accessible name, file name shown); long titles and status badges wrap or carry a `title` ([#52](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/52)).
 
 ## [2.1.0] - 2026-11-28
 
