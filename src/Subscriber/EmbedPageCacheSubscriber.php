@@ -107,3 +107,6 @@ class EmbedPageCacheSubscriber implements EventSubscriberInterface
         $this->availability->reset();
     }
 }
+
+// Former name (until 1.2.0): an alias, so instances satisfy type hints and instanceof checks on it.
+class_alias(EmbedPageCacheSubscriber::class, 'ScaleCommerce\\VideoOptimizer\\Subscriber\\DegradedEmbedCacheSubscriber');

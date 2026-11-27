@@ -182,6 +182,12 @@ class EmbedPageCacheSubscriberTest extends TestCase
 
         static::assertInstanceOf(EmbedRenderState::class, $state);
         static::assertInstanceOf(EmbedPageCacheSubscriber::class, $subscriber);
+        // New instances satisfy type hints on the old names as well.
+        static::assertInstanceOf(\ScaleCommerce\VideoOptimizer\Service\EmbedAvailability::class, new EmbedRenderState());
+        static::assertInstanceOf(
+            \ScaleCommerce\VideoOptimizer\Subscriber\DegradedEmbedCacheSubscriber::class,
+            new EmbedPageCacheSubscriber(new EmbedRenderState(), $this->createStub(CacheInvalidator::class), new EventDispatcher())
+        );
         static::assertSame(['scalecommerce-vo-video-v1'], $state->cacheTags());
     }
 

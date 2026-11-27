@@ -291,7 +291,8 @@ before they reach the storefront.
   Shopware and PHP version and the shop's public URL (`APP_URL`, reduced to scheme, host, port and path).
   VideoOptimizer uses it to show which plugin versions an organization runs.
 - **From visitors' browsers:** the video, poster and (in embed mode) the hosted player are loaded directly
-  from VideoOptimizer's EU CDN / player host, like any other media on the page. The plugin sets no cookies.
+  from VideoOptimizer's EU CDN / player host, like any other media on the page. The plugin itself sets no cookies; for the hosted
+  player (embed mode) see VideoOptimizer's privacy information.
 
 ## Development
 

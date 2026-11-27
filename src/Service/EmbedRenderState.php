@@ -67,3 +67,6 @@ class EmbedRenderState implements ResetInterface
         $this->rendered = [];
     }
 }
+
+// Former name (until 1.2.0): an alias, so instances satisfy type hints and instanceof checks on it.
+class_alias(EmbedRenderState::class, 'ScaleCommerce\\VideoOptimizer\\Service\\EmbedAvailability');

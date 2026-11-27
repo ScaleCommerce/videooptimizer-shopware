@@ -72,6 +72,8 @@ export default class ScalecommerceVoPlayer extends window.PluginBaseClass {
         if (this._stopAutoplay) {
             this._stopAutoplay();
         }
-        destroyVideoSource(this.video);
+        if (this.video) {
+            destroyVideoSource(this.video);
+        }
     }
 }

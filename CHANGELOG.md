@@ -6,20 +6,23 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Upgrade notes
-- **Subclasses of the CMS element resolvers:** `VideoSurfaceTrait::buildVideoSurface()` no longer takes the unused fifth argument `$presentation`; callers that still pass it and overrides with the old signature keep working. (#21)
-- **Storefront JavaScript:** the player, blocks and hero plugins are registered with a dynamic import, and hls.js is loaded as a separate chunk only when an HLS source is attached. Pages without a VideoOptimizer element no longer load the plugin's player code (about 340 KB). Theme overrides of the plugin's templates are not affected; code that relied on `ScalecommerceVoPlayer`/`ScalecommerceVoBlocks`/`ScalecommerceVoHero` being registered synchronously must use the `PluginManager` APIs that wait for async plugins. (#17)
+- **Storefront JavaScript:** the player, blocks and hero plugins are registered with a dynamic import (supported since Shopware 6.6.0), and hls.js is loaded as a separate chunk only when an HLS source is attached. Theme overrides of the plugin's templates are not affected. Theme code that extended a plugin class through the registry (e.g. `class X extends PluginManager.getPlugin('ScalecommerceVoPlayer').get('class')`) breaks, because the registry now holds a loader function; use `PluginManager.override(name, MyClass, selector)` with a class that does not depend on the registry. (#17)
+- **Subclasses of the CMS element resolvers:** `VideoSurfaceTrait::buildVideoSurface()` no longer takes the unused fifth argument `$presentation`. Callers that still pass it and overrides with the old signature keep working; an override that used the value now always gets its default `'direct'`. (#21)
 
 ### Added
-- Development: JavaScript tests (Vitest with jsdom) for the storefront source helper (hls.js/MP4 fallback, deferred loading, visibility autoplay) and the administration API service (paging, upload retries, cancel, progress), under `tests/js` and not part of the distributed package. (#20)
+- Development: JavaScript tests (Vitest with jsdom) for the storefront source helper (hls.js/MP4 fallback, deferred loading, play before hls.js is loaded, browsers without Media Source Extensions, visibility autoplay) and the administration API service (paging, upload retries, cancel, progress), under `tests/js` and not part of the distributed package. (#20)
 
 ### Changed
+- Storefront: pages without video load only a 3 KB entry instead of 340 KB; the player plugins and hls.js load on demand, hls.js once per page (on facade and lightbox elements only after the click). Browsers without Media Source Extensions (e.g. older iOS) don't load hls.js at all and play native HLS within the click. If a chunk fails to load, the other storefront plugins keep working and hls.js is retried for the next video. (#17)
+- hls.js updated to 1.7 (storefront and administration). (#19)
 - README: describes the 1.1 behaviour (lazy loading, accessibility, cache tags and invalidation, fail-fast during outages, paging, upload progress, permission-aware administration) and a new section on the data sent to VideoOptimizer, including the `User-Agent` with the shop URL. (#18)
-- Cleanup: the single-video element uses the shared video surface logic of the other elements, `buildVideoSurface()` lost its unused `$presentation` parameter, and the unused `getAllVideos()` was removed from the administration API service (the proxy route stays). (#21)
+- Cleanup: the single-video element uses the shared video surface logic of the other elements; `buildVideoSurface()` lost its unused `$presentation` parameter. (#21)
 
 ### Deprecated
-- `ScaleCommerce\VideoOptimizer\Service\EmbedAvailability` → use `EmbedRenderState`; `ScaleCommerce\VideoOptimizer\Subscriber\DegradedEmbedCacheSubscriber` → use `EmbedPageCacheSubscriber`. The old classes extend the new ones and their service IDs are aliases, so existing references and decorators keep working. (#21)
-- Storefront: pages without video load only a 3 KB entry instead of 340 KB; the player plugins and hls.js load on demand, hls.js once per page (on facade and lightbox elements only after the click). (#17)
-- hls.js updated to 1.7 (storefront and administration). (#19)
+- `ScaleCommerce\VideoOptimizer\Service\EmbedAvailability` → use `EmbedRenderState`; `ScaleCommerce\VideoOptimizer\Subscriber\DegradedEmbedCacheSubscriber` → use `EmbedPageCacheSubscriber`. The old names are class aliases of the new classes and their service IDs are aliases of the new services, so type hints, `instanceof` checks, references and decorators keep working. (#21)
+
+### Removed
+- `getAllVideos()` of the administration API service (`scalecommerceVoApiService`), unused by the plugin. The proxy route `GET /api/_action/scalecommerce-vo/videos` stays. (#21)
 
 ## [1.1.0] - 2026-11-27
 

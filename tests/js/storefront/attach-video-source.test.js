@@ -35,7 +35,15 @@ function fakeVideo({ nativeHls = false } = {}) {
     return video;
 }
 
-beforeEach(() => Hls.reset());
+beforeEach(() => {
+    Hls.reset();
+    // Browsers with Media Source Extensions use hls.js; jsdom has none.
+    window.MediaSource = function MediaSource() {};
+});
+
+afterEach(() => {
+    delete window.MediaSource;
+});
 
 describe('attachVideoSource', () => {
     it('attaches HLS via hls.js and defers segment loading until playback', async () => {
@@ -84,6 +92,33 @@ describe('attachVideoSource', () => {
 
         Hls.instances[0].emit(Hls.Events.ERROR, { fatal: true });
         expect(onUnplayable).toHaveBeenCalledOnce();
+    });
+
+    it('starts loading right away when playback started before hls.js was loaded', async () => {
+        const video = fakeVideo();
+        const attached = attachVideoSource(video, { hls: 'https://cdn/master.m3u8' }, { deferLoad: true });
+        // The visitor presses play while the hls.js chunk is still loading.
+        video.play();
+        await attached;
+
+        expect(Hls.instances[0].config.autoStartLoad).toBe(true);
+
+        // Attaching the source interrupts the pending play(); resume once the manifest is parsed.
+        video.paused = true;
+        Hls.instances[0].emit(Hls.Events.MANIFEST_PARSED);
+        expect(video.play).toHaveBeenCalledTimes(2);
+    });
+
+    it('without Media Source Extensions uses native HLS synchronously, without loading hls.js', () => {
+        delete window.MediaSource;
+        const video = fakeVideo({ nativeHls: true });
+
+        // No await: the source must be set within the user gesture (iOS autoplay rules).
+        attachVideoSource(video, { hls: 'https://cdn/master.m3u8' }, { autoplay: true });
+
+        expect(video.src).toBe('https://cdn/master.m3u8');
+        expect(video.play).toHaveBeenCalledOnce();
+        expect(Hls.instances).toHaveLength(0);
     });
 
     it('uses native HLS (Safari) when hls.js is not supported, with MP4 as fallback', async () => {
