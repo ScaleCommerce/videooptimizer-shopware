@@ -51,4 +51,5 @@
             </button>
         {% endif %}
     </div>
+    {% if embed.jsonLd ?? null %}<script type="application/ld+json">{{ embed.jsonLd|raw }}</script>{% endif %}
 {% endmacro %}

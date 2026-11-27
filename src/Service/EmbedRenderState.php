@@ -33,6 +33,11 @@ class EmbedRenderState implements ResetInterface
      */
     private array $videoLibraries = [];
 
+    /**
+     * @var array<string, true>
+     */
+    private array $jsonLdClaimed = [];
+
     public static function cacheTag(string $uuid): string
     {
         return 'scalecommerce-vo-video-' . $uuid;
@@ -60,6 +65,19 @@ class EmbedRenderState implements ResetInterface
     public function libraryOf(string $uuid): ?string
     {
         return $this->videoLibraries[$uuid] ?? null;
+    }
+
+    /**
+     * True for the first caller per video and request: schema.org data is output once per page.
+     */
+    public function claimJsonLd(string $uuid): bool
+    {
+        if (isset($this->jsonLdClaimed[$uuid])) {
+            return false;
+        }
+        $this->jsonLdClaimed[$uuid] = true;
+
+        return true;
     }
 
     public function markRendered(string $uuid): void
@@ -105,6 +123,7 @@ class EmbedRenderState implements ResetInterface
         $this->rendered = [];
         $this->renderedLibraries = [];
         $this->videoLibraries = [];
+        $this->jsonLdClaimed = [];
     }
 }
 

@@ -4,6 +4,7 @@
         {% set embed = data.embed %}
         <section class="scalecommerce-vo-hero scalecommerce-vo-hero--{{ data.height }} scalecommerce-vo-hero--overlay-{{ data.overlay }}"
                  style="{% if data.headlineColor %}--scvo-hero-heading:{{ data.headlineColor }};{% endif %}{% if data.textColor %}--scvo-hero-text:{{ data.textColor }};{% endif %}">
+            {% if embed.jsonLd ?? null %}<script type="application/ld+json">{{ embed.jsonLd|raw }}</script>{% endif %}
             {% if embed and (embed.hls or embed.mp4 or embed.poster) %}
                 {% set responsivePoster = embed.poster and embed.posterSrcsetAttr %}
                 {% if responsivePoster %}

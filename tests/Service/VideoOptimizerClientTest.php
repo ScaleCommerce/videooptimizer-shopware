@@ -428,6 +428,33 @@ class VideoOptimizerClientTest extends TestCase
         static::assertSame($first, $second);
     }
 
+    public function testGetVideoCreatedAtIsCachedAndNeverThrows(): void
+    {
+        $count = 0;
+        $http = new MockHttpClient(function () use (&$count): MockResponse {
+            ++$count;
+
+            return new MockResponse(json_encode(['data' => ['uuid' => 'v1', 'created_at' => '2026-03-01T10:00:00Z']]));
+        });
+        $client = $this->client($http);
+
+        static::assertSame('2026-03-01T10:00:00Z', $client->getVideoCreatedAt('v1'));
+        static::assertSame('2026-03-01T10:00:00Z', $client->getVideoCreatedAt('v1'));
+        static::assertSame(1, $count);
+
+        $failing = $this->client(new MockHttpClient(new MockResponse('', ['http_code' => 500])));
+        static::assertNull($failing->getVideoCreatedAt('v2'));
+    }
+
+    public function testJsonLdIsOnUnlessSwitchedOff(): void
+    {
+        static::assertTrue($this->client(new MockHttpClient())->jsonLdEnabled());
+
+        $config = $this->createStub(SystemConfigService::class);
+        $config->method('get')->willReturnMap([['ScaleVideoOptimizer.config.jsonLd', null, false]]);
+        static::assertFalse($this->client(new MockHttpClient(), $config)->jsonLdEnabled());
+    }
+
     public function testGetEmbedCachesFailedLookupsForSixtySeconds(): void
     {
         $count = 0;

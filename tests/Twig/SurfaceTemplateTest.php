@@ -142,4 +142,12 @@ class SurfaceTemplateTest extends TestCase
         static::assertStringContainsString('poster="https://p/t.jpg"', $html);
         static::assertStringNotContainsString('<img', $html);
     }
+
+    public function testJsonLdIsOutputInAScriptElement(): void
+    {
+        $html = $this->render(['mp4' => 'https://cdn/v.mp4', 'jsonLd' => '{"@type":"VideoObject"}'], 'facade');
+
+        static::assertStringContainsString('<script type="application/ld+json">{"@type":"VideoObject"}</script>', $html);
+        static::assertStringNotContainsString('ld+json', $this->render(['mp4' => 'https://cdn/v.mp4', 'jsonLd' => null], 'facade'));
+    }
 }
