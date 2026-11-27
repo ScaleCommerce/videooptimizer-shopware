@@ -2,7 +2,7 @@
 
 All notable changes to this package. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [2.1.1] - 2026-11-28
 
 ### Upgrade
 - `POST /api/_action/scalecommerce-vo/libraries/{id}/reprocess` answers 400 instead of 204 when `force` is present but not a boolean (e.g. `"true"` or `1`; `null` still counts as absent); API clients must send `true`/`false` ([#51](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/51)).
