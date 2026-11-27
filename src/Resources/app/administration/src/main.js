@@ -22,6 +22,8 @@ import './module/sw-cms/elements/scalecommerce-vo-spotlight';
 import './module/sw-cms/blocks/video/scalecommerce-vo-spotlight';
 import './module/sw-cms/elements/scalecommerce-vo-video-grid';
 import './module/sw-cms/blocks/video/scalecommerce-vo-video-grid';
+import './module/sw-cms/elements/scalecommerce-vo-chapters';
+import './module/sw-cms/blocks/video/scalecommerce-vo-chapters';
 
 Shopware.Service().register('scalecommerceVoApiService', (container) => {
     const initContainer = Shopware.Application.getContainer('init');

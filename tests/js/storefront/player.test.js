@@ -50,6 +50,12 @@ describe('native player (#34)', () => {
         expect(video.getAttribute('poster')).toBe('https://cdn/poster.jpg');
     });
 
+    it('publishes the attached source for other plugins (chapters, #46)', async () => {
+        const { el } = setup({ mp4: 'https://cdn/v.mp4' });
+
+        await expect(el.__scvoReady).resolves.toBeUndefined();
+    });
+
     it('mutes an autoplaying video and never uses the autoplay attribute', () => {
         const { video } = setup({ autoplay: true, mp4: 'https://cdn/v.mp4' });
 

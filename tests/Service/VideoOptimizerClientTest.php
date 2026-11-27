@@ -50,6 +50,22 @@ class VideoOptimizerClientTest extends TestCase
         return new VideoOptimizerClient($http, $config ?? $this->config(), $cache ?? new ArrayAdapter());
     }
 
+    public function testThumbnailUrlUsesTheConfiguredApiBaseOnceAndClampsTheIndex(): void
+    {
+        $client = $this->client(new MockHttpClient(), $this->config(baseUrl: 'https://api.example.com/api/v1/'));
+
+        static::assertSame('https://api.example.com/api/v1/videos/abc-1/thumbnails/3', $client->thumbnailUrl('abc-1', 3));
+        static::assertSame('https://api.example.com/api/v1/videos/abc-1/thumbnails/9', $client->thumbnailUrl('abc-1', 12));
+        static::assertSame('https://api.example.com/api/v1/videos/abc-1/thumbnails/0', $client->thumbnailUrl('abc-1', -2));
+    }
+
+    public function testThumbnailUrlRejectsPathTricks(): void
+    {
+        $this->expectException(InvalidRequestException::class);
+
+        $this->client(new MockHttpClient())->thumbnailUrl('../x', 1);
+    }
+
     public function testListLibrariesSendsBearerTokenAndUnwrapsData(): void
     {
         $capturedUrl = null;

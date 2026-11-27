@@ -1,0 +1,75 @@
+.scalecommerce-vo-chapters {
+    &__headline {
+        margin-bottom: 1rem;
+    }
+}
+
+// Scene previews under the player; scrolls sideways on small screens.
+.scalecommerce-vo-scenes {
+    display: flex;
+    gap: 0.75rem;
+    margin: 1rem 0 0;
+    padding: 0 0 0.5rem;
+    list-style: none;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+
+    &__item {
+        flex: 0 0 clamp(120px, 22%, 200px);
+        scroll-snap-align: start;
+    }
+}
+
+.scalecommerce-vo-scene {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    background: none;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:focus-visible {
+        outline: 3px solid var(--vo-accent, currentColor);
+        outline-offset: 2px;
+    }
+
+    &[aria-current='true'] {
+        border-color: var(--vo-accent, currentColor);
+    }
+
+    &__thumb {
+        position: relative;
+        display: block;
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
+        border-radius: 4px;
+        background: #000;
+
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    }
+
+    &__time {
+        position: absolute;
+        right: 4px;
+        bottom: 4px;
+        padding: 1px 6px;
+        border-radius: 3px;
+        background: rgba(0, 0, 0, 0.75);
+        color: #fff;
+        font-size: 0.75rem;
+        font-variant-numeric: tabular-nums;
+    }
+
+    &__label {
+        display: block;
+        padding: 0.25rem 0.25rem 0;
+        font-size: 0.875rem;
+    }
+}

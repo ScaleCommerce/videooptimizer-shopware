@@ -397,6 +397,14 @@ class VideoOptimizerClient implements ResetInterface
         $this->availability->markLibraryRendered($libraryId, $validUuid);
     }
 
+    /**
+     * Public URL of scene thumbnail $index (0..9); the endpoint needs no token and redirects to the CDN.
+     */
+    public function thumbnailUrl(string $uuid, int $index): string
+    {
+        return $this->baseUrl() . '/videos/' . $this->pathId($uuid) . '/thumbnails/' . max(0, min(9, $index));
+    }
+
     public function listThumbnails(string $uuid): array
     {
         return $this->requestData('GET', '/videos/' . $this->pathId($uuid) . '/thumbnails');

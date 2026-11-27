@@ -6,9 +6,11 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 
 ### Upgrade
 - A hosted embed (`playerMode` embed) of the single video element is sized to the video's own ratio instead of always 16:9 (portrait videos no longer sit in a landscape box); set the new format option to 16:9 to keep the old look ([#47](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/47)).
+- Scene previews load `<api base URL>/videos/{uuid}/thumbnails/{0-9}` (public, redirects to the VideoOptimizer CDN); a Content-Security-Policy `img-src` has to allow the API host and `*.cdn.videooptimizer.eu`. The player plugin sets `__scvoReady` on its element ([#46](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/46)).
 - New element options `format`, `focalX` and `focalY` (single video, media split) are stored in the slot config; existing elements keep the original ratio. Themes can style the new `scalecommerce-vo-surface--portrait` / `scalecommerce-vo-video--portrait` classes (max width 420 px) ([#47](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/47)).
 
 ### Added
+- New CMS element and block "Video with chapters": the player (native or hosted, shown directly) plus a row of 3-10 scene previews, the video's automatic thumbnails spread evenly with their start time (`duration / 11 * (i + 1)`); a click jumps to the scene and plays (hosted: reloads the embed with `t`), the playing scene is marked `aria-current`; optional scene titles, one per line ([#46](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/46)).
 - Format option for the single video and media split elements: original, 16:9, 9:16, 1:1, 4:5 or 21:9; the video and poster cover the surface (`object-fit: cover`, the hosted embed gets `fit=cover`), portrait formats are capped at 420 px width; an optional focal point (X/Y in percent) sets `object-position` (not supported by the hosted embed) ([#47](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/47)).
 
 ## [2.1.1] - 2026-11-28

@@ -335,6 +335,15 @@
             "lastDelivery": "Last delivery: {event}, {time}",
             "noDelivery": "No delivery received yet.",
             "openConfig": "Open plugin configuration"
+        },
+        "chapters": {
+            "label": "VideoOptimizer video with chapters",
+            "blockLabel": "VideoOptimizer video with chapters",
+            "headline": "Headline",
+            "sceneCount": "Number of scenes (3-10)",
+            "sceneTitles": "Scene titles",
+            "sceneTitlesHint": "One title per line, in the order of the scenes. Empty lines keep \"Scene n\". The previews are the video's ten automatic thumbnails, spread evenly.",
+            "scene": "Scene {number}"
         }
     },
     "sw-privileges": {

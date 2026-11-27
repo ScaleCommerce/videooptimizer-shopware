@@ -6,7 +6,10 @@
             "unavailable": "Video cannot be played",
             "video": "Video",
             "heroPause": "Pause background video",
-            "heroPlay": "Play background video"
+            "heroPlay": "Play background video",
+            "scenes": "Scenes",
+            "scene": "Scene %number%",
+            "sceneAria": "%label% · %time%"
         }
     }
 }

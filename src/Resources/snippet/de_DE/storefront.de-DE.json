@@ -6,7 +6,10 @@
             "unavailable": "Video kann nicht abgespielt werden",
             "video": "Video",
             "heroPause": "Hintergrundvideo pausieren",
-            "heroPlay": "Hintergrundvideo abspielen"
+            "heroPlay": "Hintergrundvideo abspielen",
+            "scenes": "Szenen",
+            "scene": "Szene %number%",
+            "sceneAria": "%label% · %time%"
         }
     }
 }

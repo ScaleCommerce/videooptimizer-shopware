@@ -7,6 +7,7 @@ use ScaleCommerce\VideoOptimizer\Controller\WebhookController;
 use ScaleCommerce\VideoOptimizer\DataResolver\BackgroundHeroElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\MediaSplitElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\SpotlightElementResolver;
+use ScaleCommerce\VideoOptimizer\DataResolver\VideoChaptersElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\VideoGridElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\VideoOptimizerElementResolver;
 use ScaleCommerce\VideoOptimizer\DependencyInjection\HttpProxyConfiguredPass;
@@ -106,6 +107,10 @@ return static function (ContainerConfigurator $container): void {
         ->tag('shopware.cms.data_resolver');
 
     $services->set(VideoGridElementResolver::class)
+        ->args([service(VideoOptimizerClient::class), service('logger')])
+        ->tag('shopware.cms.data_resolver');
+
+    $services->set(VideoChaptersElementResolver::class)
         ->args([service(VideoOptimizerClient::class), service('logger')])
         ->tag('shopware.cms.data_resolver');
 

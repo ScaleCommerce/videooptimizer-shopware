@@ -3,6 +3,7 @@
 namespace ScaleCommerce\VideoOptimizer\Tests\Twig;
 
 use PHPUnit\Framework\TestCase;
+use ScaleCommerce\VideoOptimizer\DataResolver\Struct\VideoChaptersStruct;
 use ScaleCommerce\VideoOptimizer\DataResolver\Struct\VideoOptimizerVideoStruct;
 use Twig\Environment;
 use Twig\Loader\ArrayLoader;
@@ -111,6 +112,61 @@ class SurfaceTemplateTest extends TestCase
 
         static::assertStringContainsString('--scvo-aspect: 1260 / 750', $html);
         static::assertStringNotContainsString('--scvo-pos', $html);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $scenes
+     */
+    private function renderChapters(string $mode, array $scenes, ?string $headline = 'Tour'): string
+    {
+        $data = new VideoChaptersStruct();
+        $data->setVideoUuid('abc');
+        $data->setPlayerMode($mode);
+        $data->setEmbedUrl('https://player.example/embed/abc?autoplay=0');
+        $data->setEmbed(['mp4' => 'https://cdn/v.mp4', 'aspectRatio' => '1920 / 1080']);
+        $data->setScenes($scenes);
+        $data->setHeadline($headline);
+
+        $views = new FilesystemLoader();
+        $views->addPath(dirname(__DIR__, 2) . '/src/Resources/views', 'ScaleVideoOptimizer');
+        $twig = new Environment($views, ['autoescape' => 'html']);
+        $twig->addFilter(new TwigFilter('trans', static fn (string $key): string => $key));
+
+        return $twig->render('@ScaleVideoOptimizer/storefront/element/cms-element-scalecommerce-vo-chapters.html.twig', ['element' => ['data' => $data, 'config' => []]]);
+    }
+
+    public function testChaptersRendersThePlayerDirectlyAndTheSceneButtons(): void
+    {
+        $html = $this->renderChapters('native', [
+            ['index' => 0, 'start' => 5, 'time' => '0:05', 'thumb' => 'https://api.example/videos/abc/thumbnails/0', 'title' => ''],
+            ['index' => 9, 'start' => 59, 'time' => '0:59', 'thumb' => 'https://api.example/videos/abc/thumbnails/9', 'title' => 'Finale <b>'],
+        ]);
+
+        static::assertStringContainsString('data-scalecommerce-vo-chapters="true"', $html);
+        static::assertStringContainsString('<h2 class="scalecommerce-vo-chapters__headline">Tour</h2>', $html);
+        static::assertStringContainsString('data-scalecommerce-vo-player="true"', $html);
+        static::assertSame(2, substr_count($html, 'data-vo-scene="'));
+        static::assertStringContainsString('data-vo-scene="59"', $html);
+        static::assertMatchesRegularExpression('#<img src="https://api.example/videos/abc/thumbnails/9" alt="" width="320" height="180" loading="lazy" decoding="async">#', $html);
+        static::assertStringContainsString('scalecommerce-vo-scene__label">Finale &lt;b&gt;<', $html);
+        static::assertStringContainsString('scalecommerce-vo-scene__time">0:59<', $html);
+    }
+
+    public function testChaptersWithTheHostedPlayerUsesTheIframe(): void
+    {
+        $html = $this->renderChapters('embed', [['index' => 0, 'start' => 5, 'time' => '0:05', 'thumb' => 'https://x/0', 'title' => '']], null);
+
+        static::assertStringContainsString('<iframe src="https://player.example/embed/abc?autoplay=0"', $html);
+        static::assertStringNotContainsString('chapters__headline', $html);
+        static::assertStringContainsString('data-vo-scene="5"', $html);
+    }
+
+    public function testChaptersWithoutScenesShowsOnlyThePlayer(): void
+    {
+        $html = $this->renderChapters('native', []);
+
+        static::assertStringContainsString('scalecommerce-vo-chapters__player', $html);
+        static::assertStringNotContainsString('scalecommerce-vo-scenes', $html);
     }
 
     public function testThemeIsPassedToThePlayerOptionsAndAccentIsACustomProperty(): void

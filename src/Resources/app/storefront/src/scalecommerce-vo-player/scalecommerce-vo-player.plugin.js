@@ -62,6 +62,8 @@ export default class ScalecommerceVoPlayer extends window.PluginBaseClass {
                     markUnavailable(this.el, this.video, unavailableLabel),
             }
         );
+        // Other plugins (chapters) wait for the source before they seek.
+        this.el.__scvoReady = attached;
         if (autoplay) {
             attached.then(() => {
                 if (!this._destroyed) {

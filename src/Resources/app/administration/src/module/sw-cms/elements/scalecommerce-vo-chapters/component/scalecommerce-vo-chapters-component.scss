@@ -1,0 +1,37 @@
+.scalecommerce-vo-chapters-component {
+    width: 100%;
+
+    &__headline {
+        margin: 0 0 8px;
+        font-weight: 600;
+    }
+
+    &__scenes {
+        display: flex;
+        gap: 8px;
+        margin: 8px 0 0;
+        padding: 0;
+        list-style: none;
+        overflow: hidden;
+    }
+
+    &__scene {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    &__thumb {
+        display: block;
+        aspect-ratio: 16 / 9;
+        border-radius: 3px;
+        background: #c9ced6;
+    }
+
+    &__label {
+        display: block;
+        overflow: hidden;
+        font-size: 11px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}

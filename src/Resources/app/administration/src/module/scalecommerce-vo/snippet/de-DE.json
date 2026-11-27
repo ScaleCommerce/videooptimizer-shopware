@@ -335,6 +335,15 @@
             "lastDelivery": "Letzte Zustellung: {event}, {time}",
             "noDelivery": "Noch keine Zustellung empfangen.",
             "openConfig": "Plugin-Konfiguration öffnen"
+        },
+        "chapters": {
+            "label": "VideoOptimizer Video mit Kapiteln",
+            "blockLabel": "VideoOptimizer Video mit Kapiteln",
+            "headline": "Überschrift",
+            "sceneCount": "Anzahl der Szenen (3-10)",
+            "sceneTitles": "Szenentitel",
+            "sceneTitlesHint": "Ein Titel pro Zeile, in der Reihenfolge der Szenen. Leere Zeilen behalten \"Szene n\". Die Vorschaubilder sind die zehn automatischen Thumbnails des Videos, gleichmäßig verteilt.",
+            "scene": "Szene {number}"
         }
     },
     "sw-privileges": {
