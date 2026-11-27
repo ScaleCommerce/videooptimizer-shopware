@@ -8,24 +8,32 @@ use ScaleCommerce\VideoOptimizer\DataResolver\MediaSplitElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\SpotlightElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\VideoGridElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\VideoOptimizerElementResolver;
+use ScaleCommerce\VideoOptimizer\DependencyInjection\HttpProxyConfiguredPass;
 use ScaleCommerce\VideoOptimizer\Service\EmbedRenderState;
+use ScaleCommerce\VideoOptimizer\Service\GuardedHttpClient;
 use ScaleCommerce\VideoOptimizer\Service\PluginUserAgent;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use ScaleCommerce\VideoOptimizer\Subscriber\EmbedPageCacheSubscriber;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
 use Shopware\Core\Framework\Util\HtmlSanitizer;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
-use Symfony\Component\HttpClient\NoPrivateNetworkHttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 // Same service IDs and arguments as the former services.xml (XML configuration is deprecated for Shopware 6.8).
 return static function (ContainerConfigurator $container): void {
     $services = $container->services();
 
+    // Set to true by HttpProxyConfiguredPass when the shop's HTTP client is configured with a proxy.
+    $container->parameters()->set(HttpProxyConfiguredPass::PARAMETER, false);
+
     // The shared HTTP client behind a guard that checks the resolved IP of every connection, redirect
     // targets included, so the configurable base URLs cannot reach internal services (issue #33).
-    $services->set('scalecommerce_vo.http_client', NoPrivateNetworkHttpClient::class)
-        ->args([service(HttpClientInterface::class)])
+    $services->set('scalecommerce_vo.http_client', GuardedHttpClient::class)
+        ->args([
+            service(HttpClientInterface::class),
+            service(SystemConfigService::class),
+            '%' . HttpProxyConfiguredPass::PARAMETER . '%',
+        ])
         ->tag('kernel.reset', ['method' => 'reset']);
 
     $services->set(VideoOptimizerClient::class)

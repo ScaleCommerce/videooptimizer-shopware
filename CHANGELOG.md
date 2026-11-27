@@ -6,7 +6,10 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 
 ### Upgrade
 - `EmbedPageCacheSubscriber` takes the `VideoOptimizerClient` as optional fourth constructor argument; subclasses overriding the constructor must pass it on ([#25](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/25)).
-- API calls no longer follow redirects, and the plugin's HTTP client refuses connections to private addresses; shops reaching the API only through a proxy that resolves host names must make them resolvable on the shop server ([#33](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/33)).
+- API calls no longer follow redirects, and the plugin's HTTP client refuses connections to private addresses (also behind host names and redirects). Not applied behind an outbound proxy (`HTTPS_PROXY`/`ALL_PROXY` or a configured `proxy`, except hosts in `NO_PROXY`; the proxy has to filter). A self-hosted VideoOptimizer on a private network needs the new plugin setting `blockPrivateNetworks` switched off; a failing DNS lookup on the shop server now also blocks the request ([#33](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/33)).
+
+### Added
+- Plugin setting `blockPrivateNetworks` (default on) to allow connections to private networks ([#33](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/33)).
 
 ### Changed
 - Tests no longer depend on the install method; input-check boundaries covered ([#26](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/26)).
