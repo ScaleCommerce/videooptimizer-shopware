@@ -2,6 +2,11 @@
 
 All notable changes to this package. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- The reprocess route rejects a `force` that is not a boolean with 400 instead of treating it as false ([#51](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/51)).
+
 ## [2.1.0] - 2026-11-28
 
 ### Upgrade

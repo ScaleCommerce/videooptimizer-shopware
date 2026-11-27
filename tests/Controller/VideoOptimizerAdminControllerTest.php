@@ -872,6 +872,28 @@ class VideoOptimizerAdminControllerTest extends TestCase
     }
 
     /**
+     * @return iterable<string, array{string}>
+     */
+    public static function invalidForceBodies(): iterable
+    {
+        yield 'string' => ['{"force":"true"}'];
+        yield 'int' => ['{"force":1}'];
+        yield 'null' => ['{"force":null}'];
+    }
+
+    #[DataProvider('invalidForceBodies')]
+    public function testNonBooleanForceIsRejected(string $body): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('reprocessLibrary');
+
+        $response = (new VideoOptimizerAdminController($client))->reprocessLibrary(self::UUID, new Request([], [], [], [], [], [], $body));
+
+        static::assertSame(400, $response->getStatusCode());
+        static::assertStringContainsString('SCALECOMMERCE_VO__INVALID_REQUEST', (string) $response->getContent());
+    }
+
+    /**
      * The API rejects YouTube page links for URL import with data.code "source_url_video_platform";
      * the administration shows its own hint for it.
      */
