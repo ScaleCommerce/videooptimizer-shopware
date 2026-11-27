@@ -21,6 +21,11 @@ export default class ScalecommerceVoHero extends window.PluginBaseClass {
             .closest('.scalecommerce-vo-hero')
             ?.querySelector('.scalecommerce-vo-hero__toggle');
 
+        // Until the source is attached (hls.js may still be loading) a click on the button cannot
+        // play anything; it is remembered here and honoured once the source is ready.
+        this._sourceReady = false;
+        this._playRequested = false;
+
         const motionReduced = this._motionReduced();
         // hls.js loads on demand, so autoplay starts only once the source is attached.
         const attached = attachVideoSource(
@@ -31,6 +36,7 @@ export default class ScalecommerceVoHero extends window.PluginBaseClass {
                 deferLoad:
                     motionReduced ||
                     !video.hasAttribute('data-scalecommerce-vo-hero-priority'),
+                shouldPlay: () => this._playRequested,
                 onUnplayable: () => {
                     video.removeAttribute('src');
                     this.toggle?.setAttribute('hidden', '');
@@ -39,8 +45,7 @@ export default class ScalecommerceVoHero extends window.PluginBaseClass {
         );
 
         if (this.toggle) {
-            this._onToggle = () =>
-                video.paused ? video.play().catch(() => {}) : video.pause();
+            this._onToggle = () => this._togglePlayback();
             this._syncToggle = () => this._updateToggle(video.paused);
             this.toggle.addEventListener('click', this._onToggle);
             video.addEventListener('play', this._syncToggle);
@@ -48,6 +53,10 @@ export default class ScalecommerceVoHero extends window.PluginBaseClass {
             this._updateToggle(true);
             this.toggle.removeAttribute('hidden');
         }
+
+        attached.then(() => {
+            this._sourceReady = true;
+        });
 
         if (!motionReduced) {
             attached.then(() => {
@@ -58,6 +67,22 @@ export default class ScalecommerceVoHero extends window.PluginBaseClass {
                     );
                 }
             });
+        }
+    }
+
+    _togglePlayback() {
+        const video = this.el;
+        if (!this._sourceReady) {
+            this._playRequested = !this._playRequested;
+            this._updateToggle(!this._playRequested);
+            return;
+        }
+        // From here on the video's own state is the truth; an early request must not restart it later.
+        this._playRequested = false;
+        if (video.paused) {
+            video.play().catch(() => {});
+        } else {
+            video.pause();
         }
     }
 

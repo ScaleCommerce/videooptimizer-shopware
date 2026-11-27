@@ -85,6 +85,64 @@ describe('attachVideoSource', () => {
         expect(onUnplayable).toHaveBeenCalledOnce();
     });
 
+    it('resumes playback on the MP4 fallback when the video was playing (#28)', async () => {
+        const video = fakeVideo();
+        await attachVideoSource(video, { hls: 'https://cdn/master.m3u8', mp4: 'https://cdn/1080p.mp4' });
+
+        // Autoplay-while-visible or the visitor started playback.
+        video.play();
+        video.play.mockClear();
+        Hls.instances[0].emit(Hls.Events.ERROR, { fatal: true });
+
+        expect(video.src).toBe('https://cdn/1080p.mp4');
+        expect(video.play).toHaveBeenCalledOnce();
+    });
+
+    it('keeps a paused video paused on the MP4 fallback', async () => {
+        const video = fakeVideo();
+        await attachVideoSource(video, { hls: 'https://cdn/master.m3u8', mp4: 'https://cdn/1080p.mp4' });
+
+        Hls.instances[0].emit(Hls.Events.ERROR, { fatal: true });
+
+        expect(video.src).toBe('https://cdn/1080p.mp4');
+        expect(video.play).not.toHaveBeenCalled();
+    });
+
+    it('resumes playback when the native HLS source fails over to MP4 (#28)', async () => {
+        Hls.supported = false;
+        const video = fakeVideo({ nativeHls: true });
+        await attachVideoSource(video, { hls: 'https://cdn/master.m3u8', mp4: 'https://cdn/720p.mp4' });
+        video.play();
+        video.play.mockClear();
+
+        video.dispatchEvent(new Event('error'));
+
+        expect(video.src).toBe('https://cdn/720p.mp4');
+        expect(video.play).toHaveBeenCalledOnce();
+    });
+
+    it('starts playback once the source is ready when the caller wants it (#28)', async () => {
+        const video = fakeVideo();
+        let wanted = false;
+        await attachVideoSource(video, { hls: 'https://cdn/master.m3u8' }, { shouldPlay: () => wanted });
+
+        Hls.instances[0].emit(Hls.Events.MANIFEST_PARSED);
+        expect(video.play).not.toHaveBeenCalled();
+
+        // The intent is read when the source becomes ready, not when attaching starts.
+        wanted = true;
+        Hls.instances[0].emit(Hls.Events.MANIFEST_PARSED);
+        expect(video.play).toHaveBeenCalledOnce();
+    });
+
+    it('starts the MP4 when the caller wants playback (#28)', async () => {
+        const video = fakeVideo();
+        await attachVideoSource(video, { mp4: 'https://cdn/720p.mp4' }, { shouldPlay: () => true });
+
+        expect(video.src).toBe('https://cdn/720p.mp4');
+        expect(video.play).toHaveBeenCalledOnce();
+    });
+
     it('reports an unplayable video on a fatal error without MP4', async () => {
         const video = fakeVideo();
         const onUnplayable = vi.fn();
