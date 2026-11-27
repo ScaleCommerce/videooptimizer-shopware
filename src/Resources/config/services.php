@@ -45,6 +45,7 @@ return static function (ContainerConfigurator $container): void {
             service(EmbedRenderState::class),
             service(CacheInvalidator::class),
             service('event_dispatcher'),
+            service(VideoOptimizerClient::class),
         ])
         ->tag('kernel.event_subscriber');
 

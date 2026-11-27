@@ -3,6 +3,7 @@
 namespace ScaleCommerce\VideoOptimizer\Subscriber;
 
 use ScaleCommerce\VideoOptimizer\Service\EmbedRenderState;
+use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
 use Shopware\Core\Framework\Adapter\Cache\Event\AddCacheTagEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -14,6 +15,8 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
  * Tags every page with the videos it shows ("scalecommerce-vo-video-<uuid>"), so admin changes to
  * a video invalidate exactly those pages (VideoOptimizerClient::forgetEmbed()); in the HTTP cache
  * via AddCacheTagEvent, on Shopware 6.6 also in the Store API route cache.
+ *
+ * Also cancels embed lookups that were started for the page but never read, once rendering is done.
  *
  * Keeps a page that was rendered while a video embed lookup failed or returned no playable sources
  * (the element is hidden then) from being cached for long, so the video comes back once the API
@@ -36,6 +39,7 @@ class EmbedPageCacheSubscriber implements EventSubscriberInterface
         private readonly EmbedRenderState $availability,
         private readonly CacheInvalidator $cacheInvalidator,
         private readonly EventDispatcherInterface $dispatcher,
+        private readonly ?VideoOptimizerClient $client = null,
     ) {
     }
 
@@ -55,6 +59,9 @@ class EmbedPageCacheSubscriber implements EventSubscriberInterface
         if (!$event->isMainRequest()) {
             return;
         }
+
+        // Rendering is done: cancel embed lookups that were started but never read.
+        $this->client?->reset();
 
         // The HTTP cache reads the collected tags when it stores the response, after this listener.
         // AddCacheTagEvent exists from a later 6.6 patch release on; before that, the HTTP cache
@@ -99,6 +106,8 @@ class EmbedPageCacheSubscriber implements EventSubscriberInterface
 
     public function onTerminate(): void
     {
+        $this->client?->reset();
+
         if (!$this->availability->isRouteCacheTagged()) {
             return;
         }

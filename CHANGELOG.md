@@ -4,6 +4,12 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Upgrade
+- `EmbedPageCacheSubscriber` takes the `VideoOptimizerClient` as optional fourth constructor argument; subclasses overriding the constructor must pass it on ([#25](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/25)).
+
+### Fixed
+- Unread embed lookups are cancelled at the end of the request and a failed lookup no longer keeps the client alive; fixes the test suite exiting 255 ([#25](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/25)).
+
 ## [1.2.1] - 2026-11-27
 
 ### Upgrade

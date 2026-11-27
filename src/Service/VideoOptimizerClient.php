@@ -297,9 +297,14 @@ class VideoOptimizerClient implements ResetInterface
         $this->discardInflight($uuid);
 
         if ($freshFailure !== null) {
+            $failure = $freshFailure;
+            // The callback holds this variable by reference and the failure's trace holds the callback
+            // (zend.exception_ignore_args=Off): clear it so the two cannot keep each other, and the
+            // client, alive until the end of the script (issue #25).
+            $freshFailure = null;
             $this->availability->markDegraded();
 
-            throw $freshFailure;
+            throw $failure;
         }
 
         if (($result['__scvo_failed'] ?? false) === true) {

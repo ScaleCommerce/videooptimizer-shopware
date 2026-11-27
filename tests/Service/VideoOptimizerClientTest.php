@@ -1203,24 +1203,32 @@ class VideoOptimizerClientTest extends TestCase
     }
 
     /**
-     * A started lookup that is never read (e.g. served from the cache meanwhile) must not throw
-     * when the client goes away, also without kernel.reset (first request of a php-fpm worker).
+     * A failed lookup must not keep the client alive through an exception/closure cycle (with
+     * zend.exception_ignore_args=Off the trace holds the cache callback), otherwise unread
+     * pre-started lookups are only cancelled at script end, in an undefined destructor order (#25).
      */
-    public function testUnreadLookupsDoNotThrowWithoutReset(): void
+    public function testClientIsFreedAfterAFailedLookupWithExceptionArgsEnabled(): void
     {
-        $http = new MockHttpClient(fn (): MockResponse => new MockResponse('{}', ['http_code' => 404]));
-        $client = $this->client($http);
-        $client->queueEmbed('a1');
-        $client->queueEmbed('b2');
+        $previous = ini_set('zend.exception_ignore_args', '0');
         try {
-            $client->getEmbed('a1');
-        } catch (VideoOptimizerApiException) {
+            $http = new MockHttpClient(fn (): MockResponse => new MockResponse('{}', ['http_code' => 404]));
+            $client = $this->client($http);
+            $client->queueEmbed('a1');
+            $client->queueEmbed('b2');
+            try {
+                $client->getEmbed('a1');
+                static::fail('The failed lookup must throw.');
+            } catch (VideoOptimizerApiException) {
+            }
+
+            $reference = \WeakReference::create($client);
+            unset($client, $http);
+            gc_collect_cycles();
+
+            static::assertNull($reference->get(), 'The client is still referenced after a failed lookup.');
+        } finally {
+            ini_set('zend.exception_ignore_args', $previous === false ? '1' : $previous);
         }
-
-        unset($client, $http);
-        gc_collect_cycles();
-
-        $this->addToAssertionCount(1);
     }
 
     /**
