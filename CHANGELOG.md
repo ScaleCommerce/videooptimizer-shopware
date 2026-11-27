@@ -16,6 +16,7 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 - Library delete, reprocess and update invalidate cached pages by a per-library cache tag, also when the video listing is truncated or fails; pages with an element's library are tagged ([#29](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/29)).
 - Background hero and autoplaying players keep playing after the MP4 fallback; a hero play click before the source is attached is no longer lost ([#28](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/28)).
 - Closing the video gallery aborts a running upload, so no video is created afterwards ([#27](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/27)).
+- Video gallery keeps its loaded pages after rename, delete and poster changes (the changed entry is updated in place); media-library posters with a generic `Content-Type` use the media entity's type or file extension ([#30](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/30)).
 
 ### Security
 - Base URL guard checks the IDNA-normalised host (full-width `localhost`), resolved IPs and redirect targets via `NoPrivateNetworkHttpClient` ([#33](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/33)).

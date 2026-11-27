@@ -78,3 +78,69 @@ describe('upload (#27)', () => {
         expect(ctx._watchProcessing).not.toHaveBeenCalled();
     });
 });
+
+describe('changes keep the loaded pages (#30)', () => {
+    const loaded = () => [video('v1'), video('v2'), video('v3')];
+
+    it('renames in place without reloading the first page', async () => {
+        const service = api();
+        const ctx = gallery.context({ scalecommerceVoApiService: service, videos: loaded(), nextCursor: 'c2', loadVideos: vi.fn() });
+        ctx.onRename(ctx.videos[1]);
+        ctx.renameTitle = '  New  ';
+
+        await ctx.onConfirmRename();
+
+        expect(service.updateVideo).toHaveBeenCalledWith('v2', { title: 'New' });
+        expect(ctx.loadVideos).not.toHaveBeenCalled();
+        expect(ctx.videos.map((v) => v.title)).toEqual(['v1', 'New', 'v3']);
+        expect(ctx.nextCursor).toBe('c2');
+        expect(ctx.$emit).toHaveBeenCalledWith('renamed', 'v2');
+    });
+
+    it('removes a deleted video in place', async () => {
+        const service = api();
+        const ctx = gallery.context({ scalecommerceVoApiService: service, videos: loaded(), nextCursor: 'c2', loadVideos: vi.fn() });
+        ctx.confirmDeleteVideo = ctx.videos[0];
+
+        await ctx.onConfirmDelete();
+
+        expect(ctx.loadVideos).not.toHaveBeenCalled();
+        expect(ctx.videos.map((v) => v.uuid)).toEqual(['v2', 'v3']);
+        expect(ctx.nextCursor).toBe('c2');
+        expect(ctx.$emit).toHaveBeenCalledWith('deleted', 'v1');
+    });
+
+    it('a failed delete leaves the list alone', async () => {
+        const service = api({ deleteVideo: vi.fn(() => Promise.reject(new Error('x'))) });
+        const ctx = gallery.context({ scalecommerceVoApiService: service, videos: loaded() });
+        ctx.confirmDeleteVideo = ctx.videos[0];
+
+        await ctx.onConfirmDelete();
+
+        expect(ctx.videos).toHaveLength(3);
+        expect(ctx.createNotificationError).toHaveBeenCalled();
+    });
+
+    it('refreshes only the changed entry after a poster change', async () => {
+        const fresh = { uuid: 'v2', title: 'v2', status: 'ready', poster_url: 'https://cdn/new.jpg' };
+        const service = api({ getVideo: vi.fn(() => Promise.resolve({ data: fresh })) });
+        const ctx = gallery.context({ scalecommerceVoApiService: service, videos: loaded(), detailUuid: 'v2', brokenPosters: { v2: true }, loadVideos: vi.fn() });
+
+        await ctx.onDetailUpdated();
+
+        expect(service.getVideo).toHaveBeenCalledWith('v2');
+        expect(ctx.loadVideos).not.toHaveBeenCalled();
+        expect(ctx.videos[1]).toEqual(fresh);
+        expect(ctx.videos[0].uuid).toBe('v1');
+        expect(ctx.brokenPosters).toEqual({});
+    });
+
+    it('keeps the list when refreshing the entry fails', async () => {
+        const service = api({ getVideo: vi.fn(() => Promise.reject(new Error('x'))) });
+        const ctx = gallery.context({ scalecommerceVoApiService: service, videos: loaded(), detailUuid: 'v2' });
+
+        await ctx.onDetailUpdated();
+
+        expect(ctx.videos).toHaveLength(3);
+    });
+});
