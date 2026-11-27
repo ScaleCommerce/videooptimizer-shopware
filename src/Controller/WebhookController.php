@@ -92,7 +92,7 @@ class WebhookController
         }
         foreach ($dedupeKeys as $key) {
             if ($this->cache->getItem($key)->isHit()) {
-                return $this->json(['duplicate' => true]);
+                return $this->json(['received' => true, 'duplicate' => true]);
             }
         }
 

@@ -18,6 +18,7 @@ use ScaleCommerce\VideoOptimizer\Subscriber\EmbedPageCacheSubscriber;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
 use Shopware\Core\Framework\Util\HtmlSanitizer;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 // Same service IDs and arguments as the former services.xml (XML configuration is deprecated for Shopware 6.8).
@@ -72,12 +73,18 @@ return static function (ContainerConfigurator $container): void {
         ->public()
         ->args([service(VideoOptimizerClient::class)]);
 
+    // Claims of processed webhook deliveries. Not cache.object: that pool is request-scoped (array)
+    // in some setups, e.g. the dev environment, where no delivery would ever be recognised again.
+    // Cleared with the cache; a repeated delivery only repeats an idempotent invalidation.
+    $services->set('scalecommerce_vo.webhook_claims', FilesystemAdapter::class)
+        ->args(['scalecommerce_vo_webhook', 86400, '%kernel.cache_dir%/scalecommerce_vo']);
+
     $services->set(WebhookController::class)
         ->public()
         ->args([
             service(VideoOptimizerClient::class),
             service(SystemConfigService::class),
-            service('cache.object'),
+            service('scalecommerce_vo.webhook_claims'),
             service('router'),
             service('logger'),
         ]);

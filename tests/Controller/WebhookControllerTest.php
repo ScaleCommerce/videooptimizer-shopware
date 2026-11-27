@@ -4,11 +4,13 @@ namespace ScaleCommerce\VideoOptimizer\Tests\Controller;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Psr\Cache\CacheItemPoolInterface;
 use ScaleCommerce\VideoOptimizer\Controller\WebhookController;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
 use Symfony\Bundle\FrameworkBundle\Routing\AttributeRouteControllerLoader;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
@@ -20,7 +22,7 @@ class WebhookControllerTest extends TestCase
 
     private const LIBRARY = '15e2662a-e0f3-4c3a-a111-0123456789ab';
 
-    private ArrayAdapter $cache;
+    private CacheItemPoolInterface $cache;
 
     protected function setUp(): void
     {
@@ -158,7 +160,35 @@ class WebhookControllerTest extends TestCase
         $request = $this->delivery(['event' => 'video.ready', 'data' => ['uuid' => self::UUID]], null, self::SECRET, 'del-9');
 
         static::assertSame(['received' => true, 'flushed' => true], $this->json($controller->receive($request)));
-        static::assertSame(['duplicate' => true], $this->json($controller->receive($request)));
+        static::assertSame(['received' => true, 'duplicate' => true], $this->json($controller->receive($request)));
+    }
+
+    /**
+     * Every webhook is its own PHP request: the claim must survive in a pool that is shared
+     * between them, here a filesystem pool read by two separate controller instances.
+     */
+    public function testAReplayIsADuplicateAcrossRequests(): void
+    {
+        $dir = sys_get_temp_dir() . '/scvo-wh-' . bin2hex(random_bytes(4));
+        $request = $this->delivery(['event' => 'video.ready', 'data' => ['uuid' => self::UUID]]);
+        $processed = 0;
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('forgetEmbed')->willReturnCallback(static function () use (&$processed): void {
+            ++$processed;
+        });
+
+        try {
+            $this->cache = new FilesystemAdapter('scvo_test', 0, $dir);
+            $first = $this->controller($client)->receive($request);
+            $this->cache = new FilesystemAdapter('scvo_test', 0, $dir);
+            $second = $this->controller($client)->receive($request);
+        } finally {
+            (new \Symfony\Component\Filesystem\Filesystem())->remove($dir);
+        }
+
+        static::assertSame(['received' => true, 'flushed' => true], $this->json($first));
+        static::assertSame(['received' => true, 'duplicate' => true], $this->json($second));
+        static::assertSame(1, $processed);
     }
 
     public function testAReplayWithAnotherDeliveryIdIsStillADuplicate(): void
@@ -172,7 +202,7 @@ class WebhookControllerTest extends TestCase
         $controller->receive($this->delivery($body, $time, self::SECRET, 'del-a'));
         $replay = $this->delivery($body, $time, self::SECRET, 'del-b');
 
-        static::assertSame(['duplicate' => true], $this->json($controller->receive($replay)));
+        static::assertSame(['received' => true, 'duplicate' => true], $this->json($controller->receive($replay)));
     }
 
     public function testAFailedInvalidationIsRetried(): void
