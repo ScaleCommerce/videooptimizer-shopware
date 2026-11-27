@@ -5,6 +5,10 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-27
+
+The storefront loads the player code and hls.js only on pages with video, hls.js 1.7, JavaScript tests, an updated README with the data sent to VideoOptimizer, and cleanup (#17, #18, #19, #20, #21).
+
 ### Upgrade notes
 - **Storefront JavaScript:** the player, blocks and hero plugins are registered with a dynamic import (supported since Shopware 6.6.0), and hls.js is loaded as a separate chunk only when an HLS source is attached. Theme overrides of the plugin's templates are not affected. Theme code that extended a plugin class through the registry (e.g. `class X extends PluginManager.getPlugin('ScalecommerceVoPlayer').get('class')`) breaks, because the registry now holds a loader function; use `PluginManager.override(name, MyClass, selector)` with a class that does not depend on the registry. (#17)
 - **Subclasses of the CMS element resolvers:** `VideoSurfaceTrait::buildVideoSurface()` no longer takes the unused fifth argument `$presentation`. Callers that still pass it and overrides with the old signature keep working; an override that used the value now always gets its default `'direct'`. (#21)
