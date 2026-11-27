@@ -4,3 +4,4 @@
 .phpunit.result.cache
 /.phpunit.cache/
 /.claude/
+/tests/js/node_modules/

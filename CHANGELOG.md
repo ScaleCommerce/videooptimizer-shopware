@@ -9,6 +9,9 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - **Subclasses of the CMS element resolvers:** `VideoSurfaceTrait::buildVideoSurface()` no longer takes the unused fifth argument `$presentation`; callers that still pass it and overrides with the old signature keep working. (#21)
 - **Storefront JavaScript:** the player, blocks and hero plugins are registered with a dynamic import, and hls.js is loaded as a separate chunk only when an HLS source is attached. Pages without a VideoOptimizer element no longer load the plugin's player code (about 340 KB). Theme overrides of the plugin's templates are not affected; code that relied on `ScalecommerceVoPlayer`/`ScalecommerceVoBlocks`/`ScalecommerceVoHero` being registered synchronously must use the `PluginManager` APIs that wait for async plugins. (#17)
 
+### Added
+- Development: JavaScript tests (Vitest with jsdom) for the storefront source helper (hls.js/MP4 fallback, deferred loading, visibility autoplay) and the administration API service (paging, upload retries, cancel, progress), under `tests/js` and not part of the distributed package. (#20)
+
 ### Changed
 - Cleanup: the single-video element uses the shared video surface logic of the other elements, `buildVideoSurface()` lost its unused `$presentation` parameter, and the unused `getAllVideos()` was removed from the administration API service (the proxy route stays). (#21)
 
