@@ -478,6 +478,8 @@ Component.register('scalecommerce-vo-video-gallery', {
                     },
                 }
             );
+            // Cancelled while the last part was in flight: the video must not be created.
+            this._uploadAbort?.signal.throwIfAborted();
             const payload = {
                 libraryId,
                 uuid: init.uuid,

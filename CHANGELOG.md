@@ -5,6 +5,7 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 ## [Unreleased]
 
 ### Upgrade
+- Leaving the module or switching the CMS element cancels a running upload in the video gallery; before, it ran on in the background and created the video ([#27](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/27)).
 - `EmbedPageCacheSubscriber` takes the `VideoOptimizerClient` as optional fourth constructor argument; subclasses overriding the constructor must pass it on ([#25](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/25)).
 - API calls no longer follow redirects, and the plugin's HTTP client refuses connections to private addresses (also behind host names and redirects). Not applied behind an outbound proxy (`HTTPS_PROXY`/`ALL_PROXY` or a configured `proxy`, except hosts in `NO_PROXY`; the proxy has to filter). A self-hosted VideoOptimizer on a private network needs the new plugin setting `blockPrivateNetworks` switched off; a failing DNS lookup on the shop server now also blocks the request ([#33](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/33)).
 
@@ -23,6 +24,7 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 - Background hero and autoplaying players keep playing after the MP4 fallback; a hero play click before the source is attached is no longer lost ([#28](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/28)).
 - Closing the video gallery aborts a running upload, so no video is created afterwards ([#27](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/27)).
 - Video gallery keeps its loaded pages after rename, delete and poster changes (the changed entry is updated in place); media-library posters with a generic `Content-Type` use the media entity's type or file extension ([#30](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/30)).
+- MP4 fallback continues at the playback position, and a hero play request is used only once ([#28](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/28)).
 
 ### Security
 - Base URL guard checks the IDNA-normalised host (full-width `localhost`), resolved IPs and redirect targets via `NoPrivateNetworkHttpClient` ([#33](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/33)).

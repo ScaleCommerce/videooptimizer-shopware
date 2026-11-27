@@ -62,6 +62,31 @@ describe('upload (#27)', () => {
         expect(ctx.createNotificationSuccess).not.toHaveBeenCalled();
     });
 
+    it('does not complete an upload that was aborted after the last part', async () => {
+        let finishParts;
+        const service = api({
+            // The transfer ends although the signal was aborted meanwhile (e.g. the last part was in flight).
+            uploadParts: vi.fn(() => new Promise((resolve) => {
+                finishParts = () => resolve([{ partNumber: 1, etag: 'e' }]);
+            })),
+        });
+        const ctx = gallery.context({
+            scalecommerceVoApiService: service,
+            libraryId: 'lib-1',
+            uploadFile: { name: 'a.mp4', size: 3, type: 'video/mp4' },
+            _watchProcessing: vi.fn(),
+        });
+
+        const upload = gallery.definition.methods.onUpload.call(ctx);
+        await vi.waitFor(() => expect(service.uploadParts).toHaveBeenCalled());
+        gallery.definition.beforeUnmount.call(ctx);
+        finishParts();
+        await upload;
+
+        expect(service.completeUpload).not.toHaveBeenCalled();
+        expect(ctx._watchProcessing).not.toHaveBeenCalled();
+    });
+
     it('does not announce or track a finished upload on an unmounted gallery', async () => {
         const service = api({ uploadParts: vi.fn(() => Promise.resolve([{ partNumber: 1, etag: 'e' }])) });
         const ctx = gallery.context({
