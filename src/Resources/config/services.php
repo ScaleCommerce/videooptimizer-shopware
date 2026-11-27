@@ -15,15 +15,22 @@ use ScaleCommerce\VideoOptimizer\Subscriber\EmbedPageCacheSubscriber;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
 use Shopware\Core\Framework\Util\HtmlSanitizer;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
+use Symfony\Component\HttpClient\NoPrivateNetworkHttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 // Same service IDs and arguments as the former services.xml (XML configuration is deprecated for Shopware 6.8).
 return static function (ContainerConfigurator $container): void {
     $services = $container->services();
 
+    // The shared HTTP client behind a guard that checks the resolved IP of every connection, redirect
+    // targets included, so the configurable base URLs cannot reach internal services (issue #33).
+    $services->set('scalecommerce_vo.http_client', NoPrivateNetworkHttpClient::class)
+        ->args([service(HttpClientInterface::class)])
+        ->tag('kernel.reset', ['method' => 'reset']);
+
     $services->set(VideoOptimizerClient::class)
         ->args([
-            service(HttpClientInterface::class),
+            service('scalecommerce_vo.http_client'),
             service(SystemConfigService::class),
             service('cache.object'),
             service('logger'),

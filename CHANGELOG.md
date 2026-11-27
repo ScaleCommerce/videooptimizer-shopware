@@ -6,6 +6,7 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 
 ### Upgrade
 - `EmbedPageCacheSubscriber` takes the `VideoOptimizerClient` as optional fourth constructor argument; subclasses overriding the constructor must pass it on ([#25](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/25)).
+- API calls no longer follow redirects, and the plugin's HTTP client refuses connections to private addresses; shops reaching the API only through a proxy that resolves host names must make them resolvable on the shop server ([#33](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/33)).
 
 ### Changed
 - Tests no longer depend on the install method; input-check boundaries covered ([#26](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/26)).
@@ -13,6 +14,9 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 ### Fixed
 - Unread embed lookups are cancelled at the end of the request and a failed lookup no longer keeps the client alive; fixes the test suite exiting 255 ([#25](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/25)).
 - Library delete, reprocess and update invalidate cached pages by a per-library cache tag, also when the video listing is truncated or fails; pages with an element's library are tagged ([#29](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/29)).
+
+### Security
+- Base URL guard checks the IDNA-normalised host (full-width `localhost`), resolved IPs and redirect targets via `NoPrivateNetworkHttpClient` ([#33](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/33)).
 
 ## [1.2.1] - 2026-11-27
 

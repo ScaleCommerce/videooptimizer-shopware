@@ -17,6 +17,7 @@ use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\NoPrivateNetworkHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
@@ -705,6 +706,14 @@ class VideoOptimizerClientTest extends TestCase
         yield 'password without user name' => ['https://:pass@api.example/api/v1'];
         yield 'hex ipv4 upper case' => ['https://0X7F000001/api/v1'];
         yield 'hex label' => ['https://api.0x7f.example/api/v1'];
+        yield 'full-width localhost' => ["https://\u{FF2C}\u{FF2F}\u{FF23}\u{FF21}\u{FF2C}\u{FF28}\u{FF2F}\u{FF33}\u{FF34}/api/v1"];
+        yield 'full-width localhost subdomain' => ["https://api.\u{FF4C}\u{FF4F}\u{FF43}\u{FF41}\u{FF4C}\u{FF48}\u{FF4F}\u{FF53}\u{FF54}/api/v1"];
+        yield 'full-width loopback ip' => ["https://\u{FF11}\u{FF12}\u{FF17}.\u{FF10}.\u{FF10}.\u{FF11}/api/v1"];
+        yield 'ideographic full stop in loopback ip' => ["https://127\u{3002}0\u{3002}0\u{3002}1/api/v1"];
+        yield 'full-width private ip' => ["https://\u{FF11}\u{FF10}.\u{FF10}.\u{FF10}.\u{FF15}/api/v1"];
+        yield 'full-width decimal ipv4' => ["https://\u{FF12}\u{FF11}\u{FF13}\u{FF10}\u{FF17}\u{FF14}\u{FF13}\u{FF13}\u{FF16}\u{FF14}\u{FF18}/api/v1"];
+        yield 'full-width hex ipv4' => ["https://0\u{FF58}7f000001/api/v1"];
+        yield 'localhost with soft hyphen' => ["https://local\u{AD}host/api/v1"];
     }
 
     #[DataProvider('rejectedBaseUrls')]
@@ -735,6 +744,8 @@ class VideoOptimizerClientTest extends TestCase
         yield 'digits in the middle' => ['https://my2api.example.com/api/v1'];
         yield 'digit-only label with letters elsewhere' => ['https://123.example.com/api/v1'];
         yield 'upper case host' => ['https://API.Example.COM/api/v1'];
+        yield 'internationalized name' => ["https://b\u{FC}cher.example/api/v1"];
+        yield 'full-width public name' => ["https://\u{FF41}\u{FF50}\u{FF49}.example.com/api/v1"];
         yield 'hex-like word' => ['https://0xample.example.com/api/v1'];
         yield 'public ipv6' => ['https://[2606:4700:4700::1111]/api/v1'];
     }
@@ -783,6 +794,157 @@ class VideoOptimizerClientTest extends TestCase
         (new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedRenderState(), $invalidator))->deleteLibrary('lib-1');
 
         static::assertSame(['scalecommerce-vo-library-lib-1', 'scalecommerce-vo-video-v2'], $invalidated);
+    }
+
+    private function guarded(HttpClientInterface $inner, array $resolve = ['api.videooptimizer.eu' => '93.184.216.34', 'cdn.example.com' => '93.184.216.35']): HttpClientInterface
+    {
+        // The guard resolves host names itself; "resolve" pins them so the tests need no DNS.
+        return (new NoPrivateNetworkHttpClient($inner))->withOptions(['resolve' => $resolve]);
+    }
+
+    /**
+     * The shared HTTP client is wrapped in NoPrivateNetworkHttpClient (services.php), which checks
+     * the resolved IP of every connection: a public name pointing to a private address is refused (#33).
+     *
+     * @return iterable<string, array{string}>
+     */
+    public static function privateAddresses(): iterable
+    {
+        yield 'loopback' => ['127.0.0.1'];
+        yield 'private 10/8' => ['10.0.0.5'];
+        yield 'private 192.168/16' => ['192.168.1.10'];
+        yield 'link-local metadata' => ['169.254.169.254'];
+        yield 'loopback v6' => ['::1'];
+    }
+
+    #[DataProvider('privateAddresses')]
+    public function testHostNameResolvingToAPrivateAddressIsRefused(string $ip): void
+    {
+        $http = new MockHttpClient(function (): MockResponse {
+            static::fail('No request may reach a private address.');
+        });
+        $client = $this->client($this->guarded($http, ['api.videooptimizer.eu' => $ip]));
+
+        try {
+            $client->listLibraries();
+            static::fail('The request must be refused.');
+        } catch (VideoOptimizerApiException $e) {
+            static::assertSame(502, $e->getStatusCode());
+            static::assertStringNotContainsString($ip, $e->getMessage());
+        }
+    }
+
+    public function testThumbnailRedirectToAPrivateAddressIsRefused(): void
+    {
+        $requested = [];
+        $http = new MockHttpClient(function (string $method, string $url) use (&$requested): MockResponse {
+            $requested[] = $url;
+
+            return new MockResponse('', ['http_code' => 302, 'response_headers' => ['Location' => 'http://127.0.0.1:8080/secret']]);
+        });
+
+        try {
+            $this->client($this->guarded($http))->getThumbnailImage('v1', 1);
+            static::fail('The redirect must be refused.');
+        } catch (VideoOptimizerApiException $e) {
+            static::assertSame(502, $e->getStatusCode());
+        }
+        static::assertCount(1, $requested, 'The redirect target must not be requested.');
+    }
+
+    public function testThumbnailRedirectToAHostResolvingToAPrivateAddressIsRefused(): void
+    {
+        $requested = [];
+        $http = new MockHttpClient(function (string $method, string $url) use (&$requested): MockResponse {
+            $requested[] = $url;
+
+            return new MockResponse('', ['http_code' => 302, 'response_headers' => ['Location' => 'https://rebind.example.com/t.jpg']]);
+        });
+        $client = $this->client($this->guarded($http, ['api.videooptimizer.eu' => '93.184.216.34', 'rebind.example.com' => '10.0.0.5']));
+
+        $this->expectException(VideoOptimizerApiException::class);
+        try {
+            $client->getThumbnailImage('v1', 1);
+        } finally {
+            static::assertCount(1, $requested);
+        }
+    }
+
+    /**
+     * Thumbnails may be served from a CDN behind a redirect; the redirect passes the guard.
+     */
+    public function testThumbnailFollowsARedirectToAPublicHostWithoutTheToken(): void
+    {
+        $authorization = [];
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$authorization): MockResponse {
+            $authorization[$url] = array_values(array_filter($options['headers'] ?? [], static fn (string $h): bool => stripos($h, 'Authorization:') === 0));
+            if (str_starts_with($url, 'https://api.videooptimizer.eu')) {
+                return new MockResponse('', ['http_code' => 302, 'response_headers' => ['Location' => 'https://cdn.example.com/t.jpg']]);
+            }
+
+            return new MockResponse('IMG', ['response_headers' => ['Content-Type' => 'image/jpeg']]);
+        });
+
+        $image = $this->client($this->guarded($http))->getThumbnailImage('v1', 1);
+
+        static::assertSame('IMG', $image['content']);
+        static::assertSame(['Authorization: Bearer vp_test'], $authorization['https://api.videooptimizer.eu/api/v1/videos/v1/thumbnails/1']);
+        static::assertSame([], $authorization['https://cdn.example.com/t.jpg']);
+    }
+
+    /**
+     * The API is not expected to redirect; a redirect must neither be followed nor deliver a foreign body (#33).
+     */
+    public function testApiCallsDoNotFollowRedirects(): void
+    {
+        $captured = [];
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$captured): MockResponse {
+            $captured[] = $options['max_redirects'] ?? 'unset';
+
+            return new MockResponse('{"codecs":["secret"]}', ['http_code' => 302, 'response_headers' => ['Location' => 'https://cdn.example.com/x']]);
+        });
+
+        try {
+            $this->client($http)->listEncodings();
+            static::fail('A redirect response is an error for API calls.');
+        } catch (VideoOptimizerApiException $e) {
+            static::assertSame(302, $e->getStatusCode());
+        }
+        static::assertSame([0], $captured);
+    }
+
+    public function testEveryApiRequestDisablesRedirects(): void
+    {
+        $captured = [];
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$captured): MockResponse {
+            $captured[$method . ' ' . parse_url($url, PHP_URL_PATH)] = $options['max_redirects'] ?? 'unset';
+
+            return $this->playable('v1');
+        });
+        $client = $this->client($http);
+        $client->queueEmbed('v1');
+        $client->getEmbed('v1');
+        $client->getVideo('v1');
+        $client->createLibrary(['name' => 'x']);
+
+        static::assertSame(
+            ['GET /api/v1/embed/v1' => 0, 'GET /api/v1/videos/v1' => 0, 'POST /api/v1/libraries' => 0],
+            $captured,
+        );
+    }
+
+    public function testThumbnailRedirectsAreBounded(): void
+    {
+        $captured = null;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$captured): MockResponse {
+            $captured = $options['max_redirects'] ?? 'unset';
+
+            return new MockResponse('IMG');
+        });
+
+        $this->client($http)->getThumbnailImage('v1', 1);
+
+        static::assertSame(3, $captured);
     }
 
     public function testPublicIpApiBaseUrlIsAccepted(): void

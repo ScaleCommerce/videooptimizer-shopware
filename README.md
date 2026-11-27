@@ -280,6 +280,12 @@ cache, and on Shopware 6.6 the Store API route cache); changing, re-postering or
 deleting, updating or reprocessing its library, in the administration invalidates exactly these pages. A page rendered while a lookup failed is cached for at most 60 seconds. Changes made
 directly in the VideoOptimizer dashboard show up after the cache lifetime.
 
+**Outgoing requests.** The plugin's HTTP client refuses connections to private, loopback and link-local
+addresses, also behind host names and redirects, so the configurable base URLs cannot be pointed at internal
+services. API calls do not follow redirects; thumbnails may be redirected to the CDN, but only to public
+addresses. Shops that reach the internet only through an HTTP proxy must let the shop server resolve public
+host names itself.
+
 User-authored rich text and call-to-action URLs are sanitized both server-side and in the admin preview
 before they reach the storefront.
 

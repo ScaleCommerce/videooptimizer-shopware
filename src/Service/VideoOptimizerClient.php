@@ -33,6 +33,14 @@ class VideoOptimizerClient implements ResetInterface
      */
     private const LIST_TIME_BUDGET = 20.0;
     private const EMBED_MAX_DURATION = 3.0;
+    /**
+     * The API does not redirect; a redirect is an error, not something to follow (SSRF, issue #33).
+     */
+    private const API_MAX_REDIRECTS = 0;
+    /**
+     * Thumbnails can sit behind a redirect to the CDN; every hop passes the private network guard.
+     */
+    private const THUMBNAIL_MAX_REDIRECTS = 3;
     private const EMBED_CONCURRENCY = 8;
     private const EMBED_API_UNAVAILABLE_KEY = 'scalecommerce_vo_embed_api_unavailable';
 
@@ -380,6 +388,7 @@ class VideoOptimizerClient implements ResetInterface
             $response = $this->httpClient->request('GET', $url, [
                 'headers' => $this->buildHeaders(true, 'image/*'),
                 'max_duration' => self::ADMIN_MAX_DURATION,
+                'max_redirects' => self::THUMBNAIL_MAX_REDIRECTS,
             ]);
             $status = $response->getStatusCode();
             if ($status < 200 || $status >= 300) {
@@ -512,6 +521,7 @@ class VideoOptimizerClient implements ResetInterface
                 $this->inflightEmbeds[$uuid] = $this->httpClient->request('GET', $this->embedUrl($uuid), [
                     'headers' => $this->buildHeaders(false, 'application/json'),
                     'max_duration' => self::EMBED_MAX_DURATION,
+                    'max_redirects' => self::API_MAX_REDIRECTS,
                 ]);
             } catch (\Throwable) {
                 // Falls back to a regular lookup in getEmbed().
@@ -642,6 +652,7 @@ class VideoOptimizerClient implements ResetInterface
     {
         $options['headers'] = array_merge($options['headers'] ?? [], $this->buildHeaders($withToken, 'application/json'));
         $options['max_duration'] ??= self::ADMIN_MAX_DURATION;
+        $options['max_redirects'] = self::API_MAX_REDIRECTS;
 
         $url = $this->baseUrl() . $path;
 
@@ -785,7 +796,10 @@ class VideoOptimizerClient implements ResetInterface
      * Defence in depth for the configurable base URLs: https only, no userinfo, query or fragment
      * (the request path is appended verbatim), and no localhost or private, loopback, link-local
      * or reserved IP literals, so the token and server-side requests cannot be pointed at
-     * internal services. Host names are not resolved here.
+     * internal services. The host is checked as the HTTP client will connect to it, i.e. after
+     * IDNA normalization (full-width "ＬＯＣＡＬＨＯＳＴ" is "localhost"). Host names are not resolved
+     * here: that, and every redirect target, is up to the NoPrivateNetworkHttpClient the shared
+     * HTTP client is wrapped in (services.php).
      */
     private function assertHttpsUrl(string $url, string $message): void
     {
@@ -795,7 +809,7 @@ class VideoOptimizerClient implements ResetInterface
         }
         // parse_url() does not normalize scheme case, so "HTTPS://..." must still be accepted.
         $scheme = strtolower((string) ($parts['scheme'] ?? ''));
-        $host = strtolower((string) ($parts['host'] ?? ''));
+        $host = $this->connectHost(strtolower((string) ($parts['host'] ?? '')), $message);
         if ($scheme !== 'https' || $host === '') {
             throw new InvalidApiBaseUrlException($message);
         }
@@ -821,5 +835,28 @@ class VideoOptimizerClient implements ResetInterface
         if (preg_match('/^[0-9.]+$/', $host) === 1 || preg_match('/(^|\.)0x[0-9a-f]*($|\.)/', $host) === 1) {
             throw new InvalidApiBaseUrlException($message);
         }
+    }
+
+    /**
+     * The host the HTTP client connects to: Symfony's HttpClientTrait::parseUrl() applies
+     * idn_to_ascii() (UTS #46) with these flags and keeps the lower-cased input if that fails, so
+     * the checks must see the same value.
+     */
+    private function connectHost(string $host, string $message): string
+    {
+        if ($host === '' || preg_match('/^[\x20-\x7E]*$/D', $host) === 1 && !str_contains($host, 'xn--')) {
+            return $host;
+        }
+        if (!\defined('INTL_IDNA_VARIANT_UTS46')) {
+            // Without intl the HTTP client cannot connect to a non-ASCII host either.
+            if (preg_match('/[\x80-\xFF]/', $host) === 1) {
+                throw new InvalidApiBaseUrlException($message);
+            }
+
+            return $host;
+        }
+        $ascii = idn_to_ascii($host, \IDNA_DEFAULT | \IDNA_USE_STD3_RULES | \IDNA_CHECK_BIDI | \IDNA_CHECK_CONTEXTJ | \IDNA_NONTRANSITIONAL_TO_ASCII, \INTL_IDNA_VARIANT_UTS46);
+
+        return strtolower($ascii !== false && $ascii !== '' ? $ascii : $host);
     }
 }
