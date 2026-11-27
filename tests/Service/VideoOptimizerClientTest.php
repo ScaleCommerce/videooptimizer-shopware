@@ -16,7 +16,9 @@ use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Cache\Adapter\TagAwareAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\NoPrivateNetworkHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
@@ -643,6 +645,8 @@ class VideoOptimizerClientTest extends TestCase
         yield 'thumbnail image a/b' => [fn (VideoOptimizerClient $c) => $c->getThumbnailImage('a/b', 1)];
         yield 'embed a/b' => [fn (VideoOptimizerClient $c) => $c->getEmbed('a/b')];
         yield 'embed with query' => [fn (VideoOptimizerClient $c) => $c->getEmbed('v1?x=1')];
+        yield 'trailing newline' => [fn (VideoOptimizerClient $c) => $c->getVideo("v1\n")];
+        yield 'leading newline' => [fn (VideoOptimizerClient $c) => $c->getVideo("\nv1")];
     }
 
     /**
@@ -697,6 +701,20 @@ class VideoOptimizerClientTest extends TestCase
         yield 'short ipv4' => ['https://127.1/api/v1'];
         yield 'hex ipv4' => ['https://0x7f000001/api/v1'];
         yield 'cgnat' => ['https://100.64.0.1/api/v1'];
+        yield 'localhost upper case' => ['https://LOCALHOST/api/v1'];
+        yield 'localhost subdomain upper case' => ['https://API.LocalHost/api/v1'];
+        yield 'user name without password' => ['https://user@api.example/api/v1'];
+        yield 'password without user name' => ['https://:pass@api.example/api/v1'];
+        yield 'hex ipv4 upper case' => ['https://0X7F000001/api/v1'];
+        yield 'hex label' => ['https://api.0x7f.example/api/v1'];
+        yield 'full-width localhost' => ["https://\u{FF2C}\u{FF2F}\u{FF23}\u{FF21}\u{FF2C}\u{FF28}\u{FF2F}\u{FF33}\u{FF34}/api/v1"];
+        yield 'full-width localhost subdomain' => ["https://api.\u{FF4C}\u{FF4F}\u{FF43}\u{FF41}\u{FF4C}\u{FF48}\u{FF4F}\u{FF53}\u{FF54}/api/v1"];
+        yield 'full-width loopback ip' => ["https://\u{FF11}\u{FF12}\u{FF17}.\u{FF10}.\u{FF10}.\u{FF11}/api/v1"];
+        yield 'ideographic full stop in loopback ip' => ["https://127\u{3002}0\u{3002}0\u{3002}1/api/v1"];
+        yield 'full-width private ip' => ["https://\u{FF11}\u{FF10}.\u{FF10}.\u{FF10}.\u{FF15}/api/v1"];
+        yield 'full-width decimal ipv4' => ["https://\u{FF12}\u{FF11}\u{FF13}\u{FF10}\u{FF17}\u{FF14}\u{FF13}\u{FF13}\u{FF16}\u{FF14}\u{FF18}/api/v1"];
+        yield 'full-width hex ipv4' => ["https://0\u{FF58}7f000001/api/v1"];
+        yield 'localhost with soft hyphen' => ["https://local\u{AD}host/api/v1"];
     }
 
     #[DataProvider('rejectedBaseUrls')]
@@ -715,6 +733,232 @@ class VideoOptimizerClientTest extends TestCase
     {
         $this->expectException(InvalidApiBaseUrlException::class);
         $this->client(new MockHttpClient(), $this->config(embedBaseUrl: $baseUrl))->embedBaseUrl();
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function acceptedBaseUrls(): iterable
+    {
+        yield 'starts with digits' => ['https://1api.example.com/api/v1'];
+        yield 'ends with digits' => ['https://api.example2/api/v1'];
+        yield 'digits in the middle' => ['https://my2api.example.com/api/v1'];
+        yield 'digit-only label with letters elsewhere' => ['https://123.example.com/api/v1'];
+        yield 'upper case host' => ['https://API.Example.COM/api/v1'];
+        yield 'internationalized name' => ["https://b\u{FC}cher.example/api/v1"];
+        yield 'full-width public name' => ["https://\u{FF41}\u{FF50}\u{FF49}.example.com/api/v1"];
+        yield 'hex-like word' => ['https://0xample.example.com/api/v1'];
+        yield 'public ipv6' => ['https://[2606:4700:4700::1111]/api/v1'];
+    }
+
+    #[DataProvider('acceptedBaseUrls')]
+    public function testValidHostNamesAreAccepted(string $baseUrl): void
+    {
+        $http = new MockHttpClient(fn (): MockResponse => new MockResponse(json_encode(['data' => []])));
+
+        static::assertSame([], $this->client($http, $this->config(baseUrl: $baseUrl))->listLibraries());
+    }
+
+    /**
+     * Only plain IDs reach the embed lookup queue; a newline-terminated one would match a "$" without "D".
+     */
+    public function testQueueEmbedIgnoresMalformedIds(): void
+    {
+        $requested = [];
+        $http = new MockHttpClient(function (string $method, string $url) use (&$requested): MockResponse {
+            $requested[] = $url;
+
+            return $this->playable(basename($url));
+        });
+        $client = $this->client($http);
+        foreach (["a1\n", "\na1", 'a/1', ''] as $id) {
+            $client->queueEmbed($id);
+        }
+        $client->queueEmbed('ok1');
+
+        $client->getEmbed('ok1');
+
+        static::assertSame(['https://api.videooptimizer.eu/api/v1/embed/ok1'], $requested);
+    }
+
+    public function testLibraryActionsIgnoreMalformedVideoIdsFromTheListing(): void
+    {
+        $http = new MockHttpClient(fn (string $method): MockResponse => $method === 'GET'
+            ? new MockResponse(json_encode(['data' => [['uuid' => "v1\n"], ['uuid' => 'v2'], ['uuid' => 5]]]))
+            : new MockResponse(json_encode(['data' => []])));
+        $invalidated = [];
+        $invalidator = $this->createStub(CacheInvalidator::class);
+        $invalidator->method('invalidate')->willReturnCallback(function (array $tags) use (&$invalidated): void {
+            $invalidated = [...$invalidated, ...$tags];
+        });
+
+        (new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedRenderState(), $invalidator))->deleteLibrary('lib-1');
+
+        static::assertSame(['scalecommerce-vo-library-lib-1', 'scalecommerce-vo-video-v2'], $invalidated);
+    }
+
+    private function guarded(HttpClientInterface $inner, array $resolve = ['api.videooptimizer.eu' => '93.184.216.34', 'cdn.example.com' => '93.184.216.35']): HttpClientInterface
+    {
+        // The guard resolves host names itself; "resolve" pins them so the tests need no DNS.
+        return (new NoPrivateNetworkHttpClient($inner))->withOptions(['resolve' => $resolve]);
+    }
+
+    /**
+     * The shared HTTP client is wrapped in NoPrivateNetworkHttpClient (services.php), which checks
+     * the resolved IP of every connection: a public name pointing to a private address is refused (#33).
+     *
+     * @return iterable<string, array{string}>
+     */
+    public static function privateAddresses(): iterable
+    {
+        yield 'loopback' => ['127.0.0.1'];
+        yield 'private 10/8' => ['10.0.0.5'];
+        yield 'private 192.168/16' => ['192.168.1.10'];
+        yield 'link-local metadata' => ['169.254.169.254'];
+        yield 'loopback v6' => ['::1'];
+    }
+
+    #[DataProvider('privateAddresses')]
+    public function testHostNameResolvingToAPrivateAddressIsRefused(string $ip): void
+    {
+        $http = new MockHttpClient(function (): MockResponse {
+            static::fail('No request may reach a private address.');
+        });
+        $client = $this->client($this->guarded($http, ['api.videooptimizer.eu' => $ip]));
+
+        try {
+            $client->listLibraries();
+            static::fail('The request must be refused.');
+        } catch (VideoOptimizerApiException $e) {
+            static::assertSame(502, $e->getStatusCode());
+            static::assertStringNotContainsString($ip, $e->getMessage());
+        }
+    }
+
+    public function testThumbnailRedirectToAPrivateAddressIsRefused(): void
+    {
+        $requested = [];
+        $http = new MockHttpClient(function (string $method, string $url) use (&$requested): MockResponse {
+            $requested[] = $url;
+
+            return new MockResponse('', ['http_code' => 302, 'response_headers' => ['Location' => 'http://127.0.0.1:8080/secret']]);
+        });
+
+        try {
+            $this->client($this->guarded($http))->getThumbnailImage('v1', 1);
+            static::fail('The redirect must be refused.');
+        } catch (VideoOptimizerApiException $e) {
+            static::assertSame(502, $e->getStatusCode());
+        }
+        static::assertCount(1, $requested, 'The redirect target must not be requested.');
+    }
+
+    public function testThumbnailRedirectToAHostResolvingToAPrivateAddressIsRefused(): void
+    {
+        $requested = [];
+        $http = new MockHttpClient(function (string $method, string $url) use (&$requested): MockResponse {
+            $requested[] = $url;
+
+            return new MockResponse('', ['http_code' => 302, 'response_headers' => ['Location' => 'https://rebind.example.com/t.jpg']]);
+        });
+        $client = $this->client($this->guarded($http, ['api.videooptimizer.eu' => '93.184.216.34', 'rebind.example.com' => '10.0.0.5']));
+
+        $this->expectException(VideoOptimizerApiException::class);
+        try {
+            $client->getThumbnailImage('v1', 1);
+        } finally {
+            static::assertCount(1, $requested);
+        }
+    }
+
+    /**
+     * Thumbnails may be served from a CDN behind a redirect; the redirect passes the guard.
+     */
+    public function testThumbnailFollowsARedirectToAPublicHostWithoutTheToken(): void
+    {
+        $authorization = [];
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$authorization): MockResponse {
+            $authorization[$url] = array_values(array_filter($options['headers'] ?? [], static fn (string $h): bool => stripos($h, 'Authorization:') === 0));
+            if (str_starts_with($url, 'https://api.videooptimizer.eu')) {
+                return new MockResponse('', ['http_code' => 302, 'response_headers' => ['Location' => 'https://cdn.example.com/t.jpg']]);
+            }
+
+            return new MockResponse('IMG', ['response_headers' => ['Content-Type' => 'image/jpeg']]);
+        });
+
+        $image = $this->client($this->guarded($http))->getThumbnailImage('v1', 1);
+
+        static::assertSame('IMG', $image['content']);
+        static::assertSame(['Authorization: Bearer vp_test'], $authorization['https://api.videooptimizer.eu/api/v1/videos/v1/thumbnails/1']);
+        static::assertSame([], $authorization['https://cdn.example.com/t.jpg']);
+    }
+
+    /**
+     * The API is not expected to redirect; a redirect must neither be followed nor deliver a foreign body (#33).
+     */
+    public function testApiCallsDoNotFollowRedirects(): void
+    {
+        $captured = [];
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$captured): MockResponse {
+            $captured[] = $options['max_redirects'] ?? 'unset';
+
+            return new MockResponse('{"codecs":["secret"]}', ['http_code' => 302, 'response_headers' => ['Location' => 'https://cdn.example.com/x']]);
+        });
+
+        try {
+            $this->client($http)->listEncodings();
+            static::fail('A redirect response is an error for API calls.');
+        } catch (VideoOptimizerApiException $e) {
+            static::assertSame(502, $e->getStatusCode());
+            static::assertSame('The VideoOptimizer API answered with a redirect; check the API base URL.', $e->getMessage());
+        }
+        static::assertSame([0], $captured);
+    }
+
+    public function testRedirectOnTheThumbnailRouteIsABadGatewayToo(): void
+    {
+        $http = new MockHttpClient(fn (): MockResponse => new MockResponse('', ['http_code' => 301, 'response_headers' => ['Location' => 'https://cdn.example.com/x']]));
+        // Redirects that are not followed (here: the mock does not follow) must not reach the browser as 3xx.
+        try {
+            $this->client($http, $this->config())->getThumbnailImage('v1', 1);
+            static::fail('A redirect response is an error.');
+        } catch (VideoOptimizerApiException $e) {
+            static::assertSame(502, $e->getStatusCode());
+        }
+    }
+
+    public function testEveryApiRequestDisablesRedirects(): void
+    {
+        $captured = [];
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$captured): MockResponse {
+            $captured[$method . ' ' . parse_url($url, PHP_URL_PATH)] = $options['max_redirects'] ?? 'unset';
+
+            return $this->playable('v1');
+        });
+        $client = $this->client($http);
+        $client->queueEmbed('v1');
+        $client->getEmbed('v1');
+        $client->getVideo('v1');
+        $client->createLibrary(['name' => 'x']);
+
+        static::assertSame(
+            ['GET /api/v1/embed/v1' => 0, 'GET /api/v1/videos/v1' => 0, 'POST /api/v1/libraries' => 0],
+            $captured,
+        );
+    }
+
+    public function testThumbnailRedirectsAreBounded(): void
+    {
+        $captured = null;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$captured): MockResponse {
+            $captured = $options['max_redirects'] ?? 'unset';
+
+            return new MockResponse('IMG');
+        });
+
+        $this->client($http)->getThumbnailImage('v1', 1);
+
+        static::assertSame(3, $captured);
     }
 
     public function testPublicIpApiBaseUrlIsAccepted(): void
@@ -1030,6 +1274,125 @@ class VideoOptimizerClientTest extends TestCase
         $client->forgetEmbed('v1');
     }
 
+    /**
+     * @return iterable<string, array{callable(VideoOptimizerClient): mixed, string}>
+     */
+    public static function libraryTagInvalidations(): iterable
+    {
+        yield 'delete' => [fn (VideoOptimizerClient $c) => $c->deleteLibrary('lib-1'), 'DELETE'];
+        yield 'reprocess' => [fn (VideoOptimizerClient $c) => $c->reprocessLibrary('lib-1', true), 'POST'];
+        yield 'update (encoding ladder)' => [fn (VideoOptimizerClient $c) => $c->updateLibrary('lib-1', ['encoding_quality' => 'quality']), 'PATCH'];
+    }
+
+    /**
+     * The per-library tag does not depend on listing the videos, which can be truncated or fail (#29).
+     */
+    #[DataProvider('libraryTagInvalidations')]
+    public function testLibraryChangesInvalidateTheLibraryTagEvenWhenListingFails(callable $action, string $method): void
+    {
+        $http = new MockHttpClient(fn (string $m): MockResponse => $m === 'GET'
+            ? new MockResponse('', ['http_code' => 500])
+            : new MockResponse(json_encode(['data' => []])));
+        $invalidated = [];
+        $invalidator = $this->createStub(CacheInvalidator::class);
+        $invalidator->method('invalidate')->willReturnCallback(function (array $tags) use (&$invalidated): void {
+            $invalidated = [...$invalidated, ...$tags];
+        });
+
+        $action(new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedRenderState(), $invalidator));
+
+        static::assertContains('scalecommerce-vo-library-lib-1', $invalidated);
+    }
+
+    public function testFailedLibraryChangeLeavesTheCacheAlone(): void
+    {
+        $http = new MockHttpClient(fn (): MockResponse => new MockResponse('{}', ['http_code' => 404]));
+        $invalidator = $this->createMock(CacheInvalidator::class);
+        $invalidator->expects(static::never())->method('invalidate');
+
+        $this->expectException(VideoOptimizerApiException::class);
+        (new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedRenderState(), $invalidator))->updateLibrary('lib-1', []);
+    }
+
+    public function testRenderedLibrariesAreRecordedAsCacheTags(): void
+    {
+        $availability = new EmbedRenderState();
+        $client = new VideoOptimizerClient(new MockHttpClient($this->playable('v1')), $this->config(), new ArrayAdapter(), new NullLogger(), $availability);
+
+        $client->markLibraryRendered('lib-1');
+        $client->markLibraryRendered('lib-1', 'v1');
+        $client->markLibraryRendered('lib/../1');
+        $client->markLibraryRendered('');
+        $client->getEmbed('v1');
+
+        static::assertSame(['scalecommerce-vo-video-v1', 'scalecommerce-vo-library-lib-1'], $availability->cacheTags());
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function embedCacheTags(): iterable
+    {
+        yield 'library tag' => ['scalecommerce-vo-library-lib-1'];
+        yield 'video tag' => ['scalecommerce-vo-video-v1'];
+    }
+
+    /**
+     * The cached embed object carries the library (when known) and video tags, so the
+     * CacheInvalidator drops it together with the pages (#29).
+     */
+    #[DataProvider('embedCacheTags')]
+    public function testCachedEmbedIsTaggedAndInvalidatedByTag(string $tag): void
+    {
+        $count = 0;
+        $http = new MockHttpClient(function () use (&$count): MockResponse {
+            ++$count;
+
+            return $this->playable('v1');
+        });
+        $cache = new TagAwareAdapter(new ArrayAdapter());
+        $client = $this->client($http, null, $cache);
+
+        $client->markLibraryRendered('lib-1', 'v1');
+        $client->getEmbed('v1');
+        $client->getEmbed('v1');
+        static::assertSame(1, $count);
+
+        $cache->invalidateTags([$tag]);
+        $client->getEmbed('v1');
+
+        static::assertSame(2, $count);
+    }
+
+    public function testEmbedWithoutKnownLibraryIsOnlyTaggedByVideo(): void
+    {
+        $count = 0;
+        $http = new MockHttpClient(function () use (&$count): MockResponse {
+            ++$count;
+
+            return $this->playable('v1');
+        });
+        $cache = new TagAwareAdapter(new ArrayAdapter());
+        $client = $this->client($http, null, $cache);
+
+        $client->getEmbed('v1');
+        $cache->invalidateTags(['scalecommerce-vo-library-lib-1']);
+        $client->getEmbed('v1');
+
+        static::assertSame(1, $count);
+    }
+
+    public function testMalformedVideoIdsAreNotMappedToALibrary(): void
+    {
+        $availability = new EmbedRenderState();
+        $client = new VideoOptimizerClient(new MockHttpClient(), $this->config(), new ArrayAdapter(), new NullLogger(), $availability);
+
+        $client->markLibraryRendered('lib-1', "v1\n");
+
+        static::assertSame(['scalecommerce-vo-library-lib-1'], $availability->cacheTags());
+        static::assertNull($availability->libraryOf("v1\n"));
+    }
+
     public function testGetEmbedRecordsTheRenderedVideo(): void
     {
         $availability = new EmbedRenderState();
@@ -1203,24 +1566,32 @@ class VideoOptimizerClientTest extends TestCase
     }
 
     /**
-     * A started lookup that is never read (e.g. served from the cache meanwhile) must not throw
-     * when the client goes away, also without kernel.reset (first request of a php-fpm worker).
+     * A failed lookup must not keep the client alive through an exception/closure cycle (with
+     * zend.exception_ignore_args=Off the trace holds the cache callback), otherwise unread
+     * pre-started lookups are only cancelled at script end, in an undefined destructor order (#25).
      */
-    public function testUnreadLookupsDoNotThrowWithoutReset(): void
+    public function testClientIsFreedAfterAFailedLookupWithExceptionArgsEnabled(): void
     {
-        $http = new MockHttpClient(fn (): MockResponse => new MockResponse('{}', ['http_code' => 404]));
-        $client = $this->client($http);
-        $client->queueEmbed('a1');
-        $client->queueEmbed('b2');
+        $previous = ini_set('zend.exception_ignore_args', '0');
         try {
-            $client->getEmbed('a1');
-        } catch (VideoOptimizerApiException) {
+            $http = new MockHttpClient(fn (): MockResponse => new MockResponse('{}', ['http_code' => 404]));
+            $client = $this->client($http);
+            $client->queueEmbed('a1');
+            $client->queueEmbed('b2');
+            try {
+                $client->getEmbed('a1');
+                static::fail('The failed lookup must throw.');
+            } catch (VideoOptimizerApiException) {
+            }
+
+            $reference = \WeakReference::create($client);
+            unset($client, $http);
+            gc_collect_cycles();
+
+            static::assertNull($reference->get(), 'The client is still referenced after a failed lookup.');
+        } finally {
+            ini_set('zend.exception_ignore_args', $previous === false ? '1' : $previous);
         }
-
-        unset($client, $http);
-        gc_collect_cycles();
-
-        $this->addToAssertionCount(1);
     }
 
     /**
@@ -1251,14 +1622,14 @@ class VideoOptimizerClientTest extends TestCase
         });
         $invalidated = [];
         $invalidator = $this->createMock(CacheInvalidator::class);
-        $invalidator->expects(static::exactly(2))->method('invalidate')->willReturnCallback(function (array $tags) use (&$invalidated): void {
+        $invalidator->expects(static::exactly(3))->method('invalidate')->willReturnCallback(function (array $tags) use (&$invalidated): void {
             $invalidated = [...$invalidated, ...$tags];
         });
 
         $action(new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedRenderState(), $invalidator));
 
         static::assertSame($expectedCalls, $calls);
-        static::assertSame(['scalecommerce-vo-video-v1', 'scalecommerce-vo-video-v2'], $invalidated);
+        static::assertSame(['scalecommerce-vo-library-lib-1', 'scalecommerce-vo-video-v1', 'scalecommerce-vo-video-v2'], $invalidated);
     }
 
     public function testLibraryDeleteStillRunsWhenListingItsVideosFails(): void
@@ -1269,8 +1640,9 @@ class VideoOptimizerClientTest extends TestCase
 
             return $method === 'GET' ? new MockResponse('{}', ['http_code' => 503]) : new MockResponse('', ['http_code' => 204]);
         });
+        // Only the library tag: the videos could not be listed.
         $invalidator = $this->createMock(CacheInvalidator::class);
-        $invalidator->expects(static::never())->method('invalidate');
+        $invalidator->expects(static::once())->method('invalidate')->with(['scalecommerce-vo-library-lib-1']);
 
         (new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedRenderState(), $invalidator))->deleteLibrary('lib-1');
 

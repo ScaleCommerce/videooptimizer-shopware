@@ -26,5 +26,13 @@
             <helpText>Public host that serves the hosted player, usually https://player.videooptimizer.eu (https://videooptimizer.eu keeps working for existing installations)</helpText>
             <helpText lang="de-DE">Öffentlicher Host, der den gehosteten Player ausliefert, üblicherweise https://player.videooptimizer.eu (https://videooptimizer.eu funktioniert für bestehende Installationen weiter)</helpText>
         </input-field>
+        <input-field type="bool">
+            <name>blockPrivateNetworks</name>
+            <label>Block private networks</label>
+            <label lang="de-DE">Private Netzwerke sperren</label>
+            <defaultValue>true</defaultValue>
+            <helpText>Refuses connections to private, loopback and link-local addresses (also behind host names and redirects). Switch off only for a self-hosted VideoOptimizer on a private network. Not applied when the shop uses an outbound proxy.</helpText>
+            <helpText lang="de-DE">Verweigert Verbindungen zu privaten, Loopback- und Link-Local-Adressen (auch hinter Hostnamen und Weiterleitungen). Nur für ein selbst gehostetes VideoOptimizer in einem privaten Netzwerk ausschalten. Wird nicht angewendet, wenn der Shop einen ausgehenden Proxy nutzt.</helpText>
+        </input-field>
     </card>
 </config>

@@ -18,29 +18,54 @@ function loadHls() {
  * `onUnplayable` is called so the caller can show the poster and a short notice instead of a
  * black or empty player.
  *
+ * Playback state is handed over, not guessed: `autoplay` or `shouldPlay()` (read when the source is
+ * ready) start playback, and a video that was playing when hls.js or native HLS failed keeps
+ * playing on the MP4 fallback.
+ *
  * The hls.js instance is kept on the element (`video.__scvoHls`) so callers can destroy it
  * via destroyVideoSource() without tracking it themselves.
  */
 export async function attachVideoSource(
     video,
     { hls = null, mp4 = null },
-    { autoplay = false, deferLoad = false, onUnplayable = () => {} } = {}
+    {
+        autoplay = false,
+        deferLoad = false,
+        shouldPlay = () => false,
+        onUnplayable = () => {},
+    } = {}
 ) {
     const play = () => {
-        if (autoplay) {
+        if (autoplay || shouldPlay()) {
             video.play().catch(() => {});
         }
     };
     const failOnError = () =>
         video.addEventListener('error', () => onUnplayable(), { once: true });
-    const useMp4 = () => {
+    // `wasPlaying` is read before the failed source is torn down: switching the source pauses the
+    // element, and nothing else would start it again.
+    // `resumeAt` is the position of the failed source; the MP4 continues there instead of restarting.
+    const useMp4 = (wasPlaying = false, resumeAt = 0) => {
         if (!mp4) {
             onUnplayable();
             return;
         }
         failOnError();
         video.src = mp4;
-        play();
+        if (resumeAt > 0) {
+            video.addEventListener(
+                'loadedmetadata',
+                () => {
+                    video.currentTime = resumeAt;
+                },
+                { once: true }
+            );
+        }
+        if (wasPlaying) {
+            video.play().catch(() => {});
+        } else {
+            play();
+        }
     };
 
     // Set by destroyVideoSource(); the element may be torn down while hls.js is still loading.
@@ -59,15 +84,23 @@ export async function attachVideoSource(
             try {
                 attachHlsJs(Hls, video, hls, deferLoad, play, useMp4);
             } catch {
+                const wasPlaying = !video.paused;
+                const resumeAt = video.currentTime || 0;
                 destroyVideoSource(video);
-                useMp4();
+                useMp4(wasPlaying, resumeAt);
             }
             return;
         }
     }
 
     if (hls && video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.addEventListener('error', () => useMp4(), { once: true });
+        video.addEventListener(
+            'error',
+            () => useMp4(!video.paused, video.currentTime || 0),
+            {
+                once: true,
+            }
+        );
         video.src = hls;
         play();
         return;
@@ -104,8 +137,10 @@ function attachHlsJs(Hls, video, hls, deferLoad, play, useMp4) {
         if (!data.fatal) {
             return;
         }
+        const wasPlaying = !video.paused;
+        const resumeAt = video.currentTime || 0;
         destroyVideoSource(video);
-        useMp4();
+        useMp4(wasPlaying, resumeAt);
     });
     player.on(Hls.Events.MANIFEST_PARSED, () => {
         play();

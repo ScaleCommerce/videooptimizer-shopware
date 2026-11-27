@@ -8,7 +8,9 @@ use ScaleCommerce\VideoOptimizer\DataResolver\MediaSplitElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\SpotlightElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\VideoGridElementResolver;
 use ScaleCommerce\VideoOptimizer\DataResolver\VideoOptimizerElementResolver;
+use ScaleCommerce\VideoOptimizer\DependencyInjection\HttpProxyConfiguredPass;
 use ScaleCommerce\VideoOptimizer\Service\EmbedRenderState;
+use ScaleCommerce\VideoOptimizer\Service\GuardedHttpClient;
 use ScaleCommerce\VideoOptimizer\Service\PluginUserAgent;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use ScaleCommerce\VideoOptimizer\Subscriber\EmbedPageCacheSubscriber;
@@ -21,9 +23,25 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 return static function (ContainerConfigurator $container): void {
     $services = $container->services();
 
-    $services->set(VideoOptimizerClient::class)
+    // The proxy options of the shop's HTTP client, set by HttpProxyConfiguredPass (null: not configured).
+    $container->parameters()
+        ->set(HttpProxyConfiguredPass::PROXY, null)
+        ->set(HttpProxyConfiguredPass::NO_PROXY, null);
+
+    // The shared HTTP client behind a guard that checks the resolved IP of every connection, redirect
+    // targets included, so the configurable base URLs cannot reach internal services (issue #33).
+    $services->set('scalecommerce_vo.http_client', GuardedHttpClient::class)
         ->args([
             service(HttpClientInterface::class),
+            service(SystemConfigService::class),
+            '%' . HttpProxyConfiguredPass::PROXY . '%',
+            '%' . HttpProxyConfiguredPass::NO_PROXY . '%',
+        ])
+        ->tag('kernel.reset', ['method' => 'reset']);
+
+    $services->set(VideoOptimizerClient::class)
+        ->args([
+            service('scalecommerce_vo.http_client'),
             service(SystemConfigService::class),
             service('cache.object'),
             service('logger'),
@@ -45,6 +63,7 @@ return static function (ContainerConfigurator $container): void {
             service(EmbedRenderState::class),
             service(CacheInvalidator::class),
             service('event_dispatcher'),
+            service(VideoOptimizerClient::class),
         ])
         ->tag('kernel.event_subscriber');
 

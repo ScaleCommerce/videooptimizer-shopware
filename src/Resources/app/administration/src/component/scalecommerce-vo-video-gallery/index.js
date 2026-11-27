@@ -112,6 +112,8 @@ Component.register('scalecommerce-vo-video-gallery', {
 
     beforeUnmount() {
         this._unmounted = true;
+        // A running upload must not create a video in the library after the editor has left.
+        this._uploadAbort?.abort();
     },
 
     methods: {
@@ -296,8 +298,35 @@ Component.register('scalecommerce-vo-video-gallery', {
             this.detailUuid = null;
         },
 
-        onDetailUpdated() {
-            this.loadVideos();
+        // The detail dialog changed the poster: refresh that entry only, so the pages loaded with
+        // "load more" stay (a full reload would drop the editor back to the first page).
+        async onDetailUpdated() {
+            const uuid = this.detailUuid;
+            if (!uuid) {
+                return;
+            }
+            await this._refreshVideo(uuid);
+        },
+
+        async _refreshVideo(uuid) {
+            try {
+                const response =
+                    await this.scalecommerceVoApiService.getVideo(uuid);
+                const fresh = response.data ?? response;
+                if (
+                    this._unmounted ||
+                    !this.videos.some((v) => v.uuid === uuid)
+                ) {
+                    return;
+                }
+                this.videos = this.videos.map((v) =>
+                    v.uuid === uuid ? fresh : v
+                );
+                this.brokenPosters = { ...this.brokenPosters };
+                delete this.brokenPosters[uuid];
+            } catch {
+                // The list keeps its current entry; the next reload picks the change up.
+            }
         },
 
         onFileSelected(event) {
@@ -339,6 +368,10 @@ Component.register('scalecommerce-vo-video-gallery', {
                 this.isUploading = false;
                 this.uploadProgress = null;
                 this._uploadAbort = null;
+            }
+            if (this._unmounted) {
+                // The upload finished while the gallery closed: nothing to announce or track here.
+                return;
             }
             this.uploadFile = null;
             this.uploadTitle = '';
@@ -445,6 +478,8 @@ Component.register('scalecommerce-vo-video-gallery', {
                     },
                 }
             );
+            // Cancelled while the last part was in flight: the video must not be created.
+            this._uploadAbort?.signal.throwIfAborted();
             const payload = {
                 libraryId,
                 uuid: init.uuid,
@@ -545,7 +580,9 @@ Component.register('scalecommerce-vo-video-gallery', {
                 await this.scalecommerceVoApiService.updateVideo(video.uuid, {
                     title,
                 });
-                await this.loadVideos();
+                this.videos = this.videos.map((entry) =>
+                    entry.uuid === video.uuid ? { ...entry, title } : entry
+                );
                 this.$emit('renamed', video.uuid);
             } catch (error) {
                 this.createNotificationError({
@@ -566,7 +603,12 @@ Component.register('scalecommerce-vo-video-gallery', {
             }
             try {
                 await this.scalecommerceVoApiService.deleteVideo(video.uuid);
-                await this.loadVideos();
+                this.videos = this.videos.filter(
+                    (entry) => entry.uuid !== video.uuid
+                );
+                if (this.selectedVideoRecord?.uuid === video.uuid) {
+                    this.selectedVideoRecord = null;
+                }
                 this.$emit('deleted', video.uuid);
             } catch (error) {
                 this.createNotificationError({

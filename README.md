@@ -168,6 +168,7 @@ Under **Settings → System → Plugins → VideoOptimizer**:
 | `apiToken` | Your VideoOptimizer API token (`vp_...`). |
 | `apiBaseUrl` | API base URL, must be `https://`. Default: `https://api.videooptimizer.eu/api/v1`. |
 | `embedBaseUrl` | Public host serving the hosted embed player, must be `https://`. Default: `https://player.videooptimizer.eu`. Existing installations that still use `https://videooptimizer.eu` keep working. |
+| `blockPrivateNetworks` | Refuse connections to private, loopback and link-local addresses, also behind host names and redirects (default on). Switch off for a self-hosted VideoOptimizer on a private network; not applied behind an outbound proxy. |
 
 ### Permissions (ACL)
 
@@ -186,6 +187,11 @@ requires **delete**.
 The administration only shows the actions a user may perform. **CMS editors** who place VideoOptimizer
 elements in Shopping Experiences need at least the **Viewer** role, independent of their CMS permissions;
 without it, the element configuration explains which permission is missing.
+
+**Shopware MCP server.** The API token is stored in the system configuration. If you connect an MCP client
+to Shopware's (experimental) MCP server, its `system_config:read` privilege exposes the token
+(`ScaleVideoOptimizer.config.apiToken`) to that client. Grant it only to clients you trust, or give the
+token the narrowest permissions in your VideoOptimizer account. The plugin registers no MCP tools.
 
 ## Usage
 
@@ -239,6 +245,8 @@ via the gallery picker, then configure per element:
 | The administration shows **"No VideoOptimizer API token is configured"** or **"…lacks the View permission"** | Token missing/rejected, or the admin user has no VideoOptimizer role | Save a valid token (users allowed to change plugin settings get a link), or grant the **Viewer** role under **Settings → Users & permissions → Roles** |
 | Videos **disappear for about a minute** | The VideoOptimizer API was unreachable or rate-limited; uncached videos fail fast for 60 seconds | Nothing to do; pages rendered meanwhile are cached for 60 seconds only and recover automatically |
 | Requests to VideoOptimizer are **blocked by a proxy/firewall** | Outgoing requests carry the `User-Agent` `VideoOptimizer-Shopware/<version> (…)` | Allow that User-Agent and the hosts `api.videooptimizer.eu` / `player.videooptimizer.eu` |
+| Requests fail and the log shows **`Host "…" is blocked`** or **`IP "…" is blocked`** | The private network guard refused the connection: the API host resolves to a private address (self-hosted VideoOptimizer), or the shop server cannot resolve the host name (DNS failure, or a proxy-only network without an outbound proxy configured) | Self-hosted on a private network: switch off **Block private networks** in the plugin configuration. DNS failure: fix name resolution on the shop server. Proxy-only network: configure `HTTPS_PROXY` (the guard is then not applied) |
+| In the **lightbox**, Tab/Esc stop working after the focus entered the player | While the browser's native video controls or the cross-origin embed iframe hold the focus, the browser does not pass key events to the page, so the lightbox cannot handle them | Click outside the player (or on the close button) to move the focus back; a reworked lightbox is planned |
 | The admin still shows the **old UI after an update** | The browser served the previous cached admin bundle | Hard-reload the administration (`Cmd+Shift+R` / `Ctrl+Shift+R`) |
 
 ## Upgrading
@@ -275,10 +283,19 @@ the token is never sent to or exposed in the browser; the browser only ever rece
 for videos that are still processing (so they appear shortly after they are ready). The videos of a page
 are looked up concurrently. After a transport error, timeout, rate limit or 502/503/504, lookups of
 uncached videos fail fast for 60 seconds instead of waiting for a timeout each. Storefront pages are tagged
-`scalecommerce-vo-video-<uuid>` (HTTP cache, and on Shopware 6.6 the Store API route cache); changing,
-re-postering or deleting a video, or deleting/reprocessing its library, in the administration invalidates
-exactly these pages. A page rendered while a lookup failed is cached for at most 60 seconds. Changes made
+`scalecommerce-vo-video-<uuid>` and, where the element has a library, `scalecommerce-vo-library-<id>` (HTTP
+cache, and on Shopware 6.6 the Store API route cache); changing, re-postering or deleting a video, or
+deleting, updating or reprocessing its library, in the administration invalidates exactly these pages. A page rendered while a lookup failed is cached for at most 60 seconds. Changes made
 directly in the VideoOptimizer dashboard show up after the cache lifetime.
+
+**Outgoing requests.** The plugin's HTTP client refuses connections to private, loopback and link-local
+addresses, also behind host names and redirects, so the configurable base URLs cannot be pointed at internal
+services. API calls do not follow redirects; thumbnails may be redirected to the CDN, but only to public
+addresses. The guard is not applied when the shop uses an outbound proxy (`HTTPS_PROXY`, `https_proxy`,
+`ALL_PROXY` or a `proxy` in the framework's `http_client` default options; hosts in `NO_PROXY` are still
+guarded, and so is every redirect hop that the proxy rules do not cover, checked per hop): the connection then goes to the proxy, which has to filter. A self-hosted VideoOptimizer on a private
+network needs **Block private networks** switched off in the plugin configuration. The protection relies on a
+current `symfony/http-client` (6.4.14 or 7.1.7 and later; the plugin does not enforce this through Composer).
 
 User-authored rich text and call-to-action URLs are sanitized both server-side and in the admin preview
 before they reach the storefront.

@@ -5,6 +5,7 @@ namespace ScaleCommerce\VideoOptimizer\Tests\Subscriber;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ScaleCommerce\VideoOptimizer\Service\EmbedRenderState;
+use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use ScaleCommerce\VideoOptimizer\Subscriber\EmbedPageCacheSubscriber;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
 use Shopware\Core\Framework\Adapter\Cache\Event\AddCacheTagEvent;
@@ -189,6 +190,27 @@ class EmbedPageCacheSubscriberTest extends TestCase
             new EmbedPageCacheSubscriber(new EmbedRenderState(), $this->createStub(CacheInvalidator::class), new EventDispatcher())
         );
         static::assertSame(['scalecommerce-vo-video-v1'], $state->cacheTags());
+    }
+
+    /**
+     * Lookups started for elements that were never read must not outlive the request (#25).
+     */
+    public function testCancelsPendingLookupsWhenTheMainResponseIsReady(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('reset');
+        $subscriber = new EmbedPageCacheSubscriber(new EmbedRenderState(), $this->createStub(CacheInvalidator::class), new EventDispatcher(), $client);
+
+        $subscriber->onResponse($this->event(new Response()));
+        $subscriber->onResponse(new ResponseEvent($this->createStub(HttpKernelInterface::class), new Request(), HttpKernelInterface::SUB_REQUEST, new Response()));
+    }
+
+    public function testCancelsPendingLookupsOnTerminate(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('reset');
+
+        (new EmbedPageCacheSubscriber(new EmbedRenderState(), $this->createStub(CacheInvalidator::class), new EventDispatcher(), $client))->onTerminate();
     }
 
     private function subscriber(EmbedRenderState $availability): EmbedPageCacheSubscriber

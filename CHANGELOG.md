@@ -4,6 +4,32 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-11-27
+
+### Upgrade
+- Leaving the module or switching the CMS element cancels a running upload in the video gallery; before, it ran on in the background and created the video ([#27](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/27)).
+- `EmbedPageCacheSubscriber` takes the `VideoOptimizerClient` as optional fourth constructor argument; subclasses overriding the constructor must pass it on ([#25](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/25)).
+- API calls no longer follow redirects (answered as 502), and the plugin's HTTP client refuses connections to private addresses (also behind host names and redirects). Not applied behind an outbound proxy (`HTTPS_PROXY`/`ALL_PROXY` or a configured `proxy`, except hosts in `NO_PROXY`; the proxy has to filter). A self-hosted VideoOptimizer on a private network needs the new plugin setting `blockPrivateNetworks` switched off; a failing DNS lookup on the shop server now also blocks the request ([#33](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/33)).
+
+### Added
+- Plugin setting `blockPrivateNetworks` (default on) to allow connections to private networks ([#33](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/33)).
+
+### Changed
+- Tests no longer depend on the install method; input-check boundaries covered ([#26](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/26)).
+- README notes that `system_config:read` exposes the API token to MCP clients ([#31](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/31)).
+- README documents the lightbox keyboard limitation while native controls or the embed iframe hold the focus ([#32](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/32)).
+- A redirect answer from the API is reported as 502 with a hint to check the API base URL ([#33](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/33)).
+
+### Fixed
+- Unread embed lookups are cancelled at the end of the request and a failed lookup no longer keeps the client alive; fixes the test suite exiting 255 ([#25](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/25)).
+- Library delete, reprocess and update invalidate cached pages and cached embeds by a per-library cache tag, also when the video listing is truncated or fails; pages are tagged with the library of their elements and grid items ([#29](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/29)).
+- Background hero and autoplaying players keep playing after the MP4 fallback and continue at the same position; a hero play click before the source is attached is no longer lost, and is used only once ([#28](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/28)).
+- Closing the video gallery aborts a running upload, so no video is created afterwards ([#27](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/27)).
+- Video gallery keeps its loaded pages after rename, delete and poster changes (the changed entry is updated in place); media-library posters with a generic `Content-Type` use the media entity's type or file extension ([#30](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/30)).
+
+### Security
+- Base URL guard checks the IDNA-normalised host (full-width `localhost`), resolved IPs and redirect targets via `NoPrivateNetworkHttpClient` ([#33](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/33)).
+
 ## [1.2.1] - 2026-11-27
 
 ### Upgrade

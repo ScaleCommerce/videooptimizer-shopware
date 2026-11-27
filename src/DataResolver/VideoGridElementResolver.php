@@ -62,6 +62,11 @@ class VideoGridElementResolver extends AbstractCmsElementResolver
             if (!is_string($uuid) || $uuid === '') {
                 continue;
             }
+            // Each item has its own library (see the element's picker).
+            $libraryId = $entry['libraryId'] ?? null;
+            if (is_string($libraryId) && $libraryId !== '') {
+                $this->client->markLibraryRendered($libraryId, $uuid);
+            }
             $surface = $this->buildVideoSurface($config, $uuid, $this->client, $this->logger);
             if ($surface['error']) {
                 // A video that no longer resolves upstream (e.g. deleted) is dropped rather than

@@ -8,7 +8,8 @@ use Symfony\Contracts\Service\ResetInterface;
  * Request-scoped state of the embed lookups made while rendering:
  * - "degraded": a lookup failed or returned a video without playable sources. The element is
  *   hidden then, so the page must not stay cached for the full page TTL.
- * - rendered videos: their cache tags let admin changes invalidate the cached pages.
+ * - rendered videos and libraries: their cache tags let admin changes invalidate the cached pages
+ *   (a library tag also covers videos that a truncated or failed video listing misses).
  * See EmbedPageCacheSubscriber.
  */
 class EmbedRenderState implements ResetInterface
@@ -22,9 +23,43 @@ class EmbedRenderState implements ResetInterface
      */
     private array $rendered = [];
 
+    /**
+     * @var array<string, true>
+     */
+    private array $renderedLibraries = [];
+
+    /**
+     * @var array<string, string>
+     */
+    private array $videoLibraries = [];
+
     public static function cacheTag(string $uuid): string
     {
         return 'scalecommerce-vo-video-' . $uuid;
+    }
+
+    public static function libraryCacheTag(string $libraryId): string
+    {
+        return 'scalecommerce-vo-library-' . $libraryId;
+    }
+
+    /**
+     * @param string|null $uuid a video of the library that is rendered, remembered for libraryOf()
+     */
+    public function markLibraryRendered(string $libraryId, ?string $uuid = null): void
+    {
+        $this->renderedLibraries[$libraryId] = true;
+        if ($uuid !== null) {
+            $this->videoLibraries[$uuid] = $libraryId;
+        }
+    }
+
+    /**
+     * The library a rendered video was announced with (the embed payload carries none).
+     */
+    public function libraryOf(string $uuid): ?string
+    {
+        return $this->videoLibraries[$uuid] ?? null;
     }
 
     public function markRendered(string $uuid): void
@@ -37,7 +72,10 @@ class EmbedRenderState implements ResetInterface
      */
     public function cacheTags(): array
     {
-        return array_map(self::cacheTag(...), array_keys($this->rendered));
+        return [
+            ...array_map(self::cacheTag(...), array_keys($this->rendered)),
+            ...array_map(self::libraryCacheTag(...), array_keys($this->renderedLibraries)),
+        ];
     }
 
     public function markDegraded(): void
@@ -65,6 +103,8 @@ class EmbedRenderState implements ResetInterface
         $this->degraded = false;
         $this->routeCacheTagged = false;
         $this->rendered = [];
+        $this->renderedLibraries = [];
+        $this->videoLibraries = [];
     }
 }
 

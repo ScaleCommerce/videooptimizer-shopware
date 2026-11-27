@@ -104,18 +104,58 @@ class PluginUserAgentTest extends TestCase
         static::assertSame($agent->value(), $agent->value());
     }
 
-    public function testResolvesThePluginVersionFromTheComposerJson(): void
+    private function composerJson(string $content): string
     {
-        // In the test setup the plugin is not installed through Composer, like a ZIP upload.
-        $composer = json_decode((string) file_get_contents(__DIR__ . '/../../composer.json'), true);
-        static::assertIsArray($composer);
+        $path = tempnam(sys_get_temp_dir(), 'vo-composer');
+        static::assertIsString($path);
+        file_put_contents($path, $content);
+        $this->tempFiles[] = $path;
 
-        static::assertSame($composer['version'], PluginUserAgent::resolvePluginVersion());
-        static::assertStringStartsWith('VideoOptimizer-Shopware/' . $composer['version'] . ' (', (new PluginUserAgent())->value());
+        return $path;
+    }
+
+    /** @var list<string> */
+    private array $tempFiles = [];
+
+    protected function tearDown(): void
+    {
+        array_map(unlink(...), $this->tempFiles);
+        $this->tempFiles = [];
+    }
+
+    /**
+     * @return iterable<string, array{?string, string, string}>
+     */
+    public static function versionSources(): iterable
+    {
+        yield 'installed version wins' => ['1.2.0', '{"version": "9.9.9"}', '1.2.0'];
+        yield 'not installed: composer.json' => [null, '{"version": "1.2.1"}', '1.2.1'];
+        yield 'empty installed version: composer.json' => ['', '{"version": "1.2.1"}', '1.2.1'];
+        yield 'composer.json without version' => [null, '{"name": "x"}', ''];
+        yield 'composer.json with non-string version' => [null, '{"version": 2}', ''];
+        yield 'composer.json is not an object' => [null, '[]', ''];
+        yield 'composer.json is not JSON' => [null, 'nope', ''];
+    }
+
+    #[DataProvider('versionSources')]
+    public function testResolvesThePluginVersion(?string $installed, string $composerJson, string $expected): void
+    {
+        static::assertSame($expected, PluginUserAgent::resolvePluginVersion($this->composerJson($composerJson), static fn (): ?string => $installed));
     }
 
     public function testResolvesAnEmptyVersionWithoutComposerJson(): void
     {
-        static::assertSame('', PluginUserAgent::resolvePluginVersion(__DIR__ . '/does-not-exist.json'));
+        static::assertSame('', PluginUserAgent::resolvePluginVersion(__DIR__ . '/does-not-exist.json', static fn (): ?string => null));
+    }
+
+    /**
+     * The shipped composer.json carries a version, so a ZIP install reports it.
+     */
+    public function testTheShippedComposerJsonHasAVersion(): void
+    {
+        $composer = json_decode((string) file_get_contents(__DIR__ . '/../../composer.json'), true);
+        static::assertIsArray($composer);
+
+        static::assertSame($composer['version'], PluginUserAgent::resolvePluginVersion(null, static fn (): ?string => null));
     }
 }

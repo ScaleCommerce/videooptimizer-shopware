@@ -6,8 +6,10 @@ import {
     orientationKey,
 } from '../../helper/video-meta';
 
-// Mirrors the poster upload proxy's allowlist (VideoOptimizerAdminController).
-const POSTER_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+import {
+    POSTER_CONTENT_TYPES,
+    resolvePosterContentType,
+} from '../../helper/poster-type';
 
 const { Component, Mixin } = Shopware;
 
@@ -439,7 +441,14 @@ Component.register('scalecommerce-vo-video-detail', {
                 });
                 return;
             }
-            await this._uploadPoster(blob);
+            // The media host's Content-Type can be generic; the media entity knows better.
+            const type = resolvePosterContentType(
+                blob.type,
+                item?.media ?? item
+            );
+            await this._uploadPoster(
+                type === blob.type ? blob : new Blob([blob], { type })
+            );
         },
 
         onClose() {

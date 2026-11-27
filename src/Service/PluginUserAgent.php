@@ -75,14 +75,16 @@ class PluginUserAgent
      * The installed package's version if Composer installed the plugin, otherwise the version in
      * the plugin's own composer.json (plugins uploaded as ZIP to custom/plugins are not known to
      * Composer). Empty if neither is available.
+     *
+     * @param (callable(): ?string)|null $installedVersion the Composer-installed version, null if not
+     *                                                     installed; replaceable so tests do not depend
+     *                                                     on how the plugin is installed
      */
-    public static function resolvePluginVersion(?string $composerJsonPath = null): string
+    public static function resolvePluginVersion(?string $composerJsonPath = null, ?callable $installedVersion = null): string
     {
-        if (InstalledVersions::isInstalled(self::PACKAGE)) {
-            $version = InstalledVersions::getPrettyVersion(self::PACKAGE);
-            if (\is_string($version) && $version !== '') {
-                return $version;
-            }
+        $version = $installedVersion !== null ? $installedVersion() : self::composerInstalledVersion();
+        if (\is_string($version) && $version !== '') {
+            return $version;
         }
 
         $path = $composerJsonPath ?? \dirname(__DIR__, 2) . '/composer.json';
@@ -94,6 +96,11 @@ class PluginUserAgent
         $version = \is_array($composer) ? ($composer['version'] ?? null) : null;
 
         return \is_string($version) ? $version : '';
+    }
+
+    private static function composerInstalledVersion(): ?string
+    {
+        return InstalledVersions::isInstalled(self::PACKAGE) ? InstalledVersions::getPrettyVersion(self::PACKAGE) : null;
     }
 
     /**

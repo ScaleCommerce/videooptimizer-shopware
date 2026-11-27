@@ -769,6 +769,64 @@ class VideoOptimizerAdminControllerTest extends TestCase
         static::assertSame(400, $response->getStatusCode());
     }
 
+    /**
+     * @return iterable<string, array{string, bool}>
+     */
+    public static function limits(): iterable
+    {
+        yield '0' => ['0', false];
+        yield '1' => ['1', true];
+        yield '2' => ['2', true];
+        yield '99' => ['99', true];
+        yield '100' => ['100', true];
+        yield '101' => ['101', false];
+        yield 'negative' => ['-1', false];
+        yield 'text' => ['abc', false];
+        yield 'empty' => ['', false];
+    }
+
+    #[DataProvider('limits')]
+    public function testListVideosLimitBounds(string $limit, bool $accepted): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects($accepted ? static::once() : static::never())->method('listVideosPage')->willReturn([
+            'items' => [],
+            'pagination' => ['next_cursor' => null, 'has_more' => false],
+        ]);
+
+        $response = (new VideoOptimizerAdminController($client))->listVideos(self::UUID, new Request(['limit' => $limit]));
+
+        static::assertSame($accepted ? 200 : 400, $response->getStatusCode());
+    }
+
+    /**
+     * @return iterable<string, array{mixed}>
+     */
+    public static function invalidSourceUrls(): iterable
+    {
+        yield 'integer' => [123];
+        yield 'array' => [['https://example.com/a.mp4']];
+        yield 'null' => [null];
+        yield 'boolean' => [true];
+        yield 'scheme only' => ['https://'];
+        yield 'upper case http' => ['HTTP://example.com/a.mp4'];
+        yield 'empty' => [''];
+    }
+
+    #[DataProvider('invalidSourceUrls')]
+    public function testIngestVideoUrlRejectsInvalidSourceUrls(mixed $sourceUrl): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('ingestVideoUrl');
+
+        $response = (new VideoOptimizerAdminController($client))->ingestVideoUrl(new Request([], [], [], [], [], [], json_encode([
+            'library_id' => 'lib-1',
+            'source_url' => $sourceUrl,
+        ])));
+
+        static::assertSame(400, $response->getStatusCode());
+    }
+
     public function testCreateLibraryPassesEncodingQuality(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);

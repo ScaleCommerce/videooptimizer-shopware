@@ -56,6 +56,15 @@ class BackgroundHeroElementResolverTest extends TestCase
         static::assertFalse($data->hasError());
     }
 
+    public function testEnrichMarksTheConfiguredLibrary(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willReturn([]);
+        $client->expects(static::once())->method('markLibraryRendered')->with('lib-1', 'uuid-1');
+
+        $this->resolver($client)->enrich($this->slot(['video' => 'uuid-1', 'libraryId' => 'lib-1']), $this->createStub(ResolverContext::class), new ElementDataCollection());
+    }
+
     public function testInvalidOverlayHeightAndColorsFallBack(): void
     {
         $client = $this->createStub(VideoOptimizerClient::class);
