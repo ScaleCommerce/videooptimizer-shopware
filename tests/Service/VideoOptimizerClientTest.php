@@ -5,6 +5,7 @@ namespace ScaleCommerce\VideoOptimizer\Tests\Service;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
+use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidRequestException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
@@ -589,22 +590,102 @@ class VideoOptimizerClientTest extends TestCase
         static::assertSame('HTTPS://embed.example', $client->embedBaseUrl());
     }
 
-    public function testGetEmbedSanitizesCacheKeyForUuidWithReservedCharacters(): void
+    /**
+     * @return iterable<string, array{callable(VideoOptimizerClient): mixed}>
+     */
+    public static function invalidPathIdCalls(): iterable
     {
-        // PSR-6 forbids "{}()/\@:" in cache keys; a UUID containing "/" must not reach the cache
-        // key unescaped.
-        $uuid = 'a/b';
-        $cache = $this->createMock(CacheInterface::class);
-        $cache->expects(static::once())
-            ->method('get')
-            ->with('scalecommerce_vo_embed_' . rawurlencode($uuid), static::isType('callable'))
-            ->willReturnCallback(fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)));
+        yield 'update library ..' => [fn (VideoOptimizerClient $c) => $c->updateLibrary('..', ['name' => 'x'])];
+        yield 'delete library ..' => [fn (VideoOptimizerClient $c) => $c->deleteLibrary('..')];
+        yield 'reprocess library .' => [fn (VideoOptimizerClient $c) => $c->reprocessLibrary('.')];
+        yield 'list videos ..' => [fn (VideoOptimizerClient $c) => $c->listVideos('..')];
+        yield 'get video ../x' => [fn (VideoOptimizerClient $c) => $c->getVideo('../x')];
+        yield 'delete video empty' => [fn (VideoOptimizerClient $c) => $c->deleteVideo('')];
+        yield 'delete poster ..' => [fn (VideoOptimizerClient $c) => $c->deletePoster('..')];
+        yield 'thumbnail image a/b' => [fn (VideoOptimizerClient $c) => $c->getThumbnailImage('a/b', 1)];
+        yield 'embed a/b' => [fn (VideoOptimizerClient $c) => $c->getEmbed('a/b')];
+        yield 'embed with query' => [fn (VideoOptimizerClient $c) => $c->getEmbed('v1?x=1')];
+    }
 
-        $http = new MockHttpClient(new MockResponse(json_encode(['data' => ['uuid' => $uuid]])));
-        $client = $this->client($http, $this->config(), $cache);
-        $result = $client->getEmbed($uuid);
+    /**
+     * IDs end up in the upstream path. Dot segments would be resolved by HttpClient and re-target
+     * the request (issue #5), so anything but a plain ID is rejected before a request is sent.
+     */
+    #[DataProvider('invalidPathIdCalls')]
+    public function testInvalidPathIdIsRejectedBeforeAnyRequest(callable $call): void
+    {
+        $http = new MockHttpClient(function (): MockResponse {
+            static::fail('No upstream request may be sent for an invalid ID.');
+        });
 
-        static::assertSame($uuid, $result['uuid']);
+        $this->expectException(InvalidRequestException::class);
+        $call($this->client($http));
+    }
+
+    public function testUuidPathIdIsAccepted(): void
+    {
+        $capturedUrl = null;
+        $http = new MockHttpClient(function (string $method, string $url) use (&$capturedUrl): MockResponse {
+            $capturedUrl = $url;
+
+            return new MockResponse(json_encode(['data' => ['uuid' => 'x']]));
+        });
+
+        $this->client($http)->getVideo('E7AB89B1-b74f-42fd-b2a9-53bfe1d492a8');
+
+        static::assertSame('https://api.videooptimizer.eu/api/v1/videos/E7AB89B1-b74f-42fd-b2a9-53bfe1d492a8', $capturedUrl);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function rejectedBaseUrls(): iterable
+    {
+        yield 'query' => ['https://api.example/api/v1?x='];
+        yield 'fragment' => ['https://api.example/api/v1#x'];
+        yield 'userinfo' => ['https://user:pass@api.example/api/v1'];
+        yield 'localhost' => ['https://localhost/api/v1'];
+        yield 'localhost subdomain' => ['https://api.localhost/api/v1'];
+        yield 'loopback v4' => ['https://127.0.0.1/api/v1'];
+        yield 'private 10/8' => ['https://10.0.0.5/api/v1'];
+        yield 'private 172.16/12' => ['https://172.16.1.1/api/v1'];
+        yield 'private 192.168/16' => ['https://192.168.1.10/api/v1'];
+        yield 'link-local metadata' => ['https://169.254.169.254/latest'];
+        yield 'unspecified' => ['https://0.0.0.0/api/v1'];
+        yield 'loopback v6' => ['https://[::1]/api/v1'];
+        yield 'unique local v6' => ['https://[fd00::1]/api/v1'];
+    }
+
+    #[DataProvider('rejectedBaseUrls')]
+    public function testRestrictedApiBaseUrlThrows(string $baseUrl): void
+    {
+        $http = new MockHttpClient(function (): MockResponse {
+            static::fail('No upstream request may be sent to a rejected base URL.');
+        });
+
+        $this->expectException(InvalidApiBaseUrlException::class);
+        $this->client($http, $this->config(baseUrl: $baseUrl))->listLibraries();
+    }
+
+    #[DataProvider('rejectedBaseUrls')]
+    public function testRestrictedEmbedBaseUrlThrows(string $baseUrl): void
+    {
+        $this->expectException(InvalidApiBaseUrlException::class);
+        $this->client(new MockHttpClient(), $this->config(embedBaseUrl: $baseUrl))->embedBaseUrl();
+    }
+
+    public function testPublicIpApiBaseUrlIsAccepted(): void
+    {
+        $capturedUrl = null;
+        $http = new MockHttpClient(function (string $method, string $url) use (&$capturedUrl): MockResponse {
+            $capturedUrl = $url;
+
+            return new MockResponse(json_encode(['data' => []]));
+        });
+
+        $this->client($http, $this->config(baseUrl: 'https://203.0.113.10:8443/api/v1'))->listLibraries();
+
+        static::assertStringStartsWith('https://203.0.113.10:8443/api/v1/libraries', $capturedUrl);
     }
 
     public function testReprocessLibrarySendsPostAndUnwrapsData(): void

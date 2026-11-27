@@ -3,6 +3,7 @@
 namespace ScaleCommerce\VideoOptimizer\Service;
 
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
+use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidRequestException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
@@ -41,12 +42,12 @@ class VideoOptimizerClient
 
     public function updateLibrary(string $id, array $payload): array
     {
-        return $this->requestData('PATCH', '/libraries/' . rawurlencode($id), ['json' => $payload]);
+        return $this->requestData('PATCH', '/libraries/' . $this->pathId($id), ['json' => $payload]);
     }
 
     public function deleteLibrary(string $id): void
     {
-        $this->request('DELETE', '/libraries/' . rawurlencode($id));
+        $this->request('DELETE', '/libraries/' . $this->pathId($id));
     }
 
     /**
@@ -57,12 +58,12 @@ class VideoOptimizerClient
      */
     public function reprocessLibrary(string $id): array
     {
-        return $this->requestData('POST', '/libraries/' . rawurlencode($id) . '/reprocess');
+        return $this->requestData('POST', '/libraries/' . $this->pathId($id) . '/reprocess');
     }
 
     public function listVideos(string $libraryId): array
     {
-        return $this->requestAllPages('/libraries/' . rawurlencode($libraryId) . '/videos');
+        return $this->requestAllPages('/libraries/' . $this->pathId($libraryId) . '/videos');
     }
 
     /**
@@ -98,12 +99,12 @@ class VideoOptimizerClient
 
     public function getVideo(string $uuid): array
     {
-        return $this->requestData('GET', '/videos/' . rawurlencode($uuid));
+        return $this->requestData('GET', '/videos/' . $this->pathId($uuid));
     }
 
     public function updateVideo(string $uuid, array $payload): array
     {
-        $result = $this->requestData('PATCH', '/videos/' . rawurlencode($uuid), ['json' => $payload]);
+        $result = $this->requestData('PATCH', '/videos/' . $this->pathId($uuid), ['json' => $payload]);
         $this->forgetEmbed($uuid);
 
         return $result;
@@ -111,7 +112,7 @@ class VideoOptimizerClient
 
     public function deleteVideo(string $uuid): void
     {
-        $this->request('DELETE', '/videos/' . rawurlencode($uuid));
+        $this->request('DELETE', '/videos/' . $this->pathId($uuid));
         $this->forgetEmbed($uuid);
     }
 
@@ -145,6 +146,9 @@ class VideoOptimizerClient
      */
     public function getEmbed(string $uuid): array
     {
+        // The UUID comes from CMS slot config; validate it before it can reach the cache or a URL.
+        $this->pathId($uuid);
+
         // Set only when the callback below actually ran (i.e. this call missed the cache), so we
         // can tell "fresh failure" (propagate the real upstream exception) apart from "served from
         // the negative cache" (synthesize a 503 below) even though both paths return the same
@@ -155,7 +159,7 @@ class VideoOptimizerClient
             $this->embedCacheKey($uuid),
             function (ItemInterface $item) use ($uuid, &$freshFailure): array {
                 try {
-                    $data = $this->requestData('GET', '/embed/' . rawurlencode($uuid), ['max_duration' => 3.0], false, false);
+                    $data = $this->requestData('GET', '/embed/' . $this->pathId($uuid), ['max_duration' => 3.0], false, false);
                 } catch (\Throwable $e) {
                     // Store the sentinel instead of throwing here - Symfony's CacheInterface::get()
                     // never persists a value when the callback throws, which is exactly what we
@@ -202,7 +206,7 @@ class VideoOptimizerClient
 
     public function listThumbnails(string $uuid): array
     {
-        return $this->requestData('GET', '/videos/' . rawurlencode($uuid) . '/thumbnails');
+        return $this->requestData('GET', '/videos/' . $this->pathId($uuid) . '/thumbnails');
     }
 
     /**
@@ -214,7 +218,7 @@ class VideoOptimizerClient
      */
     public function getThumbnailImage(string $uuid, int $index): array
     {
-        $url = $this->baseUrl() . '/videos/' . rawurlencode($uuid) . '/thumbnails/' . $index;
+        $url = $this->baseUrl() . '/videos/' . $this->pathId($uuid) . '/thumbnails/' . $index;
         $response = $this->httpClient->request('GET', $url, [
             'headers' => $this->buildHeaders(true, 'image/*'),
             'max_duration' => self::ADMIN_MAX_DURATION,
@@ -231,7 +235,7 @@ class VideoOptimizerClient
 
     public function selectThumbnail(string $uuid, int $index): array
     {
-        $result = $this->requestData('POST', '/videos/' . rawurlencode($uuid) . '/thumbnail', ['json' => ['thumbnailIndex' => $index]]);
+        $result = $this->requestData('POST', '/videos/' . $this->pathId($uuid) . '/thumbnail', ['json' => ['thumbnailIndex' => $index]]);
         $this->forgetEmbed($uuid);
 
         return $result;
@@ -244,12 +248,12 @@ class VideoOptimizerClient
      */
     public function initiatePosterUpload(string $uuid, array $payload): array
     {
-        return $this->requestData('POST', '/videos/' . rawurlencode($uuid) . '/poster/initiate', ['json' => $payload]);
+        return $this->requestData('POST', '/videos/' . $this->pathId($uuid) . '/poster/initiate', ['json' => $payload]);
     }
 
     public function completePosterUpload(string $uuid, string $key): array
     {
-        $result = $this->requestData('POST', '/videos/' . rawurlencode($uuid) . '/poster/complete', ['json' => ['key' => $key]]);
+        $result = $this->requestData('POST', '/videos/' . $this->pathId($uuid) . '/poster/complete', ['json' => ['key' => $key]]);
         $this->forgetEmbed($uuid);
 
         return $result;
@@ -260,7 +264,7 @@ class VideoOptimizerClient
      */
     public function selectPoster(string $uuid, array $payload): array
     {
-        $result = $this->requestData('POST', '/videos/' . rawurlencode($uuid) . '/poster/select', ['json' => $payload]);
+        $result = $this->requestData('POST', '/videos/' . $this->pathId($uuid) . '/poster/select', ['json' => $payload]);
         $this->forgetEmbed($uuid);
 
         return $result;
@@ -268,7 +272,7 @@ class VideoOptimizerClient
 
     public function deletePoster(string $uuid): void
     {
-        $this->request('DELETE', '/videos/' . rawurlencode($uuid) . '/poster');
+        $this->request('DELETE', '/videos/' . $this->pathId($uuid) . '/poster');
         $this->forgetEmbed($uuid);
     }
 
@@ -412,13 +416,47 @@ class VideoOptimizerClient
         return $url;
     }
 
+    /**
+     * Returns an ID for use as a single upstream path segment. Only plain IDs (UUIDs upstream) are
+     * allowed: a dot segment would be resolved by HttpClient and re-target the request, and "/",
+     * "?" or "#" would change the path or turn it into a query.
+     */
+    private function pathId(string $id): string
+    {
+        if (preg_match('/^[A-Za-z0-9_-]+$/D', $id) !== 1) {
+            throw new InvalidRequestException('Invalid VideoOptimizer ID.');
+        }
+
+        return $id;
+    }
+
+    /**
+     * Defence in depth for the configurable base URLs: https only, no userinfo, query or fragment
+     * (the request path is appended verbatim), and no localhost or private, loopback, link-local
+     * or reserved IP literals, so the token and server-side requests cannot be pointed at
+     * internal services. Host names are not resolved here.
+     */
     private function assertHttpsUrl(string $url, string $message): void
     {
         $parts = parse_url($url);
+        if ($parts === false) {
+            throw new InvalidApiBaseUrlException($message);
+        }
         // parse_url() does not normalize scheme case, so "HTTPS://..." must still be accepted.
         $scheme = strtolower((string) ($parts['scheme'] ?? ''));
-        $host = $parts['host'] ?? null;
-        if ($scheme !== 'https' || !is_string($host) || $host === '') {
+        $host = strtolower((string) ($parts['host'] ?? ''));
+        if ($scheme !== 'https' || $host === '') {
+            throw new InvalidApiBaseUrlException($message);
+        }
+        if (isset($parts['user']) || isset($parts['pass']) || isset($parts['query']) || isset($parts['fragment'])) {
+            throw new InvalidApiBaseUrlException($message);
+        }
+        if ($host === 'localhost' || str_ends_with($host, '.localhost')) {
+            throw new InvalidApiBaseUrlException($message);
+        }
+        $ip = trim($host, '[]');
+        if (filter_var($ip, FILTER_VALIDATE_IP) !== false
+            && filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
             throw new InvalidApiBaseUrlException($message);
         }
     }

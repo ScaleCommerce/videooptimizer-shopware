@@ -10,11 +10,15 @@ use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Symfony\Bundle\FrameworkBundle\Routing\AttributeRouteControllerLoader;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Routing\Exception\MethodNotAllowedException;
+use Symfony\Component\Routing\Exception\ResourceNotFoundException;
 use Symfony\Component\Routing\Matcher\UrlMatcher;
 use Symfony\Component\Routing\RequestContext;
 
 class VideoOptimizerAdminControllerTest extends TestCase
 {
+    private const UUID = 'e7ab89b1-b74f-42fd-b2a9-53bfe1d492a8';
+
     public function testListLibrariesReturnsClientData(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
@@ -491,11 +495,9 @@ class VideoOptimizerAdminControllerTest extends TestCase
     }
 
     /**
-     * `POST /videos/ingest` and `GET|PATCH|DELETE /videos/{uuid}` share the same path shape, so
-     * this loads the real route attributes and asserts Symfony's matcher resolves POST to the new
-     * ingest action while GET/PATCH/DELETE on the same literal path still resolve to the
-     * uuid-based actions (Symfony filters candidate routes by method, so no requirements pattern
-     * is needed on {uuid}).
+     * `POST /videos/ingest` and `GET|PATCH|DELETE /videos/{uuid}` share the same path shape. POST
+     * must resolve to the ingest action; on the other methods "ingest" is not a UUID, so the
+     * uuid-based routes must not match it.
      */
     public function testIngestRouteDoesNotCollideWithUuidRoutes(): void
     {
@@ -509,9 +511,57 @@ class VideoOptimizerAdminControllerTest extends TestCase
 
         $getContext = new RequestContext();
         $getContext->setMethod('GET');
-        $getMatch = (new UrlMatcher($routes, $getContext))->match($path);
-        static::assertSame('api.action.scalecommerce-vo.videos.get', $getMatch['_route']);
-        static::assertSame('ingest', $getMatch['uuid']);
+        $this->expectException(MethodNotAllowedException::class);
+        (new UrlMatcher($routes, $getContext))->match($path);
+    }
+
+    /**
+     * Every {id}/{uuid} route must only match a UUID. Otherwise "%2E%2E" reaches the client as
+     * "..", and HttpClient's dot-segment removal re-targets the upstream request (issue #5).
+     */
+    public function testEveryIdRouteRequiresAUuid(): void
+    {
+        $routes = (new AttributeRouteControllerLoader())->load(VideoOptimizerAdminController::class, 'attribute');
+        $checked = 0;
+        foreach ($routes as $name => $route) {
+            foreach (['id', 'uuid'] as $param) {
+                if (!str_contains($route->getPath(), '{' . $param . '}')) {
+                    continue;
+                }
+                $requirement = $route->getRequirement($param);
+                static::assertNotNull($requirement, sprintf('Route %s has no requirement for {%s}.', $name, $param));
+                static::assertMatchesRegularExpression('#^(?:' . $requirement . ')$#', self::UUID, $name);
+                static::assertDoesNotMatchRegularExpression('#^(?:' . $requirement . ')$#', '..', $name);
+                ++$checked;
+            }
+        }
+        static::assertGreaterThan(10, $checked);
+    }
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function traversalRequests(): iterable
+    {
+        yield 'poster delete' => ['DELETE', '/api/_action/scalecommerce-vo/videos/../poster'];
+        yield 'library update' => ['PATCH', '/api/_action/scalecommerce-vo/libraries/..'];
+        yield 'video get' => ['GET', '/api/_action/scalecommerce-vo/videos/..'];
+        yield 'library videos' => ['GET', '/api/_action/scalecommerce-vo/libraries/../videos'];
+    }
+
+    #[DataProvider('traversalRequests')]
+    public function testDotSegmentIdsDoNotMatchAnyRoute(string $method, string $path): void
+    {
+        $routes = (new AttributeRouteControllerLoader())->load(VideoOptimizerAdminController::class, 'attribute');
+        $context = new RequestContext();
+        $context->setMethod($method);
+
+        try {
+            $match = (new UrlMatcher($routes, $context))->match($path);
+            static::fail(sprintf('%s %s unexpectedly matched %s.', $method, $path, $match['_route']));
+        } catch (ResourceNotFoundException|MethodNotAllowedException) {
+            $this->addToAssertionCount(1);
+        }
     }
 
     public function testPlaybackReturnsCdnSourcesFromEmbed(): void
@@ -559,7 +609,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
         $routes = (new AttributeRouteControllerLoader())->load(VideoOptimizerAdminController::class, 'attribute');
         $context = new RequestContext();
         $context->setMethod('GET');
-        $match = (new UrlMatcher($routes, $context))->match('/api/_action/scalecommerce-vo/videos/abc/playback');
+        $match = (new UrlMatcher($routes, $context))->match('/api/_action/scalecommerce-vo/videos/' . self::UUID . '/playback');
 
         static::assertSame('api.action.scalecommerce-vo.videos.playback', $match['_route']);
         static::assertSame(['scalecommerce_vo:read'], $match['_acl']);

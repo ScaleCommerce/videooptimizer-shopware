@@ -5,6 +5,10 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Security
+- Admin API routes accept only UUIDs for `{id}`/`{uuid}`, and the client rejects any ID that is not a plain path segment before sending a request. Previously `%2E%2E` reached the client as `..`, and the dot-segment removal of the HTTP client re-targeted the upstream request one level up (for example `DELETE …/videos/%2E%2E/poster` → `DELETE /api/v1/poster`). (#5)
+- The API and embed base URLs must not contain userinfo, a query or a fragment, and must not point to `localhost` or a private, loopback, link-local or reserved IP address. (#5)
+
 ## [1.0.1] - 2026-11-26
 
 ### Fixed
