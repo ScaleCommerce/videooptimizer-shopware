@@ -1,5 +1,7 @@
 {% block element_config_scalecommerce_vo_media_split %}
 <div class="scalecommerce-vo-media-split-config">
+    <scalecommerce-vo-api-notice :error="librariesError" />
+
     <mt-select
         :label="$tc('scalecommerce-vo.cms.library')"
         :options="libraryOptions"
@@ -27,12 +29,20 @@
         :label="$tc('scalecommerce-vo.mediaSplit.headline')"
         v-model="element.config.headline.value" />
 
+    {# Like Shopware's own text element: sw-text-editor (deprecated for 6.8) until the Meteor text
+       editor is enabled via the METEOR_TEXT_EDITOR feature flag. #}
     <sw-text-editor
+        v-if="!feature.isActive('METEOR_TEXT_EDITOR')"
         :label="$tc('scalecommerce-vo.mediaSplit.text')"
         :value="element.config.text.value"
         sanitize-input
         sanitize-field-name="app_cms_block.template"
         @update:value="onTextChange" />
+    <mt-text-editor
+        v-else
+        :label="$tc('scalecommerce-vo.mediaSplit.text')"
+        :model-value="element.config.text.value"
+        @update:model-value="onTextChange" />
 
     <mt-text-field
         :label="$tc('scalecommerce-vo.mediaSplit.ctaLabel')"

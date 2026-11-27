@@ -5,10 +5,23 @@
         <section class="scalecommerce-vo-hero scalecommerce-vo-hero--{{ data.height }} scalecommerce-vo-hero--overlay-{{ data.overlay }}"
                  style="{% if data.headlineColor %}--scvo-hero-heading:{{ data.headlineColor }};{% endif %}{% if data.textColor %}--scvo-hero-text:{{ data.textColor }};{% endif %}">
             {% if embed and (embed.hls or embed.mp4 or embed.poster) %}
-                <video class="scalecommerce-vo-hero__video" muted autoplay loop playsinline
+                {# No autoplay attribute: the hero plugin starts playback only when the hero is visible and
+                   motion is not reduced (prefers-reduced-motion, data saver). #}
+                <video class="scalecommerce-vo-hero__video" muted loop playsinline aria-hidden="true"
                        preload="{{ data.priority ? 'auto' : 'metadata' }}"
+                       data-scalecommerce-vo-hero="true"
+                       {% if data.priority %}data-scalecommerce-vo-hero-priority="true"{% endif %}
                        {% if embed.poster %}poster="{{ embed.poster }}"{% endif %}
-                       {% if embed.hls %}data-scalecommerce-vo-hero-hls="{{ embed.hls }}"{% if embed.mp4 %} data-scalecommerce-vo-hero-mp4="{{ embed.mp4 }}"{% endif %}{% elseif embed.mp4 %}src="{{ embed.mp4 }}"{% endif %}></video>
+                       {% if embed.hls %}data-scalecommerce-vo-hero-hls="{{ embed.hls }}"{% endif %}
+                       {% if embed.mp4 %}data-scalecommerce-vo-hero-mp4="{{ embed.mp4 }}"{% endif %}></video>
+                {% if embed.hls or embed.mp4 %}
+                    <button type="button" class="scalecommerce-vo-hero__toggle" hidden
+                            data-label-pause="{{ 'scalecommerce-vo.storefront.heroPause'|trans }}"
+                            data-label-play="{{ 'scalecommerce-vo.storefront.heroPlay'|trans }}"
+                            aria-label="{{ 'scalecommerce-vo.storefront.heroPlay'|trans }}">
+                        <span class="scalecommerce-vo-hero__toggle-icon" aria-hidden="true"></span>
+                    </button>
+                {% endif %}
             {% endif %}
             <div class="scalecommerce-vo-hero__overlay"></div>
             <div class="scalecommerce-vo-hero__content">

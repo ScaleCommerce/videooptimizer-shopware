@@ -1,5 +1,6 @@
 import {
     attachVideoSource,
+    autoplayWhileVisible,
     destroyVideoSource,
     markUnavailable,
 } from '../helper/attach-video-source';
@@ -29,7 +30,10 @@ export default class ScalecommerceVoPlayer extends window.PluginBaseClass {
 
     _applyOptions() {
         this.video.controls = !!this.options.controls;
-        this.video.autoplay = !!this.options.autoplay;
+        // Autoplay is driven by visibility (see _attachSource), not by the attribute, so players
+        // below the fold don't start loading and playing at page load.
+        this.video.autoplay = false;
+        this.video.preload = 'metadata';
         this.video.loop = !!this.options.loop;
         // Browsers block autoplay with sound, so a video set to autoplay must start muted
         // (mirrors the hosted VideoOptimizer embed). An explicit "muted" option still applies.
@@ -45,14 +49,20 @@ export default class ScalecommerceVoPlayer extends window.PluginBaseClass {
             this.video,
             { hls, mp4: mp4 || webm },
             {
-                autoplay: !!autoplay,
+                deferLoad: true,
                 onUnplayable: () =>
                     markUnavailable(this.el, this.video, unavailableLabel),
             }
         );
+        if (autoplay) {
+            this._stopAutoplay = autoplayWhileVisible(this.video, this.el);
+        }
     }
 
     destroy() {
+        if (this._stopAutoplay) {
+            this._stopAutoplay();
+        }
         destroyVideoSource(this.video);
     }
 }

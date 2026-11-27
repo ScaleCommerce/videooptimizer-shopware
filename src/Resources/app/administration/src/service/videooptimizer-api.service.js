@@ -63,11 +63,22 @@ export default class VideoOptimizerApiService extends ApiService {
             .then((response) => ApiService.handleResponse(response));
     }
 
-    getVideos(libraryId) {
+    /**
+     * With `limit` (and `cursor`), one page is returned as { data, meta: { next_cursor, has_more } };
+     * without, the full list.
+     */
+    getVideos(libraryId, { limit, cursor } = {}) {
+        const params = {};
+        if (limit) {
+            params.limit = limit;
+        }
+        if (cursor) {
+            params.cursor = cursor;
+        }
         return this.httpClient
             .get(
                 `${this.getApiBasePath()}/libraries/${encodeURIComponent(libraryId)}/videos`,
-                { headers: this.getBasicHeaders() }
+                { headers: this.getBasicHeaders(), params }
             )
             .then((response) => ApiService.handleResponse(response));
     }
@@ -213,32 +224,56 @@ export default class VideoOptimizerApiService extends ApiService {
 
     // PUTs each file part directly to its presigned storage URL and collects the ETags the
     // complete step needs. Cross-origin, so no auth header; the bucket must expose ETag via CORS.
-    uploadParts(file, parts, partSize) {
-        return parts.reduce(
-            (chain, part) =>
-                chain.then((etags) => {
-                    const start = (part.partNumber - 1) * partSize;
-                    const blob = file.slice(start, start + partSize);
-                    return fetch(part.url, { method: 'PUT', body: blob }).then(
-                        (response) => {
-                            if (!response.ok) {
-                                throw new Error(
-                                    `Part upload failed (${response.status})`
-                                );
-                            }
-                            const etag = response.headers.get('ETag');
-                            if (!etag) {
-                                throw new Error(
-                                    'Missing ETag on uploaded part - check bucket CORS (expose ETag).'
-                                );
-                            }
-                            etags.push({ partNumber: part.partNumber, etag });
-                            return etags;
-                        }
+    /**
+     * Uploads the parts one after another straight to storage (presigned URLs, no auth header).
+     * Each part is retried up to three times with backoff; `signal` cancels the upload and
+     * `onProgress(done, total)` reports finished parts. The API has no endpoint to abort a
+     * multipart upload; storage removes incomplete uploads via its lifecycle rule.
+     */
+    async uploadParts(file, parts, partSize, { signal, onProgress } = {}) {
+        const etags = [];
+        for (const [index, part] of parts.entries()) {
+            const start = (part.partNumber - 1) * partSize;
+            const blob = file.slice(start, start + partSize);
+            const etag = await this._putPart(part.url, blob, signal);
+            etags.push({ partNumber: part.partNumber, etag });
+            if (onProgress) {
+                onProgress(index + 1, parts.length);
+            }
+        }
+        return etags;
+    }
+
+    async _putPart(url, blob, signal, attempts = 3) {
+        for (let attempt = 1; ; attempt += 1) {
+            try {
+                const response = await fetch(url, {
+                    method: 'PUT',
+                    body: blob,
+                    signal,
+                });
+                if (!response.ok) {
+                    throw new Error(`Part upload failed (${response.status})`);
+                }
+                const etag = response.headers.get('ETag');
+                if (!etag) {
+                    const error = new Error(
+                        'Missing ETag on uploaded part - check bucket CORS (expose ETag).'
                     );
-                }),
-            Promise.resolve([])
-        );
+                    // A configuration problem; retrying won't help.
+                    error.noRetry = true;
+                    throw error;
+                }
+                return etag;
+            } catch (error) {
+                if (signal?.aborted || error.noRetry || attempt >= attempts) {
+                    throw error;
+                }
+                await new Promise((resolve) => {
+                    window.setTimeout(resolve, 1000 * 2 ** (attempt - 1));
+                });
+            }
+        }
     }
 
     updateVideo(uuid, payload) {

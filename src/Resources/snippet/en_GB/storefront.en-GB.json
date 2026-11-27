@@ -3,7 +3,10 @@
         "storefront": {
             "play": "Play video",
             "close": "Close",
-            "unavailable": "Video cannot be played"
+            "unavailable": "Video cannot be played",
+            "video": "Video",
+            "heroPause": "Pause background video",
+            "heroPlay": "Play background video"
         }
     }
 }

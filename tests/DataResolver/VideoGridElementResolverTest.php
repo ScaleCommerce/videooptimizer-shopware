@@ -115,6 +115,19 @@ class VideoGridElementResolverTest extends TestCase
         static::assertSame('uuid-ok', $items[0]['videoUuid']);
     }
 
+    public function testCollectQueuesAllVideosForConcurrentLookup(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $queued = [];
+        $client->expects(static::exactly(2))->method('queueEmbed')->willReturnCallback(function (string $uuid) use (&$queued): void {
+            $queued[] = $uuid;
+        });
+
+        $slot = $this->slot(['items' => [['video' => 'uuid-a'], ['video' => ''], ['video' => 'uuid-b']]]);
+        static::assertNull($this->resolver($client)->collect($slot, $this->createStub(ResolverContext::class)));
+        static::assertSame(['uuid-a', 'uuid-b'], $queued);
+    }
+
     public function testPresentationDefaultsToLightboxAndSkipsEmptyItems(): void
     {
         $client = $this->createStub(VideoOptimizerClient::class);

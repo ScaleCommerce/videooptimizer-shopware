@@ -10,7 +10,7 @@
     {% block scalecommerce_vo_list_smart_bar_actions %}
     <template #smart-bar-actions>
         <mt-button
-            v-if="mode !== 'create' || selectedLibraryId"
+            v-if="(mode !== 'create' || selectedLibraryId) && (mode === 'create' || canCreate)"
             variant="secondary"
             @click="mode === 'create' ? onCancelCreate() : onNewLibrary()">
             {{ mode === 'create' ? $tc('scalecommerce-vo.library.cancel') : $tc('scalecommerce-vo.library.new') }}
@@ -30,16 +30,18 @@
                 :subtitle="libraryMeta"
                 position-identifier="scalecommerce-vo-libraries">
 
-                <template v-if="mode !== 'create' && selectedLibraryId" #headerRight>
+                <template v-if="mode !== 'create' && selectedLibraryId && (canUpdate || canDelete)" #headerRight>
                     <sw-context-button>
-                        <sw-context-menu-item :disabled="!mediaManaged || isReprocessing" @click="onReprocessLibraryClick">
+                        <sw-context-menu-item v-if="canUpdate" :disabled="!mediaManaged || isReprocessing" @click="onReprocessLibraryClick">
                             {{ $tc('scalecommerce-vo.library.reprocess') }}
                         </sw-context-menu-item>
-                        <sw-context-menu-item variant="danger" @click="onDeleteLibraryClick">
+                        <sw-context-menu-item v-if="canDelete" variant="danger" @click="onDeleteLibraryClick">
                             {{ $tc('scalecommerce-vo.library.delete') }}
                         </sw-context-menu-item>
                     </sw-context-button>
                 </template>
+
+                <scalecommerce-vo-api-notice :error="librariesError" />
 
                 <mt-select
                     :label="$tc('scalecommerce-vo.list.selectLibrary')"

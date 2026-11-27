@@ -5,15 +5,40 @@ namespace ScaleCommerce\VideoOptimizer\Service;
 use Symfony\Contracts\Service\ResetInterface;
 
 /**
- * Request-scoped flag: set when an embed lookup failed or returned a video without playable
- * sources while rendering. The affected element is hidden then, so the page must not stay in the
- * HTTP cache for the full page TTL (see DegradedEmbedCacheSubscriber).
+ * Request-scoped state of the embed lookups made while rendering:
+ * - "degraded": a lookup failed or returned a video without playable sources. The element is
+ *   hidden then, so the page must not stay cached for the full page TTL.
+ * - rendered videos: their cache tags let admin changes invalidate the cached pages.
+ * See DegradedEmbedCacheSubscriber.
  */
 class EmbedAvailability implements ResetInterface
 {
     private bool $degraded = false;
 
     private bool $routeCacheTagged = false;
+
+    /**
+     * @var array<string, true>
+     */
+    private array $rendered = [];
+
+    public static function cacheTag(string $uuid): string
+    {
+        return 'scalecommerce-vo-video-' . $uuid;
+    }
+
+    public function markRendered(string $uuid): void
+    {
+        $this->rendered[$uuid] = true;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function cacheTags(): array
+    {
+        return array_map(self::cacheTag(...), array_keys($this->rendered));
+    }
 
     public function markDegraded(): void
     {
@@ -39,5 +64,6 @@ class EmbedAvailability implements ResetInterface
     {
         $this->degraded = false;
         $this->routeCacheTagged = false;
+        $this->rendered = [];
     }
 }

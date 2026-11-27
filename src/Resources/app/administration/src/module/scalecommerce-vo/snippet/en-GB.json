@@ -1,6 +1,8 @@
 {
     "scalecommerce-vo": {
-        "general": { "mainMenuItemGeneral": "VideoOptimizer" },
+        "general": {
+            "mainMenuItemGeneral": "VideoOptimizer"
+        },
         "list": {
             "pageTitle": "VideoOptimizer",
             "selectLibrary": "Library",
@@ -54,7 +56,8 @@
                 "intro": "Intro",
                 "cta": "Button",
                 "label": "Label"
-            }
+            },
+            "embedBadge": "Embed"
         },
         "mediaSplit": {
             "label": "VideoOptimizer media split",
@@ -127,7 +130,11 @@
             "presentationDirect": "Embedded directly",
             "player": "Player",
             "playerNative": "Native player",
-            "playerEmbed": "VideoOptimizer embed"
+            "playerEmbed": "VideoOptimizer embed",
+            "changeVideo": "Change video {position}",
+            "moveUp": "Move up",
+            "moveDown": "Move down",
+            "remove": "Remove"
         },
         "gallery": {
             "upload": "Upload",
@@ -150,10 +157,21 @@
             "orientationLandscape": "landscape",
             "orientationSquare": "square",
             "processingFailed": "Video processing failed.",
-            "processingTimeout": "Processing is taking longer than expected; the list will refresh later.",
+            "processingTimeout": "Processing takes longer than expected. Reload the list later to see the finished video.",
             "cancel": "Cancel",
             "confirmDeleteTitle": "Delete video?",
-            "confirmDeleteText": "“{title}” will be permanently deleted at VideoOptimizer. This cannot be undone."
+            "confirmDeleteText": "“{title}” will be permanently deleted at VideoOptimizer. This cannot be undone.",
+            "status": {
+                "ready": "ready",
+                "processing": "processing",
+                "pending": "pending",
+                "queued": "queued",
+                "uploading": "uploading",
+                "failed": "failed"
+            },
+            "uploadProgress": "Part {done} of {total} uploaded",
+            "uploadCancelled": "Upload cancelled.",
+            "loadMore": "Load more videos"
         },
         "detail": {
             "previewImage": "Preview image",
@@ -175,6 +193,14 @@
             "playerUnavailable": "The video cannot be played here.",
             "posterInvalidType": "Please choose a JPEG, PNG or WebP image.",
             "mediaFetchFailed": "The image could not be loaded from the media library."
+        },
+        "apiNotice": {
+            "tokenMissing": "No VideoOptimizer API token is configured.",
+            "invalidBaseUrl": "The VideoOptimizer API URL in the plugin configuration is invalid.",
+            "tokenRejected": "The VideoOptimizer API token was rejected (expired or revoked).",
+            "privilege": "Your user lacks the \"View\" permission for VideoOptimizer (Settings → Users & permissions → Roles).",
+            "unavailable": "VideoOptimizer data could not be loaded.",
+            "openConfig": "Open plugin configuration"
         }
     },
     "sw-privileges": {

@@ -6,6 +6,7 @@
 
         {% block scalecommerce_vo_video_gallery_add_card %}
         <mt-card
+            v-if="canCreate"
             :title="$tc('scalecommerce-vo.gallery.addHeading')"
             position-identifier="scalecommerce-vo-gallery-add">
             <sw-container columns="1fr 1fr" gap="0 32px">
@@ -25,13 +26,22 @@
                             {{ uploadFile ? uploadFile.name : $tc('scalecommerce-vo.gallery.noFile') }}
                         </span>
                     </div>
-                    <mt-button
-                        variant="primary"
-                        :is-loading="isUploading"
-                        :disabled="!uploadFile || isUploading || !libraryId"
-                        @click="onUpload">
-                        {{ $tc('scalecommerce-vo.gallery.upload') }}
-                    </mt-button>
+                    <div class="scalecommerce-vo-gallery__upload-actions">
+                        <mt-button
+                            variant="primary"
+                            :is-loading="isUploading"
+                            :disabled="!uploadFile || isUploading || !libraryId"
+                            @click="onUpload">
+                            {{ $tc('scalecommerce-vo.gallery.upload') }}
+                        </mt-button>
+                        <mt-button v-if="isUploading" variant="secondary" @click="onCancelUpload">
+                            {{ $tc('scalecommerce-vo.gallery.cancel') }}
+                        </mt-button>
+                    </div>
+                    <div v-if="uploadProgress" class="scalecommerce-vo-gallery__progress" role="status">
+                        <progress :value="uploadProgress.done" :max="uploadProgress.total"></progress>
+                        <span>{{ $tc('scalecommerce-vo.gallery.uploadProgress', { done: uploadProgress.done, total: uploadProgress.total }) }}</span>
+                    </div>
                 </div>
 
                 <div class="scalecommerce-vo-gallery__ingest-form">
@@ -62,33 +72,42 @@
                         'is-selected': video.uuid === selectedUuid,
                         'is-selectable': video.status === 'ready'
                     }"
-                    :role="video.status === 'ready' ? 'button' : null"
-                    :tabindex="video.status === 'ready' ? 0 : null"
-                    @click="onSelect(video)"
-                    @keydown.enter="onSelect(video)"
-                    @keydown.space.prevent="onSelect(video)">
+                    @click="onSelect(video)">
                     <div class="scalecommerce-vo-gallery__poster">
-                        <img v-if="posterFor(video)" :src="posterFor(video)" :alt="video.title" />
+                        <img v-if="posterFor(video)" :src="posterFor(video)" alt="" @error="onPosterError(video)" />
                         <mt-icon v-else name="regular-play" size="32" />
                         <div class="scalecommerce-vo-gallery__tile-actions">
-                            <sw-context-button @click.stop>
-                                <sw-context-menu-item @click="onRename(video)">
+                            <sw-context-button v-if="canUpdate || canDelete" @click.stop @keydown.stop>
+                                <sw-context-menu-item v-if="canUpdate" @click="onRename(video)">
                                     {{ $tc('scalecommerce-vo.gallery.rename') }}
                                 </sw-context-menu-item>
-                                <sw-context-menu-item variant="danger" @click="onDeleteClick(video)">
+                                <sw-context-menu-item v-if="canDelete" variant="danger" @click="onDeleteClick(video)">
                                     {{ $tc('scalecommerce-vo.gallery.delete') }}
                                 </sw-context-menu-item>
                             </sw-context-button>
                         </div>
                     </div>
                     <div class="scalecommerce-vo-gallery__meta">
-                        <span class="scalecommerce-vo-gallery__title">{{ video.title || video.uuid }}</span>
+                        <button
+                            type="button"
+                            class="scalecommerce-vo-gallery__title"
+                            :disabled="video.status !== 'ready'"
+                            :aria-pressed="mode === 'select' ? String(video.uuid === selectedUuid) : null"
+                            @click.stop="onSelect(video)">
+                            {{ video.title || video.uuid }}
+                        </button>
                         <sw-label :variant="statusVariant(video.status)" size="small" :ghost="true">
-                            {{ video.status }}
+                            {{ statusLabel(video.status) }}
                         </sw-label>
                     </div>
                     <span v-if="metaLine(video)" class="scalecommerce-vo-gallery__meta-info">{{ metaLine(video) }}</span>
                 </div>
+            </div>
+
+            <div v-if="nextCursor" class="scalecommerce-vo-gallery__more">
+                <mt-button variant="secondary" :is-loading="isLoadingMore" @click="loadMoreVideos">
+                    {{ $tc('scalecommerce-vo.gallery.loadMore') }}
+                </mt-button>
             </div>
 
             <div v-if="!isLoading && !videos.length" class="scalecommerce-vo-gallery__empty">
@@ -110,31 +129,41 @@
                     'is-selected': video.uuid === selectedUuid,
                     'is-selectable': mode === 'select' && video.status === 'ready'
                 }"
-                :role="mode === 'select' && video.status === 'ready' ? 'button' : null"
-                :tabindex="mode === 'select' && video.status === 'ready' ? 0 : null"
-                @click="onSelect(video)"
-                @keydown.enter="onSelect(video)"
-                @keydown.space.prevent="onSelect(video)">
+                @click="onSelect(video)">
                 <div class="scalecommerce-vo-gallery__poster">
-                    <img v-if="posterFor(video)" :src="posterFor(video)" :alt="video.title" />
+                    <img v-if="posterFor(video)" :src="posterFor(video)" alt="" @error="onPosterError(video)" />
                     <mt-icon v-else name="regular-play" size="32" />
                 </div>
                 <div class="scalecommerce-vo-gallery__meta">
-                    <span class="scalecommerce-vo-gallery__title">{{ video.title || video.uuid }}</span>
+                    <button
+                        type="button"
+                        class="scalecommerce-vo-gallery__title"
+                        :disabled="video.status !== 'ready'"
+                        :aria-pressed="mode === 'select' ? String(video.uuid === selectedUuid) : null"
+                        @click.stop="onSelect(video)">
+                        {{ video.title || video.uuid }}
+                    </button>
                     <sw-label :variant="statusVariant(video.status)" size="small" :ghost="true">
-                        {{ video.status }}
+                        {{ statusLabel(video.status) }}
                     </sw-label>
                 </div>
                 <span v-if="metaLine(video)" class="scalecommerce-vo-gallery__meta-info">{{ metaLine(video) }}</span>
             </div>
 
-            <div class="scalecommerce-vo-gallery__card scalecommerce-vo-gallery__upload">
+            <div v-if="canCreate" class="scalecommerce-vo-gallery__card scalecommerce-vo-gallery__upload">
                 <span class="scalecommerce-vo-gallery__upload-heading">{{ $tc('scalecommerce-vo.gallery.uploadHeading') }}</span>
                 <mt-text-field v-model="uploadTitle" :label="$tc('scalecommerce-vo.gallery.uploadTitle')" size="small" />
                 <input type="file" accept="video/*" ref="fileInput" @change="onFileSelected" />
-                <mt-button size="small" variant="primary" :disabled="!uploadFile || isUploading || !libraryId" @click="onUpload">
+                <mt-button size="small" variant="primary" :is-loading="isUploading" :disabled="!uploadFile || isUploading || !libraryId" @click="onUpload">
                     {{ $tc('scalecommerce-vo.gallery.upload') }}
                 </mt-button>
+                <mt-button v-if="isUploading" size="small" variant="secondary" @click="onCancelUpload">
+                    {{ $tc('scalecommerce-vo.gallery.cancel') }}
+                </mt-button>
+                <div v-if="uploadProgress" class="scalecommerce-vo-gallery__progress" role="status">
+                    <progress :value="uploadProgress.done" :max="uploadProgress.total"></progress>
+                    <span>{{ $tc('scalecommerce-vo.gallery.uploadProgress', { done: uploadProgress.done, total: uploadProgress.total }) }}</span>
+                </div>
 
                 <span class="scalecommerce-vo-gallery__upload-heading">{{ $tc('scalecommerce-vo.gallery.ingestHeading') }}</span>
                 <mt-text-field v-model="ingestUrl" :label="$tc('scalecommerce-vo.gallery.ingestUrl')" placeholder="https://…" size="small" />
@@ -149,8 +178,14 @@
             <span class="scalecommerce-vo-gallery__detail-title">{{ selectedVideo.title || selectedVideo.uuid }}</span>
             <span v-if="metaLine(selectedVideo)" class="scalecommerce-vo-gallery__meta-info">{{ metaLine(selectedVideo) }}</span>
             <sw-label :variant="statusVariant(selectedVideo.status)" size="small" :ghost="true">
-                {{ selectedVideo.status }}
+                {{ statusLabel(selectedVideo.status) }}
             </sw-label>
+        </div>
+
+        <div v-if="nextCursor" class="scalecommerce-vo-gallery__more">
+            <mt-button size="small" variant="secondary" :is-loading="isLoadingMore" @click="loadMoreVideos">
+                {{ $tc('scalecommerce-vo.gallery.loadMore') }}
+            </mt-button>
         </div>
 
         <div v-if="!isLoading && !videos.length" class="scalecommerce-vo-gallery__empty">

@@ -4,11 +4,17 @@ namespace ScaleCommerce\VideoOptimizer\Subscriber;
 
 use ScaleCommerce\VideoOptimizer\Service\EmbedAvailability;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
+use Shopware\Core\Framework\Adapter\Cache\Event\AddCacheTagEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
+ * Tags every page with the videos it shows ("scalecommerce-vo-video-<uuid>"), so admin changes to
+ * a video invalidate exactly those pages (VideoOptimizerClient::forgetEmbed()); in the HTTP cache
+ * via AddCacheTagEvent, on Shopware 6.6 also in the Store API route cache.
+ *
  * Keeps a page that was rendered while a video embed lookup failed or returned no playable sources
  * (the element is hidden then) from being cached for long, so the video comes back once the API
  * recovers or the video is ready. Matches the 60 s negative cache of VideoOptimizerClient::getEmbed().
@@ -29,6 +35,7 @@ class DegradedEmbedCacheSubscriber implements EventSubscriberInterface
     public function __construct(
         private readonly EmbedAvailability $availability,
         private readonly CacheInvalidator $cacheInvalidator,
+        private readonly EventDispatcherInterface $dispatcher,
     ) {
     }
 
@@ -45,7 +52,19 @@ class DegradedEmbedCacheSubscriber implements EventSubscriberInterface
 
     public function onResponse(ResponseEvent $event): void
     {
-        if (!$event->isMainRequest() || !$this->availability->isDegraded()) {
+        if (!$event->isMainRequest()) {
+            return;
+        }
+
+        // The HTTP cache reads the collected tags when it stores the response, after this listener.
+        // AddCacheTagEvent exists from a later 6.6 patch release on; before that, the HTTP cache
+        // takes the tags of the Store API route cache (see onRouteCacheTags()).
+        $tags = $this->availability->cacheTags();
+        if ($tags !== [] && class_exists(AddCacheTagEvent::class)) {
+            $this->dispatcher->dispatch(new AddCacheTagEvent(...$tags));
+        }
+
+        if (!$this->availability->isDegraded()) {
             return;
         }
 
@@ -63,12 +82,19 @@ class DegradedEmbedCacheSubscriber implements EventSubscriberInterface
      */
     public function onRouteCacheTags(object $event): void
     {
-        if (!$this->availability->isDegraded() || !method_exists($event, 'addTags')) {
+        if (!method_exists($event, 'addTags')) {
             return;
         }
 
-        $event->addTags([self::ROUTE_CACHE_TAG]);
-        $this->availability->markRouteCacheTagged();
+        $tags = $this->availability->cacheTags();
+        if ($tags !== []) {
+            $event->addTags($tags);
+        }
+
+        if ($this->availability->isDegraded()) {
+            $event->addTags([self::ROUTE_CACHE_TAG]);
+            $this->availability->markRouteCacheTagged();
+        }
     }
 
     public function onTerminate(): void

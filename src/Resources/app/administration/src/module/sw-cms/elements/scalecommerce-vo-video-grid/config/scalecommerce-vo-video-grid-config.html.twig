@@ -1,5 +1,7 @@
 {% block element_config_scalecommerce_vo_video_grid %}
 <div class="scalecommerce-vo-video-grid-config">
+    <scalecommerce-vo-api-notice :error="librariesError" />
+
     <mt-text-field
         :label="$tc('scalecommerce-vo.videoGrid.headline')"
         v-model="element.config.headline.value" />
@@ -15,23 +17,27 @@
             v-for="(item, index) in items"
             :key="index"
             class="scalecommerce-vo-video-grid-config__row">
-            <div class="scalecommerce-vo-video-grid-config__thumb" @click="openPicker(index)">
+            <button
+                type="button"
+                class="scalecommerce-vo-video-grid-config__thumb"
+                :aria-label="$tc('scalecommerce-vo.videoGrid.changeVideo', { position: index + 1 })"
+                @click="openPicker(index)">
                 <img v-if="poster(item.video)" :src="poster(item.video)" alt="" />
                 <mt-icon v-else name="regular-play" size="24" />
-            </div>
+            </button>
             <mt-text-field
                 class="scalecommerce-vo-video-grid-config__label"
                 :label="$tc('scalecommerce-vo.videoGrid.itemLabel')"
                 :model-value="item.label"
                 @update:model-value="(value) => onLabelInput(index, value)" />
             <div class="scalecommerce-vo-video-grid-config__row-actions">
-                <mt-button size="small" variant="secondary" :disabled="index === 0" @click="moveUp(index)">
+                <mt-button size="small" variant="secondary" :disabled="index === 0" :aria-label="$tc('scalecommerce-vo.videoGrid.moveUp')" @click="moveUp(index)">
                     <mt-icon name="regular-chevron-up" size="16" />
                 </mt-button>
-                <mt-button size="small" variant="secondary" :disabled="index === items.length - 1" @click="moveDown(index)">
+                <mt-button size="small" variant="secondary" :disabled="index === items.length - 1" :aria-label="$tc('scalecommerce-vo.videoGrid.moveDown')" @click="moveDown(index)">
                     <mt-icon name="regular-chevron-down" size="16" />
                 </mt-button>
-                <mt-button size="small" variant="critical" @click="removeItem(index)">
+                <mt-button size="small" variant="critical" :aria-label="$tc('scalecommerce-vo.videoGrid.remove')" @click="removeItem(index)">
                     <mt-icon name="regular-trash" size="16" />
                 </mt-button>
             </div>

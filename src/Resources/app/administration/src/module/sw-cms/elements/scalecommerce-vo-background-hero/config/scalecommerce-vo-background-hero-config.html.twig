@@ -1,5 +1,7 @@
 {% block element_config_scalecommerce_vo_background_hero %}
 <div class="scalecommerce-vo-background-hero-config">
+    <scalecommerce-vo-api-notice :error="librariesError" />
+
     <mt-select
         :label="$tc('scalecommerce-vo.cms.library')"
         :options="libraryOptions"

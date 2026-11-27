@@ -28,6 +28,15 @@ class VideoGridElementResolver extends AbstractCmsElementResolver
 
     public function collect(CmsSlotEntity $slot, ResolverContext $resolverContext): ?CriteriaCollection
     {
+        // Announce all lookups so the tiles are fetched concurrently instead of one by one.
+        $rawItems = $slot->getFieldConfig()->get('items')?->getValue();
+        foreach (is_array($rawItems) ? $rawItems : [] as $entry) {
+            $uuid = is_array($entry) ? ($entry['video'] ?? null) : null;
+            if (is_string($uuid) && $uuid !== '') {
+                $this->client->queueEmbed($uuid);
+            }
+        }
+
         return null;
     }
 

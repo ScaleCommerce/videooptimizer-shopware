@@ -181,6 +181,10 @@ The module is gated by the `scalecommerce_vo` privilege group under **Content**,
 Poster and thumbnail selection and library reprocessing require **update**; deleting videos or libraries
 requires **delete**.
 
+The administration only shows the actions a user may perform. **CMS editors** who place VideoOptimizer
+elements in Shopping Experiences need at least the **Viewer** role, independent of their CMS permissions;
+without it, the element configuration explains which permission is missing.
+
 ## Usage
 
 ### Admin module

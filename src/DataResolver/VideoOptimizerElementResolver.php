@@ -29,6 +29,12 @@ class VideoOptimizerElementResolver extends AbstractCmsElementResolver
 
     public function collect(CmsSlotEntity $slot, ResolverContext $resolverContext): ?CriteriaCollection
     {
+        // Announce the lookup so all videos of the page are fetched concurrently (see enrich()).
+        $uuid = $slot->getFieldConfig()->get('videoUuid')?->getValue();
+        if (is_string($uuid) && $uuid !== '') {
+            $this->client->queueEmbed($uuid);
+        }
+
         return null;
     }
 

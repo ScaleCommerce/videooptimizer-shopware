@@ -12,7 +12,7 @@ import Hls from 'hls.js/dist/hls.light.mjs';
 export function attachVideoSource(
     video,
     { hls = null, mp4 = null },
-    { autoplay = false, onUnplayable = () => {} } = {}
+    { autoplay = false, deferLoad = false, onUnplayable = () => {} } = {}
 ) {
     const play = () => {
         if (autoplay) {
@@ -32,9 +32,26 @@ export function attachVideoSource(
     };
 
     if (hls && Hls.isSupported()) {
-        const player = new Hls();
+        // hls.js ignores the video's preload hint and buffers right away; with deferLoad only the
+        // playlists are fetched until playback starts. capLevelToPlayerSize keeps small tiles from
+        // pulling the 4K rendition.
+        const player = new Hls({
+            autoStartLoad: !deferLoad,
+            capLevelToPlayerSize: true,
+        });
         // Reachable for destroyVideoSource() before anything can emit an error.
         video.__scvoHls = player;
+        if (deferLoad) {
+            video.addEventListener(
+                'play',
+                () => {
+                    if (video.__scvoHls === player) {
+                        player.startLoad();
+                    }
+                },
+                { once: true }
+            );
+        }
         player.on(Hls.Events.ERROR, (event, data) => {
             if (!data.fatal) {
                 return;
@@ -56,6 +73,62 @@ export function attachVideoSource(
     }
 
     useMp4();
+}
+
+/**
+ * Calls onChange(true|false) when the element enters or leaves the viewport (25 % visible).
+ * Returns a function that stops observing. Without IntersectionObserver the element counts as
+ * visible.
+ */
+export function observeVisibility(element, onChange) {
+    if (typeof window.IntersectionObserver !== 'function') {
+        onChange(true);
+        return () => {};
+    }
+    const observer = new window.IntersectionObserver(
+        (entries) => entries.forEach((entry) => onChange(entry.isIntersecting)),
+        { threshold: 0.25 }
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+}
+
+/**
+ * Plays a muted, autoplaying video only while it is visible and pauses it when it scrolls out
+ * of view. Once the visitor pauses it themselves, it is not resumed automatically.
+ * Returns a function that stops observing.
+ */
+export function autoplayWhileVisible(video, observed = video) {
+    let pausedForViewport = false;
+    let pausedByUser = false;
+    const onPause = () => {
+        if (pausedForViewport) {
+            pausedForViewport = false;
+            return;
+        }
+        if (!video.ended) {
+            pausedByUser = true;
+        }
+    };
+    const onPlay = () => {
+        pausedByUser = false;
+    };
+    video.addEventListener('pause', onPause);
+    video.addEventListener('play', onPlay);
+    const stop = observeVisibility(observed, (visible) => {
+        // A finished non-looping video is not restarted when it scrolls back into view.
+        if (visible && video.paused && !pausedByUser && !video.ended) {
+            video.play().catch(() => {});
+        } else if (!visible && !video.paused) {
+            pausedForViewport = true;
+            video.pause();
+        }
+    });
+    return () => {
+        stop();
+        video.removeEventListener('pause', onPause);
+        video.removeEventListener('play', onPlay);
+    };
 }
 
 export function destroyVideoSource(video) {

@@ -11,7 +11,9 @@ use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidRequestException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
 use ScaleCommerce\VideoOptimizer\Service\EmbedAvailability;
+use ScaleCommerce\VideoOptimizer\Service\PluginUserAgent;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
+use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -333,7 +335,39 @@ class VideoOptimizerClientTest extends TestCase
 
         // Same list-of-"Name: Value"-strings shape as request() uses, not a mix of list and
         // assoc keys.
-        static::assertSame(['Authorization: Bearer vp_test', 'Accept: image/*'], $capturedOptions['headers']);
+        static::assertSame(
+            ['Authorization: Bearer vp_test', 'Accept: image/*', 'User-Agent: ' . (new PluginUserAgent())->value()],
+            $capturedOptions['headers'],
+        );
+    }
+
+    /**
+     * VideoOptimizer shows which plugin versions an organization runs, so every request - with or
+     * without token - identifies the plugin.
+     */
+    public function testEveryRequestSendsThePluginUserAgent(): void
+    {
+        $userAgents = [];
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$userAgents): MockResponse {
+            $userAgents[parse_url($url, \PHP_URL_PATH)] = $options['normalized_headers']['user-agent'] ?? null;
+
+            return str_contains($url, '/thumbnails/')
+                ? new MockResponse('IMG', ['response_headers' => ['content-type' => 'image/jpeg']])
+                : new MockResponse(json_encode(['data' => ['sources' => [['type' => 'hls', 'src' => 'https://cdn/x.m3u8']]]]));
+        });
+        $userAgent = new PluginUserAgent('6.7.16.2', 'https://shop.example.com', '1.0.3');
+        $client = new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedAvailability(), null, $userAgent);
+
+        $client->listLibraries();
+        $client->getEmbed('vid-1');
+        $client->getThumbnailImage('vid-1', 2);
+
+        $expected = ['User-Agent: VideoOptimizer-Shopware/1.0.3 (Shopware 6.7.16.2; PHP ' . \PHP_VERSION . '; +https://shop.example.com)'];
+        static::assertSame([
+            '/api/v1/libraries' => $expected,
+            '/api/v1/embed/vid-1' => $expected,
+            '/api/v1/videos/vid-1/thumbnails/2' => $expected,
+        ], $userAgents);
     }
 
     public function testNonHttpsApiBaseUrlThrows(): void
@@ -881,5 +915,365 @@ class VideoOptimizerClientTest extends TestCase
         }
 
         static::assertSame($degraded, $availability->isDegraded());
+    }
+
+    private function playable(string $uuid): MockResponse
+    {
+        return new MockResponse(json_encode(['data' => ['uuid' => $uuid, 'sources' => [['src' => "https://cdn/$uuid.mp4", 'type' => 'video/mp4', 'size' => 1]]]]));
+    }
+
+    /**
+     * Lookups queued during the CMS collect phase start together on the first getEmbed(), instead
+     * of one after another with 3 s each (issue #4).
+     */
+    public function testQueuedEmbedsAreRequestedConcurrently(): void
+    {
+        $requested = [];
+        $http = new MockHttpClient(function (string $method, string $url) use (&$requested): MockResponse {
+            $uuid = basename(parse_url($url, PHP_URL_PATH));
+            $requested[] = $uuid;
+
+            return $this->playable($uuid);
+        });
+        $client = $this->client($http);
+
+        $client->queueEmbed('a1');
+        $client->queueEmbed('b2');
+        $client->queueEmbed('c3');
+        $client->queueEmbed('a1');
+
+        static::assertSame('a1', $client->getEmbed('a1')['uuid']);
+        static::assertSame(['a1', 'b2', 'c3'], $requested, 'all queued lookups start with the first getEmbed()');
+
+        static::assertSame('b2', $client->getEmbed('b2')['uuid']);
+        static::assertSame('c3', $client->getEmbed('c3')['uuid']);
+        static::assertCount(3, $requested);
+    }
+
+    public function testQueuedEmbedAlreadyCachedIsNotRequestedAgain(): void
+    {
+        $requested = [];
+        $http = new MockHttpClient(function (string $method, string $url) use (&$requested): MockResponse {
+            $uuid = basename(parse_url($url, PHP_URL_PATH));
+            $requested[] = $uuid;
+
+            return $this->playable($uuid);
+        });
+        $client = $this->client($http);
+        $client->getEmbed('a1');
+
+        $client->queueEmbed('a1');
+        $client->queueEmbed('b2');
+        $client->getEmbed('b2');
+
+        static::assertSame(['a1', 'b2'], $requested);
+    }
+
+    /**
+     * @return iterable<string, array{MockResponse, bool}>
+     */
+    public static function unavailabilityCases(): iterable
+    {
+        yield 'transport error' => [new MockResponse('', ['error' => 'Connection reset']), true];
+        yield 'service unavailable' => [new MockResponse('{}', ['http_code' => 503]), true];
+        yield 'gateway timeout' => [new MockResponse('{}', ['http_code' => 504]), true];
+        yield 'error for a single video' => [new MockResponse('{}', ['http_code' => 500]), false];
+        yield 'rate limited' => [new MockResponse('{}', ['http_code' => 429]), true];
+        yield 'video not found' => [new MockResponse('{}', ['http_code' => 404]), false];
+    }
+
+    /**
+     * Once the API is unavailable, further lookups fail fast for 60 s without waiting for another
+     * timeout per video; a missing (deleted) video does not count.
+     */
+    #[DataProvider('unavailabilityCases')]
+    public function testUnavailableApiFailsFastForOtherVideos(MockResponse $first, bool $failFast): void
+    {
+        $count = 0;
+        $http = new MockHttpClient(function () use (&$count, $first): MockResponse {
+            ++$count;
+
+            return $count === 1 ? $first : $this->playable('b2');
+        });
+        $client = $this->client($http);
+
+        try {
+            $client->getEmbed('a1');
+        } catch (VideoOptimizerApiException) {
+        }
+
+        if ($failFast) {
+            try {
+                $client->getEmbed('b2');
+                static::fail('Expected a fast failure');
+            } catch (VideoOptimizerApiException $e) {
+                static::assertSame(503, $e->getStatusCode());
+            }
+            static::assertSame(1, $count);
+
+            return;
+        }
+
+        static::assertSame('b2', $client->getEmbed('b2')['uuid']);
+        static::assertSame(2, $count);
+    }
+
+    /**
+     * Admin changes to a video invalidate the pages that show it (issue #3).
+     */
+    public function testForgetEmbedInvalidatesTheVideoCacheTag(): void
+    {
+        $invalidator = $this->createMock(CacheInvalidator::class);
+        $invalidator->expects(static::once())->method('invalidate')->with(['scalecommerce-vo-video-v1']);
+
+        $client = new VideoOptimizerClient(new MockHttpClient(), $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedAvailability(), $invalidator);
+        $client->forgetEmbed('v1');
+    }
+
+    public function testGetEmbedRecordsTheRenderedVideo(): void
+    {
+        $availability = new EmbedAvailability();
+        $client = new VideoOptimizerClient(new MockHttpClient($this->playable('v1')), $this->config(), new ArrayAdapter(), new NullLogger(), $availability);
+
+        $client->getEmbed('v1');
+
+        static::assertSame(['scalecommerce-vo-video-v1'], $availability->cacheTags());
+    }
+
+    public function testResetDropsQueuedLookups(): void
+    {
+        $count = 0;
+        $http = new MockHttpClient(function (string $method, string $url) use (&$count): MockResponse {
+            ++$count;
+
+            return $this->playable(basename(parse_url($url, PHP_URL_PATH)));
+        });
+        $client = $this->client($http);
+        $client->queueEmbed('a1');
+        $client->queueEmbed('b2');
+        $client->reset();
+
+        $client->getEmbed('c3');
+
+        static::assertSame(1, $count);
+    }
+
+    /**
+     * With the API down, the concurrently started lookups that are not read anymore must not throw
+     * when they are destroyed at the end of the request.
+     */
+    public function testUnreadFailedLookupsDoNotThrowWhenDestroyed(): void
+    {
+        $http = new MockHttpClient(fn (): MockResponse => new MockResponse('', ['error' => 'Could not resolve host']));
+        $client = $this->client($http);
+        foreach (['a1', 'b2', 'c3'] as $uuid) {
+            $client->queueEmbed($uuid);
+        }
+
+        foreach (['a1', 'b2'] as $uuid) {
+            try {
+                $client->getEmbed($uuid);
+            } catch (VideoOptimizerApiException) {
+            }
+        }
+        $client->reset();
+        unset($client, $http);
+        gc_collect_cycles();
+
+        $this->addToAssertionCount(1);
+    }
+
+    /**
+     * The administration pages through a library instead of collecting everything in one
+     * request (issue #15).
+     */
+    public function testListVideosPageRequestsOnePageWithCursor(): void
+    {
+        $captured = null;
+        $http = new MockHttpClient(function (string $method, string $url) use (&$captured): MockResponse {
+            $captured = $url;
+
+            return new MockResponse(json_encode([
+                'data' => [['uuid' => 'v1'], ['uuid' => 'v2']],
+                'pagination' => ['next_cursor' => 'c2', 'has_more' => true],
+            ]));
+        });
+
+        $page = $this->client($http)->listVideosPage('lib-1', 'c1', 2);
+
+        static::assertStringContainsString('/libraries/lib-1/videos?', (string) $captured);
+        static::assertStringContainsString('limit=2', (string) $captured);
+        static::assertStringContainsString('cursor=c1', (string) $captured);
+        static::assertSame([['uuid' => 'v1'], ['uuid' => 'v2']], $page['items']);
+        static::assertSame(['next_cursor' => 'c2', 'has_more' => true], $page['pagination']);
+    }
+
+    public function testListVideosPageWithoutCursorAndLastPage(): void
+    {
+        $captured = null;
+        $http = new MockHttpClient(function (string $method, string $url) use (&$captured): MockResponse {
+            $captured = $url;
+
+            return new MockResponse(json_encode(['data' => [['uuid' => 'v1']]]));
+        });
+
+        $page = $this->client($http)->listVideosPage('lib-1', null, 60);
+
+        static::assertStringNotContainsString('cursor=', (string) $captured);
+        static::assertSame(['next_cursor' => null, 'has_more' => false], $page['pagination']);
+    }
+
+    public function testListingAllPagesLogsWhenTheListIsTruncated(): void
+    {
+        $page = 0;
+        $http = new MockHttpClient(function () use (&$page): MockResponse {
+            ++$page;
+
+            return new MockResponse(json_encode([
+                'data' => [['id' => 'l' . $page]],
+                'pagination' => ['next_cursor' => 'c' . $page, 'has_more' => true],
+            ]));
+        });
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(static::once())->method('warning')->with(static::stringContains('truncated'));
+
+        $items = (new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), $logger))->listLibraries();
+
+        static::assertCount(100, $items);
+    }
+
+    /**
+     * A lookup that fails only because the API is flagged unavailable must not extend the flag,
+     * otherwise steady traffic keeps the outage alive forever (pre-release review of 1.1.0).
+     */
+    public function testFailuresFromTheFlagDoNotExtendIt(): void
+    {
+        $cache = new class extends ArrayAdapter {
+            public int $flagWrites = 0;
+
+            public function save(\Psr\Cache\CacheItemInterface $item): bool
+            {
+                if ($item->getKey() === 'scalecommerce_vo_embed_api_unavailable') {
+                    ++$this->flagWrites;
+                }
+
+                return parent::save($item);
+            }
+        };
+        $requests = 0;
+        $http = new MockHttpClient(function () use (&$requests): MockResponse {
+            ++$requests;
+
+            return new MockResponse('{}', ['http_code' => 503]);
+        });
+        $client = $this->client($http, null, $cache);
+
+        foreach (['a1', 'b2', 'c3', 'a1'] as $uuid) {
+            try {
+                $client->getEmbed($uuid);
+            } catch (VideoOptimizerApiException) {
+            }
+        }
+
+        static::assertSame(1, $requests);
+        static::assertSame(1, $cache->flagWrites);
+    }
+
+    public function testConcurrentLookupsAreStartedInBatchesOfEight(): void
+    {
+        $requested = 0;
+        $http = new MockHttpClient(function (string $method, string $url) use (&$requested): MockResponse {
+            ++$requested;
+
+            return $this->playable(basename(parse_url($url, PHP_URL_PATH)));
+        });
+        $client = $this->client($http);
+        $uuids = array_map(fn (int $i): string => 'v' . $i, range(1, 12));
+        foreach ($uuids as $uuid) {
+            $client->queueEmbed($uuid);
+        }
+
+        $client->getEmbed('v1');
+        static::assertSame(8, $requested);
+
+        foreach ($uuids as $uuid) {
+            static::assertSame($uuid, $client->getEmbed($uuid)['uuid']);
+        }
+        static::assertSame(12, $requested);
+    }
+
+    /**
+     * A started lookup that is never read (e.g. served from the cache meanwhile) must not throw
+     * when the client goes away, also without kernel.reset (first request of a php-fpm worker).
+     */
+    public function testUnreadLookupsDoNotThrowWithoutReset(): void
+    {
+        $http = new MockHttpClient(fn (): MockResponse => new MockResponse('{}', ['http_code' => 404]));
+        $client = $this->client($http);
+        $client->queueEmbed('a1');
+        $client->queueEmbed('b2');
+        try {
+            $client->getEmbed('a1');
+        } catch (VideoOptimizerApiException) {
+        }
+
+        unset($client, $http);
+        gc_collect_cycles();
+
+        $this->addToAssertionCount(1);
+    }
+
+    /**
+     * @return iterable<string, array{callable(VideoOptimizerClient): mixed, list<string>}>
+     */
+    public static function libraryActions(): iterable
+    {
+        yield 'delete' => [fn (VideoOptimizerClient $c) => $c->deleteLibrary('lib-1'), ['GET /libraries/lib-1/videos', 'DELETE /libraries/lib-1']];
+        yield 'reprocess' => [fn (VideoOptimizerClient $c) => $c->reprocessLibrary('lib-1'), ['POST /libraries/lib-1/reprocess', 'GET /libraries/lib-1/videos']];
+    }
+
+    /**
+     * Deleting or reprocessing a library changes all its videos, so the pages showing them are
+     * invalidated like after a change to a single video.
+     *
+     * @param list<string> $expectedCalls
+     */
+    #[DataProvider('libraryActions')]
+    public function testLibraryActionsInvalidateTheirVideos(callable $action, array $expectedCalls): void
+    {
+        $calls = [];
+        $http = new MockHttpClient(function (string $method, string $url) use (&$calls): MockResponse {
+            $calls[] = $method . ' ' . str_replace('/api/v1', '', (string) parse_url($url, PHP_URL_PATH));
+
+            return $method === 'GET'
+                ? new MockResponse(json_encode(['data' => [['uuid' => 'v1'], ['uuid' => 'v2']]]))
+                : new MockResponse(json_encode(['data' => []]));
+        });
+        $invalidated = [];
+        $invalidator = $this->createMock(CacheInvalidator::class);
+        $invalidator->expects(static::exactly(2))->method('invalidate')->willReturnCallback(function (array $tags) use (&$invalidated): void {
+            $invalidated = [...$invalidated, ...$tags];
+        });
+
+        $action(new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedAvailability(), $invalidator));
+
+        static::assertSame($expectedCalls, $calls);
+        static::assertSame(['scalecommerce-vo-video-v1', 'scalecommerce-vo-video-v2'], $invalidated);
+    }
+
+    public function testLibraryDeleteStillRunsWhenListingItsVideosFails(): void
+    {
+        $calls = [];
+        $http = new MockHttpClient(function (string $method) use (&$calls): MockResponse {
+            $calls[] = $method;
+
+            return $method === 'GET' ? new MockResponse('{}', ['http_code' => 503]) : new MockResponse('', ['http_code' => 204]);
+        });
+        $invalidator = $this->createMock(CacheInvalidator::class);
+        $invalidator->expects(static::never())->method('invalidate');
+
+        (new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedAvailability(), $invalidator))->deleteLibrary('lib-1');
+
+        static::assertSame(['GET', 'DELETE'], $calls);
     }
 }

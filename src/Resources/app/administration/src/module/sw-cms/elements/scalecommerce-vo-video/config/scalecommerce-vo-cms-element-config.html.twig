@@ -1,5 +1,7 @@
 {% block element_config_scalecommerce_vo_video %}
 <div class="scalecommerce-vo-cms-element-config">
+    <scalecommerce-vo-api-notice :error="librariesError" />
+
     <mt-select
         :label="$tc('scalecommerce-vo.cms.library')"
         :options="libraryOptions"

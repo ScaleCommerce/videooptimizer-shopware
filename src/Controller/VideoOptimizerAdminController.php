@@ -78,9 +78,29 @@ class VideoOptimizerAdminController
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/libraries/{id}/videos', name: 'api.action.scalecommerce-vo.videos.list', methods: ['GET'], requirements: ['id' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:read']])]
-    public function listVideos(string $id): JsonResponse
+    public function listVideos(string $id, Request $request): JsonResponse
     {
-        return $this->wrap(fn () => $this->client->listVideos($id));
+        // With ?limit (and ?cursor) one page plus "meta" is returned; without them, the full list
+        // as before, so existing callers keep working.
+        if (!$request->query->has('limit') && !$request->query->has('cursor')) {
+            return $this->wrap(fn () => $this->client->listVideos($id));
+        }
+
+        $limit = (string) $request->query->get('limit', '60');
+        $cursor = $request->query->get('cursor');
+        if (!ctype_digit($limit) || (int) $limit < 1 || (int) $limit > 100) {
+            return $this->clientError(new InvalidRequestException('limit must be between 1 and 100.'));
+        }
+
+        try {
+            $page = $this->client->listVideosPage($id, is_string($cursor) ? $cursor : null, (int) $limit);
+        } catch (MissingApiTokenException|InvalidApiBaseUrlException|InvalidRequestException $e) {
+            return $this->clientError($e);
+        } catch (VideoOptimizerApiException $e) {
+            return $this->apiError($e);
+        }
+
+        return new JsonResponse(['data' => $page['items'], 'meta' => $page['pagination']]);
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/videos', name: 'api.action.scalecommerce-vo.videos.list-all', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
@@ -183,7 +203,7 @@ class VideoOptimizerAdminController
                 'Content-Disposition' => 'inline',
             ]);
         } catch (MissingApiTokenException|InvalidApiBaseUrlException|InvalidRequestException $e) {
-            return new JsonResponse(['errors' => [['status' => '400', 'detail' => $e->getMessage()]]], 400);
+            return $this->clientError($e);
         } catch (VideoOptimizerApiException $e) {
             return $this->apiError($e);
         }
@@ -322,7 +342,7 @@ class VideoOptimizerAdminController
 
             return new JsonResponse(['data' => $data], $successStatus);
         } catch (MissingApiTokenException|InvalidApiBaseUrlException|InvalidRequestException $e) {
-            return new JsonResponse(['errors' => [['status' => '400', 'detail' => $e->getMessage()]]], 400);
+            return $this->clientError($e);
         } catch (VideoOptimizerApiException $e) {
             return $this->apiError($e);
         } catch (\JsonException) {
@@ -360,5 +380,20 @@ class VideoOptimizerAdminController
         }
 
         return new JsonResponse(['errors' => [$error]], $status);
+    }
+
+    /**
+     * Configuration and request errors carry an own code, so the administration can tell a missing
+     * token from a misconfigured base URL and point to the plugin configuration.
+     */
+    private function clientError(\RuntimeException $e): JsonResponse
+    {
+        $code = match (true) {
+            $e instanceof MissingApiTokenException => 'SCALECOMMERCE_VO__API_TOKEN_MISSING',
+            $e instanceof InvalidApiBaseUrlException => 'SCALECOMMERCE_VO__INVALID_BASE_URL',
+            default => 'SCALECOMMERCE_VO__INVALID_REQUEST',
+        };
+
+        return new JsonResponse(['errors' => [['status' => '400', 'code' => $code, 'detail' => $e->getMessage()]]], 400);
     }
 }

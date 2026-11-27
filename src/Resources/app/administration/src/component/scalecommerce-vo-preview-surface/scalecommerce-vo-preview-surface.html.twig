@@ -22,10 +22,10 @@
         <span v-if="showExpand" class="scalecommerce-vo-preview-surface__badge" aria-hidden="true">
             <mt-icon name="regular-expand" size="10" />
         </span>
-        <span v-if="showEmbed" class="scalecommerce-vo-preview-surface__badge">Embed</span>
+        <span v-if="showEmbed" class="scalecommerce-vo-preview-surface__badge">{{ $tc('scalecommerce-vo.cms.embedBadge') }}</span>
         <span v-if="hasVideo && status"
               class="scalecommerce-vo-preview-surface__badge"
-              :class="'is-' + statusVariant">{{ status }}</span>
+              :class="'is-' + statusVariant">{{ statusLabel }}</span>
     </div>
 
     <span v-if="meta" class="scalecommerce-vo-preview-surface__meta">{{ meta }}</span>

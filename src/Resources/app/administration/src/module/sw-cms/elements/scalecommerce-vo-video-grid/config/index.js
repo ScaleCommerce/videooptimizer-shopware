@@ -1,14 +1,14 @@
 import template from './scalecommerce-vo-video-grid-config.html.twig';
 import './scalecommerce-vo-video-grid-config.scss';
+import libraryLoader from '../../../../../mixin/scalecommerce-vo-library-loader';
 
 Shopware.Component.register('scalecommerce-vo-video-grid-config', {
     template,
-    mixins: ['cms-element'],
+    mixins: ['cms-element', libraryLoader],
     inject: ['scalecommerceVoApiService'],
 
     data() {
         return {
-            libraries: [],
             posters: {}, // uuid -> poster url
             pickerIndex: null, // null = closed, -1 = adding new, >=0 = editing that row
             pickerLibraryId: null,
@@ -18,12 +18,6 @@ Shopware.Component.register('scalecommerce-vo-video-grid-config', {
     computed: {
         items() {
             return this.element.config.items.value ?? [];
-        },
-        libraryOptions() {
-            return this.libraries.map((library) => ({
-                value: library.id,
-                label: library.name,
-            }));
         },
         presentationOptions() {
             return [
@@ -75,15 +69,6 @@ Shopware.Component.register('scalecommerce-vo-video-grid-config', {
     },
 
     methods: {
-        async loadLibraries() {
-            try {
-                const response =
-                    await this.scalecommerceVoApiService.getLibraries();
-                this.libraries = response.data ?? response;
-            } catch {
-                this.libraries = [];
-            }
-        },
         async loadPosters() {
             // Use key presence, not truthiness, so a video whose poster resolved to null
             // (posterless) is not re-fetched on every subsequent call.

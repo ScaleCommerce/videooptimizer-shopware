@@ -5,6 +5,7 @@ namespace ScaleCommerce\VideoOptimizer\Tests\Controller;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ScaleCommerce\VideoOptimizer\Controller\VideoOptimizerAdminController;
+use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidRequestException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
@@ -682,5 +683,67 @@ class VideoOptimizerAdminControllerTest extends TestCase
         $error = json_decode((string) $response->getContent(), true)['errors'][0];
         static::assertSame('SCALECOMMERCE_VO__API_TOKEN_FORBIDDEN', $error['code']);
         static::assertSame('Library limit of the plan reached', $error['detail']);
+    }
+
+    /**
+     * @return iterable<string, array{\RuntimeException, string}>
+     */
+    public static function clientErrors(): iterable
+    {
+        yield 'missing token' => [new MissingApiTokenException(), 'SCALECOMMERCE_VO__API_TOKEN_MISSING'];
+        yield 'invalid base url' => [new InvalidApiBaseUrlException(), 'SCALECOMMERCE_VO__INVALID_BASE_URL'];
+        yield 'invalid request' => [new InvalidRequestException('library_id is required.'), 'SCALECOMMERCE_VO__INVALID_REQUEST'];
+    }
+
+    /**
+     * The administration tells these cases apart to show the right hint (issue #11).
+     */
+    #[DataProvider('clientErrors')]
+    public function testClientErrorsCarryAnOwnCode(\RuntimeException $exception, string $code): void
+    {
+        $client = $this->createStub(VideoOptimizerClient::class);
+        $client->method('listLibraries')->willThrowException($exception);
+
+        $response = (new VideoOptimizerAdminController($client))->listLibraries();
+
+        static::assertSame(400, $response->getStatusCode());
+        static::assertSame($code, json_decode((string) $response->getContent(), true)['errors'][0]['code']);
+    }
+
+    public function testListVideosWithLimitReturnsOnePageAndMeta(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('listVideos');
+        $client->expects(static::once())->method('listVideosPage')->with(self::UUID, 'c1', 60)->willReturn([
+            'items' => [['uuid' => 'v1']],
+            'pagination' => ['next_cursor' => 'c2', 'has_more' => true],
+        ]);
+
+        $response = (new VideoOptimizerAdminController($client))->listVideos(self::UUID, new Request(['limit' => '60', 'cursor' => 'c1']));
+
+        static::assertSame(
+            ['data' => [['uuid' => 'v1']], 'meta' => ['next_cursor' => 'c2', 'has_more' => true]],
+            json_decode((string) $response->getContent(), true)
+        );
+    }
+
+    public function testListVideosWithoutPagingKeepsTheFullList(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('listVideos')->with(self::UUID)->willReturn([['uuid' => 'v1']]);
+
+        $response = (new VideoOptimizerAdminController($client))->listVideos(self::UUID, new Request());
+
+        static::assertSame(['data' => [['uuid' => 'v1']]], json_decode((string) $response->getContent(), true));
+    }
+
+    public function testListVideosRejectsAnInvalidLimit(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('listVideosPage');
+
+        $response = (new VideoOptimizerAdminController($client))->listVideos(self::UUID, new Request(['limit' => '500']));
+
+        static::assertSame(400, $response->getStatusCode());
     }
 }

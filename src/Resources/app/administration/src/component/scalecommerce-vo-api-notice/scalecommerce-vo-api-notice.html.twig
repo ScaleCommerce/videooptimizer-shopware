@@ -1,0 +1,8 @@
+{% block scalecommerce_vo_api_notice %}
+<mt-banner v-if="info" class="scalecommerce-vo-api-notice" variant="attention">
+    {{ message }}
+    <router-link v-if="showConfigLink" :to="configRoute" class="scalecommerce-vo-api-notice__link">
+        {{ $tc('scalecommerce-vo.apiNotice.openConfig') }}
+    </router-link>
+</mt-banner>
+{% endblock %}

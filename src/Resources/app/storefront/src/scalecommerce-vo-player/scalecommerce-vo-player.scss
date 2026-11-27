@@ -1,3 +1,62 @@
+// Layout of the video surfaces and players (formerly inline styles in the templates). The aspect
+// ratio is per video and comes in as the --scvo-aspect custom property.
+.cms-element-scalecommerce-vo-video {
+    width: 100%;
+}
+
+.scalecommerce-vo-surface,
+.scalecommerce-vo-video--sized {
+    position: relative;
+    width: 100%;
+    aspect-ratio: var(--scvo-aspect, 16 / 9);
+}
+
+// Fills its surface: player wrapper built by the template or the blocks plugin.
+.scalecommerce-vo-fill {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+// Hosted-embed iframe.
+.scalecommerce-vo-frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.scalecommerce-vo-video__player {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+
+    // Players opened from a facade or in the lightbox show the whole video.
+    &--contain {
+        object-fit: contain;
+        background: #000;
+    }
+}
+
+.scalecommerce-vo-surface__facade {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+// Decorative poster inside the labelled facade button (hence alt="").
+.scalecommerce-vo-surface__poster {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
 // Notice for a player whose video cannot be played (fatal HLS error, no MP4 fallback). The poster
 // stays visible underneath.
 .scalecommerce-vo-video--unavailable::after {

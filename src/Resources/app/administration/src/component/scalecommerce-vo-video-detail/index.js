@@ -14,7 +14,7 @@ const { Component, Mixin } = Shopware;
 Component.register('scalecommerce-vo-video-detail', {
     template,
 
-    inject: ['scalecommerceVoApiService'],
+    inject: ['scalecommerceVoApiService', 'acl'],
 
     mixins: [Mixin.getByName('notification')],
 
@@ -39,6 +39,10 @@ Component.register('scalecommerce-vo-video-detail', {
     },
 
     computed: {
+        // Changing the poster needs the VideoOptimizer "editor" permission.
+        canUpdate() {
+            return this.acl.can('scalecommerce_vo.editor');
+        },
         posterSrc() {
             const url = this.video?.poster_url;
             if (!url) {
