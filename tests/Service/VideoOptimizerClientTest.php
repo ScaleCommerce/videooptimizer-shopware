@@ -782,7 +782,7 @@ class VideoOptimizerClientTest extends TestCase
 
         (new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedRenderState(), $invalidator))->deleteLibrary('lib-1');
 
-        static::assertSame(['scalecommerce-vo-video-v2'], $invalidated);
+        static::assertSame(['scalecommerce-vo-library-lib-1', 'scalecommerce-vo-video-v2'], $invalidated);
     }
 
     public function testPublicIpApiBaseUrlIsAccepted(): void
@@ -1098,6 +1098,60 @@ class VideoOptimizerClientTest extends TestCase
         $client->forgetEmbed('v1');
     }
 
+    /**
+     * @return iterable<string, array{callable(VideoOptimizerClient): mixed, string}>
+     */
+    public static function libraryTagInvalidations(): iterable
+    {
+        yield 'delete' => [fn (VideoOptimizerClient $c) => $c->deleteLibrary('lib-1'), 'DELETE'];
+        yield 'reprocess' => [fn (VideoOptimizerClient $c) => $c->reprocessLibrary('lib-1', true), 'POST'];
+        yield 'update (encoding ladder)' => [fn (VideoOptimizerClient $c) => $c->updateLibrary('lib-1', ['encoding_quality' => 'quality']), 'PATCH'];
+    }
+
+    /**
+     * The per-library tag does not depend on listing the videos, which can be truncated or fail (#29).
+     */
+    #[DataProvider('libraryTagInvalidations')]
+    public function testLibraryChangesInvalidateTheLibraryTagEvenWhenListingFails(callable $action, string $method): void
+    {
+        $http = new MockHttpClient(fn (string $m): MockResponse => $m === 'GET'
+            ? new MockResponse('', ['http_code' => 500])
+            : new MockResponse(json_encode(['data' => []])));
+        $invalidated = [];
+        $invalidator = $this->createStub(CacheInvalidator::class);
+        $invalidator->method('invalidate')->willReturnCallback(function (array $tags) use (&$invalidated): void {
+            $invalidated = [...$invalidated, ...$tags];
+        });
+
+        $action(new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedRenderState(), $invalidator));
+
+        static::assertContains('scalecommerce-vo-library-lib-1', $invalidated);
+    }
+
+    public function testFailedLibraryChangeLeavesTheCacheAlone(): void
+    {
+        $http = new MockHttpClient(fn (): MockResponse => new MockResponse('{}', ['http_code' => 404]));
+        $invalidator = $this->createMock(CacheInvalidator::class);
+        $invalidator->expects(static::never())->method('invalidate');
+
+        $this->expectException(VideoOptimizerApiException::class);
+        (new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedRenderState(), $invalidator))->updateLibrary('lib-1', []);
+    }
+
+    public function testRenderedLibrariesAreRecordedAsCacheTags(): void
+    {
+        $availability = new EmbedRenderState();
+        $client = new VideoOptimizerClient(new MockHttpClient($this->playable('v1')), $this->config(), new ArrayAdapter(), new NullLogger(), $availability);
+
+        $client->markLibraryRendered('lib-1');
+        $client->markLibraryRendered('lib-1');
+        $client->markLibraryRendered('lib/../1');
+        $client->markLibraryRendered('');
+        $client->getEmbed('v1');
+
+        static::assertSame(['scalecommerce-vo-video-v1', 'scalecommerce-vo-library-lib-1'], $availability->cacheTags());
+    }
+
     public function testGetEmbedRecordsTheRenderedVideo(): void
     {
         $availability = new EmbedRenderState();
@@ -1327,14 +1381,14 @@ class VideoOptimizerClientTest extends TestCase
         });
         $invalidated = [];
         $invalidator = $this->createMock(CacheInvalidator::class);
-        $invalidator->expects(static::exactly(2))->method('invalidate')->willReturnCallback(function (array $tags) use (&$invalidated): void {
+        $invalidator->expects(static::exactly(3))->method('invalidate')->willReturnCallback(function (array $tags) use (&$invalidated): void {
             $invalidated = [...$invalidated, ...$tags];
         });
 
         $action(new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedRenderState(), $invalidator));
 
         static::assertSame($expectedCalls, $calls);
-        static::assertSame(['scalecommerce-vo-video-v1', 'scalecommerce-vo-video-v2'], $invalidated);
+        static::assertSame(['scalecommerce-vo-library-lib-1', 'scalecommerce-vo-video-v1', 'scalecommerce-vo-video-v2'], $invalidated);
     }
 
     public function testLibraryDeleteStillRunsWhenListingItsVideosFails(): void
@@ -1345,8 +1399,9 @@ class VideoOptimizerClientTest extends TestCase
 
             return $method === 'GET' ? new MockResponse('{}', ['http_code' => 503]) : new MockResponse('', ['http_code' => 204]);
         });
+        // Only the library tag: the videos could not be listed.
         $invalidator = $this->createMock(CacheInvalidator::class);
-        $invalidator->expects(static::never())->method('invalidate');
+        $invalidator->expects(static::once())->method('invalidate')->with(['scalecommerce-vo-library-lib-1']);
 
         (new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedRenderState(), $invalidator))->deleteLibrary('lib-1');
 

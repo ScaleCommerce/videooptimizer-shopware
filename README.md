@@ -275,9 +275,9 @@ the token is never sent to or exposed in the browser; the browser only ever rece
 for videos that are still processing (so they appear shortly after they are ready). The videos of a page
 are looked up concurrently. After a transport error, timeout, rate limit or 502/503/504, lookups of
 uncached videos fail fast for 60 seconds instead of waiting for a timeout each. Storefront pages are tagged
-`scalecommerce-vo-video-<uuid>` (HTTP cache, and on Shopware 6.6 the Store API route cache); changing,
-re-postering or deleting a video, or deleting/reprocessing its library, in the administration invalidates
-exactly these pages. A page rendered while a lookup failed is cached for at most 60 seconds. Changes made
+`scalecommerce-vo-video-<uuid>` and, where the element has a library, `scalecommerce-vo-library-<id>` (HTTP
+cache, and on Shopware 6.6 the Store API route cache); changing, re-postering or deleting a video, or
+deleting, updating or reprocessing its library, in the administration invalidates exactly these pages. A page rendered while a lookup failed is cached for at most 60 seconds. Changes made
 directly in the VideoOptimizer dashboard show up after the cache lifetime.
 
 User-authored rich text and call-to-action URLs are sanitized both server-side and in the admin preview

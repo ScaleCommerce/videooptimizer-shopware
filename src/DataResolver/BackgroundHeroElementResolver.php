@@ -61,6 +61,7 @@ class BackgroundHeroElementResolver extends AbstractCmsElementResolver
             return;
         }
         $struct->setVideoUuid($uuid);
+        $this->markLibraryRendered($config, $this->client);
 
         try {
             $struct->setEmbed($this->normalizeEmbed($this->client->getEmbed($uuid)));

@@ -75,6 +75,27 @@ class VideoOptimizerElementResolverTest extends TestCase
         static::assertTrue($slot->getData()->hasError());
     }
 
+    /**
+     * The page is tagged with the element's library, so library changes invalidate it (#29).
+     */
+    public function testEnrichMarksTheConfiguredLibrary(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willReturn(['sources' => [['src' => 'https://cdn/master.m3u8', 'type' => 'application/vnd.apple.mpegurl', 'codec' => 'hls']]]);
+        $client->expects(static::once())->method('markLibraryRendered')->with('lib-1');
+
+        $this->resolver($client)->enrich($this->slotWithUuid('uuid-1', ['libraryId' => 'lib-1']), $this->createStub(ResolverContext::class), new ElementDataCollection());
+    }
+
+    public function testEnrichWithoutLibraryMarksNone(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willReturn([]);
+        $client->expects(static::never())->method('markLibraryRendered');
+
+        $this->resolver($client)->enrich($this->slotWithUuid('uuid-1', ['libraryId' => null]), $this->createStub(ResolverContext::class), new ElementDataCollection());
+    }
+
     public function testCollectQueuesTheVideo(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);

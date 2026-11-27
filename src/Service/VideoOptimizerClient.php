@@ -101,7 +101,11 @@ class VideoOptimizerClient implements ResetInterface
 
     public function updateLibrary(string $id, array $payload): array
     {
-        return $this->requestData('PATCH', '/libraries/' . $this->pathId($id), ['json' => $payload]);
+        $result = $this->requestData('PATCH', '/libraries/' . $this->pathId($id), ['json' => $payload]);
+        // E.g. a changed encoding ladder changes the sources of every video in it.
+        $this->forgetLibrary($id);
+
+        return $result;
     }
 
     public function deleteLibrary(string $id): void
@@ -109,6 +113,7 @@ class VideoOptimizerClient implements ResetInterface
         // The library's videos can only be listed before it is gone.
         $uuids = $this->libraryVideoUuids($id);
         $this->request('DELETE', '/libraries/' . $this->pathId($id));
+        $this->forgetLibrary($id);
         array_map($this->forgetEmbed(...), $uuids);
     }
 
@@ -122,6 +127,7 @@ class VideoOptimizerClient implements ResetInterface
     public function reprocessLibrary(string $id, bool $force = false): array
     {
         $result = $this->requestData('POST', '/libraries/' . $this->pathId($id) . '/reprocess', $force ? ['json' => ['force' => true]] : []);
+        $this->forgetLibrary($id);
         array_map($this->forgetEmbed(...), $this->libraryVideoUuids($id));
 
         return $result;
@@ -333,6 +339,25 @@ class VideoOptimizerClient implements ResetInterface
         $this->cache->delete(self::EMBED_API_UNAVAILABLE_KEY);
         // Pages showing this video were tagged while rendering (EmbedPageCacheSubscriber).
         $this->cacheInvalidator?->invalidate([EmbedRenderState::cacheTag($uuid)]);
+    }
+
+    /**
+     * Invalidates the pages that show videos of a library, by the library tag set while rendering
+     * (markLibraryRendered()). Independent of the video listing, which can be truncated or fail.
+     */
+    public function forgetLibrary(string $id): void
+    {
+        $this->cacheInvalidator?->invalidate([EmbedRenderState::libraryCacheTag($this->pathId($id))]);
+    }
+
+    /**
+     * Announces the library configured on a rendered element, so the page is tagged with it.
+     */
+    public function markLibraryRendered(string $libraryId): void
+    {
+        if (preg_match('/^[A-Za-z0-9_-]+$/D', $libraryId) === 1) {
+            $this->availability->markLibraryRendered($libraryId);
+        }
     }
 
     public function listThumbnails(string $uuid): array
