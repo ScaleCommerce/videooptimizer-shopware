@@ -192,6 +192,10 @@
             </div>
         </div>
 
+        <mt-banner v-if="mode === 'select' && selectedMissing" variant="critical" class="scalecommerce-vo-gallery__missing">
+            {{ $tc('scalecommerce-vo.gallery.selectedMissing') }}
+        </mt-banner>
+
         <div v-if="mode === 'select' && selectedVideo" class="scalecommerce-vo-gallery__detail">
             <span class="scalecommerce-vo-gallery__detail-title">{{ selectedVideo.title || selectedVideo.uuid }}</span>
             <span v-if="metaLine(selectedVideo)" class="scalecommerce-vo-gallery__meta-info">{{ metaLine(selectedVideo) }}</span>

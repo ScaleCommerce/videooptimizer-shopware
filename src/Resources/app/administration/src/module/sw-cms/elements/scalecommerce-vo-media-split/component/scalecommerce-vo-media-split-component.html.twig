@@ -9,6 +9,7 @@
             :status="video ? video.status : null"
             :meta="metaLine()"
             :has-video="!!video"
+            :missing="videoMissing"
             :tooltip="video ? (video.title || video.uuid) : null"
         />
     </div>

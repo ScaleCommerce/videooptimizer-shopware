@@ -12,6 +12,7 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 - Tags and metadata (key/value, e.g. CMS IDs) editable in the video detail; the video lists filter by tag and by metadata value ([#37](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/37)).
 - Savings card in the module: file-size reduction and estimated bandwidth saved, for the organization or a library and a period ([#38](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/38)).
 - Webhook receiver `POST /scalecommerce-vo/webhook` (HMAC-SHA256 signature, replay window, duplicate detection, 1 MiB limit) that drops the cached embed and the cached pages of a video on `video.ready`, `video.failed`, `video.updated` and `video.deleted`; the plugin setting `webhookSecret` and a module card with the URL to enter in VideoOptimizer ([#39](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/39)).
+- The element configuration and the editor preview flag a selected video that no longer exists ([#35](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/35)).
 
 ### Changed
 - GitHub Actions run PHPUnit and PHPStan (level 5) on Shopware 6.6 and 6.7, Vitest and `shopware-cli extension validate` on every push and pull request ([#40](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/40)).

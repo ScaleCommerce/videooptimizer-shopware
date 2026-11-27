@@ -1,6 +1,7 @@
 import template from './scalecommerce-vo-video-grid-component.html.twig';
 import './scalecommerce-vo-video-grid-component.scss';
 import { formatMetaLine } from '../../../../../helper/video-meta';
+import { isNotFound } from '../../../../../helper/api-error';
 
 const PLACEHOLDER_TILE_COUNT = 3;
 
@@ -13,6 +14,7 @@ Shopware.Component.register('scalecommerce-vo-video-grid-component', {
     data() {
         return {
             videos: {}, // uuid -> video record (or null when the lookup failed)
+            missing: {}, // uuid -> true when the video no longer exists (issue #35)
         };
     },
 
@@ -46,6 +48,7 @@ Shopware.Component.register('scalecommerce-vo-video-grid-component', {
                     status: null,
                     meta: '',
                     title: null,
+                    missing: false,
                 }));
             }
 
@@ -60,6 +63,7 @@ Shopware.Component.register('scalecommerce-vo-video-grid-component', {
                     status: video?.status ?? null,
                     meta: formatMetaLine(video, (key) => this.$tc(key)),
                     title: video ? video.title || video.uuid : null,
+                    missing: !!this.missing[item.video],
                 };
             });
         },
@@ -104,6 +108,9 @@ Shopware.Component.register('scalecommerce-vo-video-grid-component', {
                             error
                         );
                         this.videos = { ...this.videos, [uuid]: null };
+                        if (isNotFound(error)) {
+                            this.missing = { ...this.missing, [uuid]: true };
+                        }
                     }
                 })
             );

@@ -7,6 +7,7 @@
         :status="video ? video.status : null"
         :meta="metaLine()"
         :has-video="!!video"
+        :missing="videoMissing"
         :tooltip="video ? (video.title || video.uuid) : null"
     >
         <div class="scalecommerce-vo-background-hero-component__overlay" :class="'is-' + overlay"></div>

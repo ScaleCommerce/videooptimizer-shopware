@@ -64,7 +64,8 @@
                 "cta": "Button",
                 "label": "Beschriftung"
             },
-            "embedBadge": "Embed"
+            "embedBadge": "Embed",
+            "videoMissing": "Das Video existiert nicht mehr"
         },
         "mediaSplit": {
             "label": "VideoOptimizer Media Split",
@@ -180,7 +181,8 @@
             "uploadCancelled": "Upload abgebrochen.",
             "loadMore": "Weitere Videos laden",
             "ingestUrlHelp": "Öffentlicher https-Link direkt zur Videodatei, z. B. https://example.com/video.mp4.",
-            "ingestPlatform": "Links zu Videoseiten wie YouTube können nicht importiert werden. Bitte einen Link direkt zur Videodatei angeben."
+            "ingestPlatform": "Links zu Videoseiten wie YouTube können nicht importiert werden. Bitte einen Link direkt zur Videodatei angeben.",
+            "selectedMissing": "Das ausgewählte Video existiert in VideoOptimizer nicht mehr. Wähle ein anderes Video, um es zu ersetzen."
         },
         "detail": {
             "previewImage": "Vorschaubild",

@@ -4,7 +4,7 @@
      :style="surfaceStyle"
      :title="tooltip">
     <img v-if="posterUrl" class="scalecommerce-vo-preview-surface__poster" :src="posterUrl" alt="" />
-    <div v-else-if="!hasVideo" class="scalecommerce-vo-preview-surface__empty">
+    <div v-else-if="!hasVideo" class="scalecommerce-vo-preview-surface__empty" :class="{ 'is-missing': missing }" :role="missing ? 'alert' : null">
         <mt-icon name="regular-play" size="20" />
         <span>{{ emptyText }}</span>
     </div>

@@ -19,6 +19,8 @@ Shopware.Component.register('scalecommerce-vo-preview-surface', {
         status: { type: String, required: false, default: null },
         meta: { type: String, required: false, default: '' },
         hasVideo: { type: Boolean, required: false, default: false },
+        // The configured video no longer exists (issue #35).
+        missing: { type: Boolean, required: false, default: false },
         emptyLabel: { type: String, required: false, default: null },
         tooltip: { type: String, required: false, default: null },
     },
@@ -53,6 +55,9 @@ Shopware.Component.register('scalecommerce-vo-preview-surface', {
             return 'pending';
         },
         emptyText() {
+            if (this.missing) {
+                return this.$tc('scalecommerce-vo.cms.videoMissing');
+            }
             return (
                 this.emptyLabel || this.$tc('scalecommerce-vo.cms.selectVideo')
             );

@@ -30,6 +30,13 @@ export function apiErrorKind(error) {
 }
 
 /**
+ * Whether the proxy answered 404: the video (or library) does not exist (any more).
+ */
+export function isNotFound(error) {
+    return error?.response?.status === 404;
+}
+
+/**
  * The readable message of a failed proxy call: the server's detail, the error message, or the
  * given fallback.
  */

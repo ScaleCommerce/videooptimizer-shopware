@@ -1,4 +1,5 @@
 import { formatMetaLine } from '../helper/video-meta';
+import { isNotFound } from '../helper/api-error';
 
 /**
  * Shared video lookup for the CMS element previews. Consumers define a `videoUuid` computed
@@ -10,6 +11,8 @@ export default {
     data() {
         return {
             video: null,
+            // The configured video was deleted in VideoOptimizer (issue #35).
+            videoMissing: false,
         };
     },
 
@@ -33,6 +36,7 @@ export default {
 
     methods: {
         async loadVideo() {
+            this.videoMissing = false;
             if (!this.videoUuid) {
                 this.video = null;
                 return;
@@ -43,6 +47,7 @@ export default {
                 );
                 this.video = response.data ?? response;
             } catch (error) {
+                this.videoMissing = isNotFound(error);
                 console.warn(
                     '[VideoOptimizer] failed to load video for preview',
                     error

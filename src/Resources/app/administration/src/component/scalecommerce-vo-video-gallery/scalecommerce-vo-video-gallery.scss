@@ -140,6 +140,10 @@
         font-weight: 600;
     }
 
+    &__missing {
+        margin-top: 8px;
+    }
+
     &__detail {
         display: flex;
         align-items: center;
