@@ -3,6 +3,8 @@
 /.superpowers export-ignore
 /.claude export-ignore
 /phpunit.xml.dist export-ignore
+/phpstan.neon.dist export-ignore
+/.github export-ignore
 /.gitignore export-ignore
 /.gitattributes export-ignore
 /.phpunit.result.cache export-ignore
