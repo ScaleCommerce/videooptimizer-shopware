@@ -44,7 +44,9 @@
             <button type="button" class="scalecommerce-vo-surface__facade"
                     data-vo-action="{{ presentation == 'lightbox' ? 'lightbox' : 'facade' }}"
                     aria-label="{{ label|default('scalecommerce-vo.storefront.play'|trans) }}">
-                {% if embed.poster %}<img class="scalecommerce-vo-surface__poster" src="{{ embed.poster }}" alt="" loading="lazy">{% endif %}
+                {% if embed.poster %}<img class="scalecommerce-vo-surface__poster" src="{{ embed.poster }}"
+                         {% if embed.posterSrcsetAttr %}srcset="{{ embed.posterSrcsetAttr }}" sizes="{{ opts.posterSizes ?? '(min-width: 1280px) 1280px, 100vw' }}"{% endif %}
+                         alt="" loading="lazy" decoding="async">{% endif %}
                 <span class="scalecommerce-vo-surface__play scalecommerce-vo-surface__play--{{ theme.playButtonShape ?? 'round' }} scalecommerce-vo-surface__play--{{ theme.playButtonSize ?? 'medium' }}{% if (theme.bigPlayButton ?? true) == false %} scalecommerce-vo-surface__play--hidden{% endif %}" aria-hidden="true">▶</span>
             </button>
         {% endif %}

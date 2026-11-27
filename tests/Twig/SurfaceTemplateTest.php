@@ -16,6 +16,19 @@ use Twig\TwigFilter;
 class SurfaceTemplateTest extends TestCase
 {
     /**
+     * @param array<string, mixed> $data
+     */
+    private function renderHero(array $data): string
+    {
+        $views = new FilesystemLoader();
+        $views->addPath(dirname(__DIR__, 2) . '/src/Resources/views', 'ScaleVideoOptimizer');
+        $twig = new Environment($views, ['autoescape' => 'html']);
+        $twig->addFilter(new TwigFilter('trans', static fn (string $key): string => $key));
+
+        return $twig->render('@ScaleVideoOptimizer/storefront/element/cms-element-scalecommerce-vo-background-hero.html.twig', ['element' => ['data' => $data]]);
+    }
+
+    /**
      * @param array<string, mixed> $embed
      * @param array<string, mixed> $options
      */
@@ -82,5 +95,51 @@ class SurfaceTemplateTest extends TestCase
 
         static::assertStringNotContainsString('crossorigin', $html);
         static::assertStringNotContainsString('<track', $html);
+    }
+
+    public function testFacadePosterIsResponsive(): void
+    {
+        $html = $this->render(['mp4' => 'https://cdn/v.mp4', 'poster' => 'https://p/t.jpg', 'posterSrcsetAttr' => 'https://p/480.jpg 480w, https://p/1280.jpg 1280w'], 'facade', 'native', ['posterSizes' => '50vw']);
+
+        static::assertStringContainsString('srcset="https://p/480.jpg 480w, https://p/1280.jpg 1280w"', $html);
+        static::assertStringContainsString('sizes="50vw"', $html);
+        static::assertStringContainsString('loading="lazy"', $html);
+    }
+
+    public function testFacadePosterWithoutSrcsetStaysASingleImage(): void
+    {
+        $html = $this->render(['mp4' => 'https://cdn/v.mp4', 'poster' => 'https://p/t.jpg'], 'facade');
+
+        static::assertStringContainsString('src="https://p/t.jpg"', $html);
+        static::assertStringNotContainsString('srcset', $html);
+    }
+
+    private const HERO_EMBED = ['mp4' => 'https://cdn/v.mp4', 'poster' => 'https://p/t.jpg', 'posterSrcsetAttr' => 'https://p/480.jpg 480w, https://p/1280.jpg 1280w'];
+
+    public function testPriorityHeroPreloadsItsResponsivePoster(): void
+    {
+        $html = $this->renderHero(['videoUuid' => 'u', 'embed' => self::HERO_EMBED, 'priority' => true, 'height' => 'large', 'overlay' => 'none']);
+
+        static::assertStringContainsString('<link rel="preload" as="image" href="https://p/t.jpg" imagesrcset="https://p/480.jpg 480w, https://p/1280.jpg 1280w" imagesizes="100vw" fetchpriority="high">', $html);
+        static::assertMatchesRegularExpression('/<img class="scalecommerce-vo-hero__poster"[^>]*srcset="[^"]+"[^>]*fetchpriority="high"/', $html);
+        static::assertStringNotContainsString('loading="lazy"', $html);
+        static::assertStringNotContainsString('poster="', explode('<video', $html)[1]);
+    }
+
+    public function testRegularHeroLoadsItsPosterLazily(): void
+    {
+        $html = $this->renderHero(['videoUuid' => 'u', 'embed' => self::HERO_EMBED, 'priority' => false, 'height' => 'large', 'overlay' => 'none']);
+
+        static::assertStringNotContainsString('rel="preload"', $html);
+        static::assertStringNotContainsString('fetchpriority', $html);
+        static::assertMatchesRegularExpression('/<img class="scalecommerce-vo-hero__poster"[^>]*loading="lazy"/', $html);
+    }
+
+    public function testHeroWithoutSrcsetKeepsThePosterAttribute(): void
+    {
+        $html = $this->renderHero(['videoUuid' => 'u', 'embed' => ['mp4' => 'https://cdn/v.mp4', 'poster' => 'https://p/t.jpg'], 'priority' => true, 'height' => 'large', 'overlay' => 'none']);
+
+        static::assertStringContainsString('poster="https://p/t.jpg"', $html);
+        static::assertStringNotContainsString('<img', $html);
     }
 }

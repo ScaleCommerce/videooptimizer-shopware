@@ -120,11 +120,14 @@ trait VideoSurfaceTrait
     protected function normalizeEmbed(array $embed): array
     {
         $sources = $embed['sources'] ?? [];
+        $posterSrcset = EmbedSources::posterSrcset($embed['posterSrcset'] ?? null);
 
         return [
             'hls' => EmbedSources::hls($sources),
             'mp4' => EmbedSources::mp4($sources),
             'poster' => $embed['poster'] ?? null,
+            'posterSrcset' => $posterSrcset,
+            'posterSrcsetAttr' => EmbedSources::srcsetAttribute($posterSrcset),
             'title' => $embed['title'] ?? null,
             'theme' => EmbedSources::theme($embed['theme'] ?? null),
             'tracks' => EmbedSources::tracks($embed['tracks'] ?? null),

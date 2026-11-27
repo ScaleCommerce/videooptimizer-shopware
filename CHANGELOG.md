@@ -5,11 +5,13 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 ## [Unreleased]
 
 ### Upgrade
+- The background hero renders its poster as `<img class="scalecommerce-vo-hero__poster">` behind the video (the `<video>` carries no `poster` attribute then); templates overriding the hero should adopt it or keep the single `poster` ([#43](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/43)).
 - A native `<video>` with subtitle tracks is loaded with `crossorigin="anonymous"` (the CDN allows any origin); a self-hosted VideoOptimizer must send `Access-Control-Allow-Origin` for the video and subtitle files ([#42](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/42)).
 - The native player takes `preload` from the video's player theme (default `auto`) instead of the fixed `metadata`, and honours its autoplay, muted start, loop and controls settings in addition to the element's; set them in VideoOptimizer or override the template ([#41](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/41)).
 - The `data-vo-native-options` and player options JSON carry a new `theme` key and the facade play button gets shape/size modifier classes (`scalecommerce-vo-surface__play--round|rectangle|small|medium|large|hidden`); themes overriding these templates keep working without them ([#41](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/41)).
 
 ### Added
+- Responsive posters: the facade poster and the background hero poster use `posterSrcset` (`srcset` and `sizes`, lazy loaded); a hero with "priority" preloads its poster (`<link rel="preload">`, `fetchpriority="high"`) ([#43](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/43)).
 - Subtitle tracks of the video (`tracks` of `GET /embed`) become `<track>` elements in the native player (direct, facade and lightbox); the `<video>` gets `crossorigin="anonymous"` when there are tracks ([#42](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/42)).
 - The native player applies the player theme of `GET /embed`: controls, autoplay with muted start, loop, preload, `interactive: false`, no fullscreen/playback-rate menu/Picture-in-Picture where the browser's controls allow it, play button shape/size/visibility on the facade, and the accent colour as `--vo-accent` on the plugin's own controls. Control bar colour, volume, time display and quality menu cannot be changed on native controls and are ignored ([#41](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/41)).
 

@@ -72,4 +72,24 @@ class EmbedSourcesTest extends TestCase
         ], $tracks);
         static::assertSame([], EmbedSources::tracks(null));
     }
+
+    public function testPosterSrcsetIsSortedAndFiltered(): void
+    {
+        $posters = EmbedSources::posterSrcset([
+            ['width' => 1280, 'height' => 720, 'url' => 'https://poster/poster_1280.jpg'],
+            ['width' => 480, 'height' => 270, 'url' => 'https://poster/poster_480.jpg'],
+            ['width' => 640, 'height' => 360, 'url' => 'http://poster/insecure.jpg'],
+            ['width' => 0, 'height' => 360, 'url' => 'https://poster/zero.jpg'],
+            ['width' => 800, 'height' => 450, 'url' => 'https://poster/a.jpg, https://evil/b.jpg'],
+            ['width' => '1920', 'height' => 1080, 'url' => 'https://poster/string.jpg'],
+        ]);
+
+        static::assertSame([
+            ['width' => 480, 'height' => 270, 'url' => 'https://poster/poster_480.jpg'],
+            ['width' => 1280, 'height' => 720, 'url' => 'https://poster/poster_1280.jpg'],
+        ], $posters);
+        static::assertSame('https://poster/poster_480.jpg 480w, https://poster/poster_1280.jpg 1280w', EmbedSources::srcsetAttribute($posters));
+        static::assertSame([], EmbedSources::posterSrcset(null));
+        static::assertSame('', EmbedSources::srcsetAttribute([]));
+    }
 }

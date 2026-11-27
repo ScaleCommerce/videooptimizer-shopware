@@ -41,6 +41,7 @@ class VideoOptimizerElementResolverTest extends TestCase
             'duration' => '10',
             'resolution' => '1260x750',
             'theme' => ['accentColor' => '#C72876', 'loopButton' => true, 'preload' => 'bogus', 'x' => 1],
+            'posterSrcset' => [['width' => 640, 'height' => 360, 'url' => 'https://cdn/p640.jpg'], ['width' => 480, 'height' => 270, 'url' => 'https://cdn/p480.jpg']],
             'tracks' => [['src' => 'https://cdn/de.vtt', 'srclang' => 'de', 'label' => 'Deutsch', 'kind' => 'captions', 'default' => true]],
         ]);
 
@@ -60,6 +61,9 @@ class VideoOptimizerElementResolverTest extends TestCase
         static::assertSame('1260 / 750', $embed['aspectRatio']);
         // The theme is reduced to valid keys and values (#41).
         static::assertSame(['loopButton' => true, 'accentColor' => '#C72876'], $embed['theme']);
+        // Responsive posters for srcset (#43).
+        static::assertSame('https://cdn/p480.jpg 480w, https://cdn/p640.jpg 640w', $embed['posterSrcsetAttr']);
+        static::assertCount(2, $embed['posterSrcset']);
         // Subtitle tracks for the <track> elements (#42).
         static::assertSame([['src' => 'https://cdn/de.vtt', 'srclang' => 'de', 'label' => 'Deutsch', 'kind' => 'captions', 'default' => true]], $embed['tracks']);
     }

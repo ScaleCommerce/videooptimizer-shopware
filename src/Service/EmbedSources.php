@@ -133,6 +133,45 @@ final class EmbedSources
     }
 
     /**
+     * The responsive poster sizes (`posterSrcset`) of a `GET /embed/{uuid}` response, smallest first.
+     *
+     * @return list<array{width: int, height: int, url: string}>
+     */
+    public static function posterSrcset(mixed $posters): array
+    {
+        if (!is_array($posters)) {
+            return [];
+        }
+        $result = [];
+        foreach ($posters as $poster) {
+            if (!is_array($poster)) {
+                continue;
+            }
+            $url = $poster['url'] ?? null;
+            $width = $poster['width'] ?? null;
+            $height = $poster['height'] ?? null;
+            if (!is_string($url) || preg_match('#^https://[^\s"\',<>]+$#iD', $url) !== 1
+                || !is_int($width) || $width <= 0 || !is_int($height) || $height <= 0) {
+                continue;
+            }
+            $result[$width] = ['width' => $width, 'height' => $height, 'url' => $url];
+        }
+        ksort($result);
+
+        return array_values($result);
+    }
+
+    /**
+     * The `srcset` attribute value of posterSrcset() entries.
+     *
+     * @param list<array{width: int, height: int, url: string}> $posters
+     */
+    public static function srcsetAttribute(array $posters): string
+    {
+        return implode(', ', array_map(static fn (array $poster): string => $poster['url'] . ' ' . $poster['width'] . 'w', $posters));
+    }
+
+    /**
      * @param array<mixed> $source
      */
     private static function src(array $source): ?string
