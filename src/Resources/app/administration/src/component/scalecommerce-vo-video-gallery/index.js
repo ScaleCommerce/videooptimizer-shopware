@@ -112,6 +112,8 @@ Component.register('scalecommerce-vo-video-gallery', {
 
     beforeUnmount() {
         this._unmounted = true;
+        // A running upload must not create a video in the library after the editor has left.
+        this._uploadAbort?.abort();
     },
 
     methods: {
@@ -339,6 +341,10 @@ Component.register('scalecommerce-vo-video-gallery', {
                 this.isUploading = false;
                 this.uploadProgress = null;
                 this._uploadAbort = null;
+            }
+            if (this._unmounted) {
+                // The upload finished while the gallery closed: nothing to announce or track here.
+                return;
             }
             this.uploadFile = null;
             this.uploadTitle = '';
