@@ -172,10 +172,23 @@ Component.register('scalecommerce-vo-video-gallery', {
                     return;
                 }
                 const items = response.data ?? [];
-                this.videos = cursor ? [...this.videos, ...items] : items;
-                this.nextCursor = response.meta?.has_more
+                if (cursor) {
+                    // Skip videos already listed (e.g. moved between pages while paging).
+                    const known = new Set(
+                        this.videos.map((video) => video.uuid)
+                    );
+                    this.videos = [
+                        ...this.videos,
+                        ...items.filter((video) => !known.has(video.uuid)),
+                    ];
+                } else {
+                    this.videos = items;
+                }
+                const next = response.meta?.has_more
                     ? response.meta.next_cursor
                     : null;
+                // A cursor that doesn't move would offer the same page forever.
+                this.nextCursor = next && next !== cursor ? next : null;
             } catch (error) {
                 if (request !== this._loadRequest) {
                     return;
@@ -254,6 +267,7 @@ Component.register('scalecommerce-vo-video-gallery', {
             if (!file || !this.libraryId) {
                 return;
             }
+            const context = this._selectionContext();
             this.isUploading = true;
             this.uploadProgress = null;
             this._uploadAbort = new AbortController();
@@ -292,7 +306,7 @@ Component.register('scalecommerce-vo-video-gallery', {
             this.createNotificationSuccess({
                 message: this.$tc('scalecommerce-vo.gallery.uploadStarted'),
             });
-            this._watchProcessing(uuid);
+            this._watchProcessing(uuid, context);
         },
 
         onCancelUpload() {
@@ -301,19 +315,37 @@ Component.register('scalecommerce-vo-video-gallery', {
             }
         },
 
+        // What the editor had selected when an upload or import started.
+        _selectionContext() {
+            return {
+                selectedUuid: this.selectedUuid,
+                libraryId: this.libraryId,
+            };
+        },
+
         // Reloads the list right away (the tile shows "processing") and selects the video once
-        // it is ready; does not block the upload form.
-        async _watchProcessing(uuid) {
+        // it is ready - unless the editor picked another video or library in the meantime, which
+        // must not be overwritten minutes later. Does not block the upload form.
+        async _watchProcessing(uuid, context) {
             await this.loadVideos();
-            if (await this._pollUntilReady(uuid)) {
-                this.$emit('upload-complete', uuid);
+            if (!(await this._pollUntilReady(uuid))) {
+                return;
             }
+            if (
+                context &&
+                (this.selectedUuid !== context.selectedUuid ||
+                    this.libraryId !== context.libraryId)
+            ) {
+                return;
+            }
+            this.$emit('upload-complete', uuid);
         },
 
         async onIngest() {
             if (!this.canIngest) {
                 return;
             }
+            const context = this._selectionContext();
             this.isIngesting = true;
             try {
                 const payload = {
@@ -333,7 +365,7 @@ Component.register('scalecommerce-vo-video-gallery', {
                 });
                 this.ingestUrl = '';
                 this.ingestTitle = '';
-                this._watchProcessing(video.uuid);
+                this._watchProcessing(video.uuid, context);
             } catch (error) {
                 this.createNotificationError({
                     message: this._errorText(error),

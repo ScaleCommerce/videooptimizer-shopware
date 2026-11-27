@@ -33,6 +33,7 @@ class VideoOptimizerClient implements ResetInterface
      */
     private const LIST_TIME_BUDGET = 20.0;
     private const EMBED_MAX_DURATION = 3.0;
+    private const EMBED_CONCURRENCY = 8;
     private const EMBED_API_UNAVAILABLE_KEY = 'scalecommerce_vo_embed_api_unavailable';
 
     /**
@@ -57,6 +58,13 @@ class VideoOptimizerClient implements ResetInterface
         private readonly ?CacheInvalidator $cacheInvalidator = null,
         private readonly PluginUserAgent $userAgent = new PluginUserAgent(),
     ) {
+    }
+
+    public function __destruct()
+    {
+        // kernel.reset does not run after the first request of a php-fpm worker; unread failed
+        // responses would throw when destroyed.
+        $this->reset();
     }
 
     /**
@@ -229,6 +237,16 @@ class VideoOptimizerClient implements ResetInterface
         $this->availability->markRendered($uuid);
         $this->startQueuedEmbeds();
 
+        // While the API is flagged unavailable, fail fast for videos that are not cached - without
+        // asking the API, caching a per-video failure or re-marking the flag (which would keep an
+        // outage alive as long as there is traffic). Cached videos are still served.
+        if ($this->embedApiUnavailable() && !$this->embedCached($uuid)) {
+            $this->discardInflight($uuid);
+            $this->availability->markDegraded();
+
+            throw new VideoOptimizerApiException(503, 'VideoOptimizer API temporarily unavailable (cached failure).');
+        }
+
         // Set only when the callback below actually ran (i.e. this call missed the cache), so we
         // can tell "fresh failure" (propagate the real upstream exception) apart from "served from
         // the negative cache" (synthesize a 503 below) even though both paths return the same
@@ -241,12 +259,6 @@ class VideoOptimizerClient implements ResetInterface
                 try {
                     $inflight = $this->inflightEmbeds[$uuid] ?? null;
                     unset($this->inflightEmbeds[$uuid]);
-                    if ($this->embedApiUnavailable()) {
-                        // An unread failed response would throw when destroyed.
-                        $inflight?->cancel();
-
-                        throw new VideoOptimizerApiException(503, 'VideoOptimizer API temporarily unavailable (cached failure).');
-                    }
                     $data = $inflight !== null
                         ? $this->decodeData($inflight, 'GET', $this->embedUrl($uuid))
                         : $this->requestData('GET', '/embed/' . $this->pathId($uuid), ['max_duration' => self::EMBED_MAX_DURATION], false, false);
@@ -272,6 +284,10 @@ class VideoOptimizerClient implements ResetInterface
                 return $data;
             }
         );
+
+        // Served from the cache although a lookup was started (another process cached it meanwhile):
+        // an unread failed response would throw when destroyed.
+        $this->discardInflight($uuid);
 
         if ($freshFailure !== null) {
             $this->availability->markDegraded();
@@ -411,13 +427,19 @@ class VideoOptimizerClient implements ResetInterface
         if ($this->queuedEmbeds === []) {
             return;
         }
-        $uuids = array_keys($this->queuedEmbeds);
-        $this->queuedEmbeds = [];
         if (!$this->cache instanceof CacheItemPoolInterface || $this->embedApiUnavailable()) {
+            $this->queuedEmbeds = [];
+
             return;
         }
 
-        foreach ($uuids as $uuid) {
+        // At most EMBED_CONCURRENCY lookups at a time, so a large grid does not trip the rate limit;
+        // the rest start as earlier ones are consumed.
+        foreach (array_keys($this->queuedEmbeds) as $uuid) {
+            if (\count($this->inflightEmbeds) >= self::EMBED_CONCURRENCY) {
+                break;
+            }
+            unset($this->queuedEmbeds[$uuid]);
             if (isset($this->inflightEmbeds[$uuid]) || $this->cache->hasItem($this->embedCacheKey($uuid))) {
                 continue;
             }
@@ -442,7 +464,22 @@ class VideoOptimizerClient implements ResetInterface
             return false;
         }
 
-        return $e->getStatusCode() >= 500 || $e->getStatusCode() === 429;
+        // Transport errors and timeouts (502), rate limits and gateway/availability errors. A 500
+        // for one video is a problem of that video and stays in its own negative cache.
+        return \in_array($e->getStatusCode(), [429, 502, 503, 504], true);
+    }
+
+    private function embedCached(string $uuid): bool
+    {
+        return $this->cache instanceof CacheItemPoolInterface && $this->cache->hasItem($this->embedCacheKey($uuid));
+    }
+
+    private function discardInflight(string $uuid): void
+    {
+        if (isset($this->inflightEmbeds[$uuid])) {
+            $this->inflightEmbeds[$uuid]->cancel();
+            unset($this->inflightEmbeds[$uuid]);
+        }
     }
 
     private function embedApiUnavailable(): bool

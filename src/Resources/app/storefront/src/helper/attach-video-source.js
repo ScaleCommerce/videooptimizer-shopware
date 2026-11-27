@@ -116,7 +116,8 @@ export function autoplayWhileVisible(video, observed = video) {
     video.addEventListener('pause', onPause);
     video.addEventListener('play', onPlay);
     const stop = observeVisibility(observed, (visible) => {
-        if (visible && video.paused && !pausedByUser) {
+        // A finished non-looping video is not restarted when it scrolls back into view.
+        if (visible && video.paused && !pausedByUser && !video.ended) {
             video.play().catch(() => {});
         } else if (!visible && !video.paused) {
             pausedForViewport = true;

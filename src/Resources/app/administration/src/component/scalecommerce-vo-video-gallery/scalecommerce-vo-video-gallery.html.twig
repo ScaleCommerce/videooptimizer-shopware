@@ -178,7 +178,7 @@
             <span class="scalecommerce-vo-gallery__detail-title">{{ selectedVideo.title || selectedVideo.uuid }}</span>
             <span v-if="metaLine(selectedVideo)" class="scalecommerce-vo-gallery__meta-info">{{ metaLine(selectedVideo) }}</span>
             <sw-label :variant="statusVariant(selectedVideo.status)" size="small" :ghost="true">
-                {{ selectedVideo.status }}
+                {{ statusLabel(selectedVideo.status) }}
             </sw-label>
         </div>
 

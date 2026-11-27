@@ -975,7 +975,9 @@ class VideoOptimizerClientTest extends TestCase
     public static function unavailabilityCases(): iterable
     {
         yield 'transport error' => [new MockResponse('', ['error' => 'Connection reset']), true];
-        yield 'server error' => [new MockResponse('{}', ['http_code' => 503]), true];
+        yield 'service unavailable' => [new MockResponse('{}', ['http_code' => 503]), true];
+        yield 'gateway timeout' => [new MockResponse('{}', ['http_code' => 504]), true];
+        yield 'error for a single video' => [new MockResponse('{}', ['http_code' => 500]), false];
         yield 'rate limited' => [new MockResponse('{}', ['http_code' => 429]), true];
         yield 'video not found' => [new MockResponse('{}', ['http_code' => 404]), false];
     }
@@ -1138,5 +1140,86 @@ class VideoOptimizerClientTest extends TestCase
         $items = (new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), $logger))->listLibraries();
 
         static::assertCount(100, $items);
+    }
+
+    /**
+     * A lookup that fails only because the API is flagged unavailable must not extend the flag,
+     * otherwise steady traffic keeps the outage alive forever (pre-release review of 1.1.0).
+     */
+    public function testFailuresFromTheFlagDoNotExtendIt(): void
+    {
+        $cache = new class extends ArrayAdapter {
+            public int $flagWrites = 0;
+
+            public function save(\Psr\Cache\CacheItemInterface $item): bool
+            {
+                if ($item->getKey() === 'scalecommerce_vo_embed_api_unavailable') {
+                    ++$this->flagWrites;
+                }
+
+                return parent::save($item);
+            }
+        };
+        $requests = 0;
+        $http = new MockHttpClient(function () use (&$requests): MockResponse {
+            ++$requests;
+
+            return new MockResponse('{}', ['http_code' => 503]);
+        });
+        $client = $this->client($http, null, $cache);
+
+        foreach (['a1', 'b2', 'c3', 'a1'] as $uuid) {
+            try {
+                $client->getEmbed($uuid);
+            } catch (VideoOptimizerApiException) {
+            }
+        }
+
+        static::assertSame(1, $requests);
+        static::assertSame(1, $cache->flagWrites);
+    }
+
+    public function testConcurrentLookupsAreStartedInBatchesOfEight(): void
+    {
+        $requested = 0;
+        $http = new MockHttpClient(function (string $method, string $url) use (&$requested): MockResponse {
+            ++$requested;
+
+            return $this->playable(basename(parse_url($url, PHP_URL_PATH)));
+        });
+        $client = $this->client($http);
+        $uuids = array_map(fn (int $i): string => 'v' . $i, range(1, 12));
+        foreach ($uuids as $uuid) {
+            $client->queueEmbed($uuid);
+        }
+
+        $client->getEmbed('v1');
+        static::assertSame(8, $requested);
+
+        foreach ($uuids as $uuid) {
+            static::assertSame($uuid, $client->getEmbed($uuid)['uuid']);
+        }
+        static::assertSame(12, $requested);
+    }
+
+    /**
+     * A started lookup that is never read (e.g. served from the cache meanwhile) must not throw
+     * when the client goes away, also without kernel.reset (first request of a php-fpm worker).
+     */
+    public function testUnreadLookupsDoNotThrowWithoutReset(): void
+    {
+        $http = new MockHttpClient(fn (): MockResponse => new MockResponse('{}', ['http_code' => 404]));
+        $client = $this->client($http);
+        $client->queueEmbed('a1');
+        $client->queueEmbed('b2');
+        try {
+            $client->getEmbed('a1');
+        } catch (VideoOptimizerApiException) {
+        }
+
+        unset($client, $http);
+        gc_collect_cycles();
+
+        $this->addToAssertionCount(1);
     }
 }
