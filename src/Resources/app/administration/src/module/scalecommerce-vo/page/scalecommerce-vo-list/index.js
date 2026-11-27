@@ -21,7 +21,7 @@ function formatBytes(bytes) {
 Component.register('scalecommerce-vo-list', {
     template,
 
-    inject: ['scalecommerceVoApiService'],
+    inject: ['scalecommerceVoApiService', 'acl'],
 
     mixins: [Mixin.getByName('notification')],
 
@@ -40,6 +40,7 @@ Component.register('scalecommerce-vo-list', {
             confirmDeleteLibrary: false,
             isReprocessing: false,
             confirmReprocessLibrary: false,
+            librariesError: null,
         };
     },
 
@@ -64,13 +65,24 @@ Component.register('scalecommerce-vo-list', {
             const library = this.activeLibrary;
             return !library || library.media_managed !== false;
         },
+        canCreate() {
+            return this.acl.can('scalecommerce_vo.creator');
+        },
+        canUpdate() {
+            return this.acl.can('scalecommerce_vo.editor');
+        },
+        canDelete() {
+            return this.acl.can('scalecommerce_vo.deleter');
+        },
         canSave() {
             // In edit mode there must be a library to save to (none exist, or the last one was
             // just deleted); create mode is entered automatically in that case, see loadLibraries().
             return (
                 !!this.formName.trim() &&
                 !this.isSaving &&
-                (this.mode === 'create' || !!this.selectedLibraryId)
+                (this.mode === 'create'
+                    ? this.canCreate
+                    : !!this.selectedLibraryId && this.canUpdate)
             );
         },
         storageLabel() {
@@ -147,6 +159,7 @@ Component.register('scalecommerce-vo-list', {
 
         async loadLibraries() {
             this.isLoading = true;
+            this.librariesError = null;
             try {
                 const response =
                     await this.scalecommerceVoApiService.getLibraries();
@@ -162,9 +175,8 @@ Component.register('scalecommerce-vo-list', {
                     this.mode = 'create';
                 }
             } catch (error) {
-                this.createNotificationError({
-                    message: this._errorText(error),
-                });
+                // Shown as a banner with the reason (token, permission, API) instead of a toast.
+                this.librariesError = error;
             } finally {
                 this.isLoading = false;
             }

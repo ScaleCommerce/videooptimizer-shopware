@@ -6,6 +6,7 @@
 
         {% block scalecommerce_vo_video_gallery_add_card %}
         <mt-card
+            v-if="canCreate"
             :title="$tc('scalecommerce-vo.gallery.addHeading')"
             position-identifier="scalecommerce-vo-gallery-add">
             <sw-container columns="1fr 1fr" gap="0 32px">
@@ -71,11 +72,11 @@
                         <img v-if="posterFor(video)" :src="posterFor(video)" :alt="video.title" />
                         <mt-icon v-else name="regular-play" size="32" />
                         <div class="scalecommerce-vo-gallery__tile-actions">
-                            <sw-context-button @click.stop>
-                                <sw-context-menu-item @click="onRename(video)">
+                            <sw-context-button v-if="canUpdate || canDelete" @click.stop>
+                                <sw-context-menu-item v-if="canUpdate" @click="onRename(video)">
                                     {{ $tc('scalecommerce-vo.gallery.rename') }}
                                 </sw-context-menu-item>
-                                <sw-context-menu-item variant="danger" @click="onDeleteClick(video)">
+                                <sw-context-menu-item v-if="canDelete" variant="danger" @click="onDeleteClick(video)">
                                     {{ $tc('scalecommerce-vo.gallery.delete') }}
                                 </sw-context-menu-item>
                             </sw-context-button>
@@ -128,7 +129,7 @@
                 <span v-if="metaLine(video)" class="scalecommerce-vo-gallery__meta-info">{{ metaLine(video) }}</span>
             </div>
 
-            <div class="scalecommerce-vo-gallery__card scalecommerce-vo-gallery__upload">
+            <div v-if="canCreate" class="scalecommerce-vo-gallery__card scalecommerce-vo-gallery__upload">
                 <span class="scalecommerce-vo-gallery__upload-heading">{{ $tc('scalecommerce-vo.gallery.uploadHeading') }}</span>
                 <mt-text-field v-model="uploadTitle" :label="$tc('scalecommerce-vo.gallery.uploadTitle')" size="small" />
                 <input type="file" accept="video/*" ref="fileInput" @change="onFileSelected" />

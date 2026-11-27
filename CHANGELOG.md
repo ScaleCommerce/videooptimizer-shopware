@@ -9,13 +9,17 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - **Background hero markup:** the `<video>` no longer has the `autoplay` attribute (and an MP4-only hero no longer a `src`); the hero plugin starts playback when the hero is visible and motion is not reduced. The video carries `data-scalecommerce-vo-hero` plus `data-scalecommerce-vo-hero-hls`/`-mp4`/`-priority`, and a pause/play button follows it. Theme overrides of `cms-element-scalecommerce-vo-background-hero.html.twig` keep working (the plugin still picks up `data-scalecommerce-vo-hero-hls`), but only the new markup respects reduced motion and shows the button. (#6)
 - **Page cache tags:** pages showing a video are tagged `scalecommerce-vo-video-<uuid>` (HTTP cache; on Shopware 6.6 also the Store API route cache). Changing, re-postering or deleting a video in the administration invalidates these pages, following the shop's cache invalidation settings. Changes made directly in the VideoOptimizer dashboard still show up after the cache lifetime. (#3)
 - **API outages:** after a transport error, server error or rate limit, embed lookups for all videos fail fast for 60 seconds instead of waiting for a timeout per video; the affected pages are cached briefly as in 1.0.2. (#4)
+- **Own code calling the admin proxy:** configuration errors (400) now carry an error `code`: `SCALECOMMERCE_VO__API_TOKEN_MISSING`, `SCALECOMMERCE_VO__INVALID_BASE_URL` or `SCALECOMMERCE_VO__INVALID_REQUEST`. (#11)
+- **User roles:** the administration hides actions the user's VideoOptimizer role doesn't allow (before, they failed with 403 after the click). CMS editors need the VideoOptimizer **Viewer** role to pick videos. (#11)
 - **`VideoOptimizerClient`:** new optional constructor argument `CacheInvalidator`, new public method `queueEmbed()`, and it is reset between requests (`kernel.reset`). (#3, #4)
 - **Autoplaying native players** (single video, media split, spotlight, grid with presentation "direct") start when they scroll into view and pause when they leave it, instead of all starting at page load. (#8)
 
 ### Added
+- Administration: when libraries can't be loaded, the module and every element configuration say why (no or rejected API token, invalid API URL, missing VideoOptimizer permission, API unavailable), with a link to the plugin configuration for users who may change it. (#11)
 - Background hero: a pause/play button for the looping video. With `prefers-reduced-motion` or the browser's data saver, the video doesn't start and nothing is preloaded; the poster stays. (#6)
 
 ### Changed
+- Administration: create, edit, upload, rename, poster, reprocess and delete actions are only shown to users with the matching VideoOptimizer role. (#11)
 - Native players load video segments only when playback starts; until then only the playlists are fetched. hls.js caps the rendition at the player size, so small tiles no longer pull 4K. The hero option "priority" now means "start buffering right away" (others load once visible). (#8)
 
 ### Fixed

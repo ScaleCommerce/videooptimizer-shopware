@@ -11,7 +11,7 @@ const { Component, Mixin } = Shopware;
 Component.register('scalecommerce-vo-video-gallery', {
     template,
 
-    inject: ['scalecommerceVoApiService'],
+    inject: ['scalecommerceVoApiService', 'acl'],
 
     mixins: [Mixin.getByName('notification')],
 
@@ -49,6 +49,16 @@ Component.register('scalecommerce-vo-video-gallery', {
     },
 
     computed: {
+        canCreate() {
+            return this.acl.can('scalecommerce_vo.creator');
+        },
+        canUpdate() {
+            return this.acl.can('scalecommerce_vo.editor');
+        },
+        canDelete() {
+            return this.acl.can('scalecommerce_vo.deleter');
+        },
+
         selectedVideo() {
             return (
                 this.videos.find((video) => video.uuid === this.selectedUuid) ??

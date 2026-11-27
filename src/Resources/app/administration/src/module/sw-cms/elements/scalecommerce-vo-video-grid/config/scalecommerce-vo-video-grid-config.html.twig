@@ -1,5 +1,7 @@
 {% block element_config_scalecommerce_vo_video_grid %}
 <div class="scalecommerce-vo-video-grid-config">
+    <scalecommerce-vo-api-notice :error="librariesError" />
+
     <mt-text-field
         :label="$tc('scalecommerce-vo.videoGrid.headline')"
         v-model="element.config.headline.value" />

@@ -175,6 +175,14 @@
             "playerUnavailable": "Das Video kann hier nicht abgespielt werden.",
             "posterInvalidType": "Bitte ein JPEG-, PNG- oder WebP-Bild wählen.",
             "mediaFetchFailed": "Das Bild aus der Mediathek konnte nicht geladen werden."
+        },
+        "apiNotice": {
+            "tokenMissing": "Für VideoOptimizer ist kein API-Token hinterlegt.",
+            "invalidBaseUrl": "Die VideoOptimizer-API-URL in der Plugin-Konfiguration ist ungültig.",
+            "tokenRejected": "Der VideoOptimizer-API-Token wurde abgelehnt (abgelaufen oder widerrufen).",
+            "privilege": "Deinem Benutzer fehlt das Recht „Ansehen“ für VideoOptimizer (Einstellungen → Benutzer & Rechte → Rollen).",
+            "unavailable": "VideoOptimizer-Daten konnten nicht geladen werden.",
+            "openConfig": "Plugin-Konfiguration öffnen"
         }
     },
     "sw-privileges": {

@@ -183,7 +183,7 @@ class VideoOptimizerAdminController
                 'Content-Disposition' => 'inline',
             ]);
         } catch (MissingApiTokenException|InvalidApiBaseUrlException|InvalidRequestException $e) {
-            return new JsonResponse(['errors' => [['status' => '400', 'detail' => $e->getMessage()]]], 400);
+            return $this->clientError($e);
         } catch (VideoOptimizerApiException $e) {
             return $this->apiError($e);
         }
@@ -322,7 +322,7 @@ class VideoOptimizerAdminController
 
             return new JsonResponse(['data' => $data], $successStatus);
         } catch (MissingApiTokenException|InvalidApiBaseUrlException|InvalidRequestException $e) {
-            return new JsonResponse(['errors' => [['status' => '400', 'detail' => $e->getMessage()]]], 400);
+            return $this->clientError($e);
         } catch (VideoOptimizerApiException $e) {
             return $this->apiError($e);
         } catch (\JsonException) {
@@ -360,5 +360,20 @@ class VideoOptimizerAdminController
         }
 
         return new JsonResponse(['errors' => [$error]], $status);
+    }
+
+    /**
+     * Configuration and request errors carry an own code, so the administration can tell a missing
+     * token from a misconfigured base URL and point to the plugin configuration.
+     */
+    private function clientError(\RuntimeException $e): JsonResponse
+    {
+        $code = match (true) {
+            $e instanceof MissingApiTokenException => 'SCALECOMMERCE_VO__API_TOKEN_MISSING',
+            $e instanceof InvalidApiBaseUrlException => 'SCALECOMMERCE_VO__INVALID_BASE_URL',
+            default => 'SCALECOMMERCE_VO__INVALID_REQUEST',
+        };
+
+        return new JsonResponse(['errors' => [['status' => '400', 'code' => $code, 'detail' => $e->getMessage()]]], 400);
     }
 }

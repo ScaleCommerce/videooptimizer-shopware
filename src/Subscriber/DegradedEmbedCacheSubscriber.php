@@ -57,8 +57,10 @@ class DegradedEmbedCacheSubscriber implements EventSubscriberInterface
         }
 
         // The HTTP cache reads the collected tags when it stores the response, after this listener.
+        // AddCacheTagEvent exists from a later 6.6 patch release on; before that, the HTTP cache
+        // takes the tags of the Store API route cache (see onRouteCacheTags()).
         $tags = $this->availability->cacheTags();
-        if ($tags !== []) {
+        if ($tags !== [] && class_exists(AddCacheTagEvent::class)) {
             $this->dispatcher->dispatch(new AddCacheTagEvent(...$tags));
         }
 

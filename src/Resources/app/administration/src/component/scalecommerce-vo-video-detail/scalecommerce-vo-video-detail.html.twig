@@ -28,7 +28,7 @@
                 :key="thumb.index"
                 type="button"
                 class="scalecommerce-vo-detail__frame"
-                :disabled="busy"
+                :disabled="busy || !canUpdate"
                 :aria-label="$tc('scalecommerce-vo.detail.frame') + ' ' + (thumb.index + 1)"
                 @click="onPickFrame(thumb.index)">
                 <img v-if="frameSrcById[thumb.index]" :src="frameSrcById[thumb.index]" alt="" />
@@ -36,7 +36,7 @@
             </button>
         </div>
 
-        <div class="scalecommerce-vo-detail__custom">
+        <div v-if="canUpdate" class="scalecommerce-vo-detail__custom">
             <label class="scalecommerce-vo-detail__file">
                 <input type="file" accept="image/jpeg,image/png,image/webp" :disabled="busy" @change="onFileSelected" />
                 {{ $tc('scalecommerce-vo.detail.uploadCustom') }}

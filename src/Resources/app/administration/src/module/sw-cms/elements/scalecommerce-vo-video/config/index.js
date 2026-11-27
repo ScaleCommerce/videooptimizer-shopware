@@ -1,23 +1,12 @@
 import template from './scalecommerce-vo-cms-element-config.html.twig';
+import libraryLoader from '../../../../../mixin/scalecommerce-vo-library-loader';
 
 Shopware.Component.register('scalecommerce-vo-cms-element-config', {
     template,
-    mixins: ['cms-element'],
+    mixins: ['cms-element', libraryLoader],
     inject: ['scalecommerceVoApiService'],
 
-    data() {
-        return {
-            libraries: [],
-        };
-    },
-
     computed: {
-        libraryOptions() {
-            return this.libraries.map((library) => ({
-                value: library.id,
-                label: library.name,
-            }));
-        },
         selectedLibraryId() {
             return this.element.config.libraryId.value;
         },
@@ -44,15 +33,6 @@ Shopware.Component.register('scalecommerce-vo-cms-element-config', {
     },
 
     methods: {
-        async loadLibraries() {
-            try {
-                const response =
-                    await this.scalecommerceVoApiService.getLibraries();
-                this.libraries = response.data ?? response;
-            } catch {
-                this.libraries = [];
-            }
-        },
         onLibraryChange(libraryId) {
             this.element.config.libraryId.value = libraryId;
             this.element.config.videoUuid.value = null;

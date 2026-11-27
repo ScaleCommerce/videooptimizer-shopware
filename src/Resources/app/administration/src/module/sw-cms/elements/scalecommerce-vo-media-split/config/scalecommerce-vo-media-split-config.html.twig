@@ -1,5 +1,7 @@
 {% block element_config_scalecommerce_vo_media_split %}
 <div class="scalecommerce-vo-media-split-config">
+    <scalecommerce-vo-api-notice :error="librariesError" />
+
     <mt-select
         :label="$tc('scalecommerce-vo.cms.library')"
         :options="libraryOptions"

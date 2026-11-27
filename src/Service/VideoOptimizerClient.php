@@ -2,8 +2,8 @@
 
 namespace ScaleCommerce\VideoOptimizer\Service;
 
-use Psr\Log\LoggerInterface;
 use Psr\Cache\CacheItemPoolInterface;
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidRequestException;
@@ -275,71 +275,6 @@ class VideoOptimizerClient implements ResetInterface
         $this->cacheInvalidator?->invalidate([EmbedAvailability::cacheTag($uuid)]);
     }
 
-    private function embedUrl(string $uuid): string
-    {
-        return $this->baseUrl() . '/embed/' . $this->pathId($uuid);
-    }
-
-    /**
-     * Starts all queued, not yet cached embed lookups at once; HttpClient sends them concurrently
-     * and getEmbed() consumes each response from $inflightEmbeds.
-     */
-    private function startQueuedEmbeds(): void
-    {
-        if ($this->queuedEmbeds === []) {
-            return;
-        }
-        $uuids = array_keys($this->queuedEmbeds);
-        $this->queuedEmbeds = [];
-        if (!$this->cache instanceof CacheItemPoolInterface || $this->embedApiUnavailable()) {
-            return;
-        }
-
-        foreach ($uuids as $uuid) {
-            if (isset($this->inflightEmbeds[$uuid]) || $this->cache->hasItem($this->embedCacheKey($uuid))) {
-                continue;
-            }
-            try {
-                $this->inflightEmbeds[$uuid] = $this->httpClient->request('GET', $this->embedUrl($uuid), [
-                    'headers' => $this->buildHeaders(false, 'application/json'),
-                    'max_duration' => self::EMBED_MAX_DURATION,
-                ]);
-            } catch (\Throwable) {
-                // Falls back to a regular lookup in getEmbed().
-            }
-        }
-    }
-
-    /**
-     * Transport errors, server errors and rate limiting mean the API as a whole is unavailable;
-     * a 4xx for a single video (e.g. 404 for a deleted one) does not.
-     */
-    private function indicatesApiUnavailable(\Throwable $e): bool
-    {
-        if (!$e instanceof VideoOptimizerApiException) {
-            return false;
-        }
-
-        return $e->getStatusCode() >= 500 || $e->getStatusCode() === 429;
-    }
-
-    private function embedApiUnavailable(): bool
-    {
-        return $this->cache instanceof CacheItemPoolInterface
-            && $this->cache->hasItem(self::EMBED_API_UNAVAILABLE_KEY);
-    }
-
-    private function markEmbedApiUnavailable(): void
-    {
-        if (!$this->cache instanceof CacheItemPoolInterface) {
-            return;
-        }
-        $item = $this->cache->getItem(self::EMBED_API_UNAVAILABLE_KEY);
-        $item->set(true);
-        $item->expiresAfter(self::EMBED_FAILURE_CACHE_TTL);
-        $this->cache->save($item);
-    }
-
     public function listThumbnails(string $uuid): array
     {
         return $this->requestData('GET', '/videos/' . $this->pathId($uuid) . '/thumbnails');
@@ -428,6 +363,71 @@ class VideoOptimizerClient implements ResetInterface
         $this->assertHttpsUrl($url, 'The VideoOptimizer embed base URL must be an absolute https URL.');
 
         return $url;
+    }
+
+    private function embedUrl(string $uuid): string
+    {
+        return $this->baseUrl() . '/embed/' . $this->pathId($uuid);
+    }
+
+    /**
+     * Starts all queued, not yet cached embed lookups at once; HttpClient sends them concurrently
+     * and getEmbed() consumes each response from $inflightEmbeds.
+     */
+    private function startQueuedEmbeds(): void
+    {
+        if ($this->queuedEmbeds === []) {
+            return;
+        }
+        $uuids = array_keys($this->queuedEmbeds);
+        $this->queuedEmbeds = [];
+        if (!$this->cache instanceof CacheItemPoolInterface || $this->embedApiUnavailable()) {
+            return;
+        }
+
+        foreach ($uuids as $uuid) {
+            if (isset($this->inflightEmbeds[$uuid]) || $this->cache->hasItem($this->embedCacheKey($uuid))) {
+                continue;
+            }
+            try {
+                $this->inflightEmbeds[$uuid] = $this->httpClient->request('GET', $this->embedUrl($uuid), [
+                    'headers' => $this->buildHeaders(false, 'application/json'),
+                    'max_duration' => self::EMBED_MAX_DURATION,
+                ]);
+            } catch (\Throwable) {
+                // Falls back to a regular lookup in getEmbed().
+            }
+        }
+    }
+
+    /**
+     * Transport errors, server errors and rate limiting mean the API as a whole is unavailable;
+     * a 4xx for a single video (e.g. 404 for a deleted one) does not.
+     */
+    private function indicatesApiUnavailable(\Throwable $e): bool
+    {
+        if (!$e instanceof VideoOptimizerApiException) {
+            return false;
+        }
+
+        return $e->getStatusCode() >= 500 || $e->getStatusCode() === 429;
+    }
+
+    private function embedApiUnavailable(): bool
+    {
+        return $this->cache instanceof CacheItemPoolInterface
+            && $this->cache->hasItem(self::EMBED_API_UNAVAILABLE_KEY);
+    }
+
+    private function markEmbedApiUnavailable(): void
+    {
+        if (!$this->cache instanceof CacheItemPoolInterface) {
+            return;
+        }
+        $item = $this->cache->getItem(self::EMBED_API_UNAVAILABLE_KEY);
+        $item->set(true);
+        $item->expiresAfter(self::EMBED_FAILURE_CACHE_TTL);
+        $this->cache->save($item);
     }
 
     private function embedCacheKey(string $uuid): string
