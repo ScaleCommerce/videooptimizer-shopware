@@ -11,6 +11,10 @@ import {
     resolvePosterContentType,
 } from '../../helper/poster-type';
 
+// Retries of the playback lookup right after a video became ready.
+const PLAYBACK_RETRIES = 3;
+const PLAYBACK_RETRY_DELAY = 5000;
+
 const { Component, Mixin } = Shopware;
 
 Component.register('scalecommerce-vo-video-detail', {
@@ -127,25 +131,43 @@ Component.register('scalecommerce-vo-video-detail', {
             }
         },
 
-        async _loadPlayback() {
+        // The sources are on the CDN a moment after the video turns "ready": a video opened right
+        // then has none yet, so the lookup is repeated (fresh, past the server-side cache) before
+        // the player is declared unavailable.
+        async _loadPlayback(attempt = 0) {
             if (this.video?.status !== 'ready') {
                 return;
             }
             try {
                 const response =
-                    await this.scalecommerceVoApiService.getPlayback(this.uuid);
+                    await this.scalecommerceVoApiService.getPlayback(
+                        this.uuid,
+                        { fresh: attempt > 0 }
+                    );
                 if (this._unmounted) {
                     return;
                 }
-                this.playback = response.data ?? response;
+                const playback = response.data ?? response;
+                if (!playback.hls && !playback.mp4) {
+                    throw new Error('no sources yet');
+                }
+                this.playback = playback;
                 await this.$nextTick();
                 await this._attachPlayer();
             } catch {
+                if (this._unmounted) {
+                    return;
+                }
+                if (attempt < PLAYBACK_RETRIES) {
+                    window.setTimeout(
+                        () => this._loadPlayback(attempt + 1),
+                        PLAYBACK_RETRY_DELAY
+                    );
+                    return;
+                }
                 // Playback is a convenience on top of the poster: keep showing the poster and say
                 // why there is no player.
-                if (!this._unmounted) {
-                    this.playerError = true;
-                }
+                this.playerError = true;
             }
         },
 
@@ -449,6 +471,12 @@ Component.register('scalecommerce-vo-video-detail', {
             await this._uploadPoster(
                 type === blob.type ? blob : new Blob([blob], { type })
             );
+        },
+
+        // Tags and metadata were saved: keep the record current and let the list refresh.
+        onTagsSaved(video) {
+            this.video = { ...this.video, ...video };
+            this.$emit('updated');
         },
 
         onClose() {

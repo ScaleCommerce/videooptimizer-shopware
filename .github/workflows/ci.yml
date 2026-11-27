@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  phpunit:
+    name: PHPUnit and PHPStan (Shopware ${{ matrix.shopware }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shopware: "6.6.*"
+            php: "8.3"
+          - shopware: "6.7.*"
+            php: "8.4"
+    steps:
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: gd, intl, pdo_mysql, zip
+          tools: composer:v2
+      - name: Create a Shopware project
+        run: |
+          composer create-project "shopware/production:${{ matrix.shopware }}" shop --no-interaction --no-scripts
+          cd shop
+          composer require --dev "phpunit/phpunit:*" phpstan/phpstan --no-interaction --no-scripts -W
+      # The tests load the project's autoloader from custom/plugins/<plugin>/tests.
+      - uses: actions/checkout@v4
+        with:
+          path: shop/custom/plugins/ScaleVideoOptimizer
+      - name: PHPUnit
+        working-directory: shop
+        run: vendor/bin/phpunit -c custom/plugins/ScaleVideoOptimizer/phpunit.xml.dist
+      - name: PHPStan
+        working-directory: shop
+        run: vendor/bin/phpstan analyse -c custom/plugins/ScaleVideoOptimizer/phpstan.neon.dist --autoload-file=custom/plugins/ScaleVideoOptimizer/tests/bootstrap.php --no-progress --memory-limit=1G
+
+  vitest:
+    name: Vitest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/js/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: tests/js
+      - run: npx vitest run
+        working-directory: tests/js
+
+  validate:
+    name: shopware-cli extension validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shopware/shopware-cli-action@v1
+      - run: shopware-cli extension validate . --check-against lowest

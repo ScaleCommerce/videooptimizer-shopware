@@ -1,0 +1,48 @@
+{% block scalecommerce_vo_video_tags %}
+<div class="scalecommerce-vo-video-tags">
+    <strong>{{ $tc('scalecommerce-vo.tags.title') }}</strong>
+
+    <p v-if="!canUpdate && !tags.length" class="scalecommerce-vo-video-tags__hint">
+        {{ $tc('scalecommerce-vo.tags.empty') }}
+    </p>
+    <scalecommerce-vo-tag-picker
+        v-model="tags"
+        :available="available"
+        :allow-create="true"
+        :disabled="!canUpdate" />
+
+    <strong class="scalecommerce-vo-video-tags__heading">{{ $tc('scalecommerce-vo.metadata.title') }}</strong>
+    <p class="scalecommerce-vo-video-tags__hint">{{ $tc('scalecommerce-vo.metadata.hint') }}</p>
+
+    <div v-for="(row, index) in rows" :key="index" class="scalecommerce-vo-video-tags__row">
+        <mt-text-field
+            :label="$tc('scalecommerce-vo.metadata.key')"
+            :model-value="row.key"
+            :disabled="!canUpdate"
+            maxlength="40"
+            @update:model-value="row.key = $event" />
+        <mt-text-field
+            :label="$tc('scalecommerce-vo.metadata.value')"
+            :model-value="row.value"
+            :disabled="!canUpdate"
+            maxlength="64"
+            @update:model-value="row.value = $event" />
+        <mt-button v-if="canUpdate" size="small" variant="secondary" @click="onRemoveRow(index)">
+            {{ $tc('scalecommerce-vo.metadata.remove') }}
+        </mt-button>
+    </div>
+
+    <p v-if="problem" class="scalecommerce-vo-video-tags__error" role="alert">
+        {{ $tc('scalecommerce-vo.metadata.problem_' + problem) }}
+    </p>
+
+    <div v-if="canUpdate" class="scalecommerce-vo-video-tags__actions">
+        <mt-button size="small" variant="secondary" :disabled="!canAddRow" @click="onAddRow">
+            {{ $tc('scalecommerce-vo.metadata.add') }}
+        </mt-button>
+        <mt-button size="small" variant="primary" :disabled="!canSave" :is-loading="isSaving" @click="onSave">
+            {{ $tc('scalecommerce-vo.tags.save') }}
+        </mt-button>
+    </div>
+</div>
+{% endblock %}

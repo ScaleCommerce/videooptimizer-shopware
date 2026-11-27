@@ -11,6 +11,7 @@ use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Symfony\Bundle\FrameworkBundle\Routing\AttributeRouteControllerLoader;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Exception\MethodNotAllowedException;
 use Symfony\Component\Routing\Exception\ResourceNotFoundException;
@@ -599,7 +600,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
             ],
         ]);
 
-        $response = (new VideoOptimizerAdminController($client))->getPlayback('vid-1');
+        $response = (new VideoOptimizerAdminController($client))->getPlayback('vid-1', new Request());
 
         static::assertSame(200, $response->getStatusCode());
         static::assertSame(
@@ -613,7 +614,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
         $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getEmbed')->willReturn(['sources' => 'garbage']);
 
-        $response = (new VideoOptimizerAdminController($client))->getPlayback('vid-1');
+        $response = (new VideoOptimizerAdminController($client))->getPlayback('vid-1', new Request());
 
         static::assertSame(['data' => ['hls' => null, 'mp4' => null]], json_decode((string) $response->getContent(), true));
     }
@@ -623,7 +624,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
         $client = $this->createStub(VideoOptimizerClient::class);
         $client->method('getEmbed')->willThrowException(new VideoOptimizerApiException(404, 'Video not found'));
 
-        $response = (new VideoOptimizerAdminController($client))->getPlayback('vid-1');
+        $response = (new VideoOptimizerAdminController($client))->getPlayback('vid-1', new Request());
 
         static::assertSame(404, $response->getStatusCode());
     }
@@ -888,5 +889,284 @@ class VideoOptimizerAdminControllerTest extends TestCase
         $error = json_decode((string) $response->getContent(), true)['errors'][0];
         static::assertSame('SCALECOMMERCE_VO__SOURCE_URL_VIDEO_PLATFORM', $error['code']);
         static::assertSame('YouTube links cannot be imported.', $error['detail']);
+    }
+
+    public function testEveryRouteRequiresAnAclPrivilege(): void
+    {
+        $routes = (new AttributeRouteControllerLoader())->load(VideoOptimizerAdminController::class, 'attribute');
+        foreach ($routes as $name => $route) {
+            static::assertNotEmpty($route->getDefault('_acl'), sprintf('Route %s has no _acl.', $name));
+        }
+    }
+
+    public function testSubtitleLanguageInUseKeepsStatusAndGetsOwnCode(): void
+    {
+        $client = $this->createStub(VideoOptimizerClient::class);
+        $client->method('deleteSubtitleLanguage')->willThrowException(VideoOptimizerApiException::fromResponse(
+            409,
+            '{"message":"Language is still in use.","data":{"code":"subtitle_language_in_use","videos":3}}'
+        ));
+
+        $response = (new VideoOptimizerAdminController($client))->deleteSubtitleLanguage('de');
+
+        static::assertSame(409, $response->getStatusCode());
+        $error = json_decode((string) $response->getContent(), true)['errors'][0];
+        static::assertSame('SCALECOMMERCE_VO__SUBTITLE_LANGUAGE_IN_USE', $error['code']);
+        static::assertSame(['videos' => 3], $error['meta']);
+    }
+
+    public function testCreateSubtitleLanguagePassesCodeAndLabel(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('createSubtitleLanguage')->with('en-US', 'English')->willReturn(['code' => 'en-US']);
+
+        $response = (new VideoOptimizerAdminController($client))->createSubtitleLanguage(new Request([], [], [], [], [], [], '{"code":"en-US","label":"English","x":1}'));
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testSubtitleLanguageRouteRejectsPathTricks(): void
+    {
+        $routes = (new AttributeRouteControllerLoader())->load(VideoOptimizerAdminController::class, 'attribute');
+        $context = new RequestContext();
+        $context->setMethod('DELETE');
+        $matcher = new UrlMatcher($routes, $context);
+
+        static::assertSame('api.action.scalecommerce-vo.subtitle-languages.delete', $matcher->match('/api/_action/scalecommerce-vo/subtitle-languages/en-US')['_route']);
+        $this->expectException(ResourceNotFoundException::class);
+        $matcher->match('/api/_action/scalecommerce-vo/subtitle-languages/..');
+    }
+
+    private function subtitleRequest(string $name, string $content, array $fields): Request
+    {
+        $path = tempnam(sys_get_temp_dir(), 'scvo');
+        file_put_contents($path, $content);
+
+        return new Request([], $fields, [], [], ['file' => new UploadedFile($path, $name, null, null, true)]);
+    }
+
+    public function testUploadSubtitleRelaysFileAndOptions(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('uploadSubtitle')
+            ->with(self::UUID, 'de.vtt', "WEBVTT\n", 'de', 'captions', true)
+            ->willReturn(['skipped_cues' => 0]);
+
+        $response = (new VideoOptimizerAdminController($client))->uploadSubtitle(self::UUID, $this->subtitleRequest('de.vtt', "WEBVTT\n", ['language' => 'de', 'kind' => 'captions', 'is_default' => 'true']));
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    #[DataProvider('invalidSubtitleUploads')]
+    public function testUploadSubtitleRejectsInvalidInput(string $name, array $fields): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('uploadSubtitle');
+
+        $response = (new VideoOptimizerAdminController($client))->uploadSubtitle(self::UUID, $this->subtitleRequest($name, 'x', $fields));
+
+        static::assertSame(400, $response->getStatusCode());
+        static::assertSame('SCALECOMMERCE_VO__INVALID_REQUEST', json_decode((string) $response->getContent(), true)['errors'][0]['code']);
+    }
+
+    /**
+     * @return iterable<string, array{string, array<string, string>}>
+     */
+    public static function invalidSubtitleUploads(): iterable
+    {
+        yield 'wrong extension' => ['subtitle.txt', ['language' => 'de']];
+        yield 'no language' => ['de.vtt', []];
+        yield 'unknown kind' => ['de.vtt', ['language' => 'de', 'kind' => 'lyrics']];
+    }
+
+    public function testPlaybackWithFreshDropsTheCachedEmbedFirst(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('forgetEmbed')->with('vid-1');
+        $client->method('getEmbed')->willReturn(['sources' => []]);
+
+        (new VideoOptimizerAdminController($client))->getPlayback('vid-1', new Request(['fresh' => '1']));
+    }
+
+    public function testPlaybackWithoutFreshKeepsTheCache(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('forgetEmbed');
+        $client->method('getEmbed')->willReturn(['sources' => []]);
+
+        (new VideoOptimizerAdminController($client))->getPlayback('vid-1', new Request());
+    }
+
+    /**
+     * The administration posts multipart form data: the file arrives in $request->files and the
+     * fields in $request->request, exactly as PHP parses a real request.
+     */
+    public function testUploadSubtitleReadsAMultipartRequest(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'scvo');
+        file_put_contents($path, "WEBVTT\n");
+        $request = Request::create('/api/_action/scalecommerce-vo/videos/' . self::UUID . '/subtitles', 'POST', ['language' => 'de'], [], ['file' => new UploadedFile($path, 'de.vtt', 'text/vtt', null, true)], ['CONTENT_TYPE' => 'multipart/form-data; boundary=x']);
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('uploadSubtitle')->with(self::UUID, 'de.vtt', "WEBVTT\n", 'de', null, null)->willReturn([]);
+
+        static::assertSame(200, (new VideoOptimizerAdminController($client))->uploadSubtitle(self::UUID, $request)->getStatusCode());
+    }
+
+    public function testUploadSubtitleOmitsKindAndDefaultWhenNotSent(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('uploadSubtitle')->with(self::UUID, 'de.srt', 'x', 'de', null, null)->willReturn([]);
+
+        (new VideoOptimizerAdminController($client))->uploadSubtitle(self::UUID, $this->subtitleRequest('de.srt', 'x', ['language' => 'de']));
+    }
+
+    public function testMetadataRemovalsDoNotCountTowardsTheKeyLimit(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('updateVideo')->willReturn([]);
+        $metadata = array_fill_keys(array_map(static fn (int $i): string => 'k' . $i, range(1, 10)), 'x') + array_fill_keys(['r1', 'r2'], null);
+
+        $response = (new VideoOptimizerAdminController($client))->updateVideo(self::UUID, new Request([], [], [], [], [], [], json_encode(['metadata' => $metadata])));
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testUploadSubtitleWithoutFileIsRejected(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('uploadSubtitle');
+
+        $response = (new VideoOptimizerAdminController($client))->uploadSubtitle(self::UUID, new Request([], ['language' => 'de']));
+
+        static::assertSame(400, $response->getStatusCode());
+    }
+
+    public function testDownloadSubtitleIsAnAttachment(): void
+    {
+        $client = $this->createStub(VideoOptimizerClient::class);
+        $client->method('downloadSubtitle')->willReturn("WEBVTT\n");
+
+        $response = (new VideoOptimizerAdminController($client))->downloadSubtitle(self::UUID, 'de');
+
+        static::assertSame("WEBVTT\n", $response->getContent());
+        static::assertStringStartsWith('attachment;', (string) $response->headers->get('Content-Disposition'));
+        static::assertSame('nosniff', $response->headers->get('X-Content-Type-Options'));
+    }
+
+    public function testListTagsReturnsClientData(): void
+    {
+        $client = $this->createStub(VideoOptimizerClient::class);
+        $client->method('listTags')->willReturn([['name' => 'promo', 'video_count' => 2]]);
+
+        $response = (new VideoOptimizerAdminController($client))->listTags();
+
+        static::assertSame(['data' => [['name' => 'promo', 'video_count' => 2]]], json_decode((string) $response->getContent(), true));
+    }
+
+    public function testVideoPageIsFilteredByTagsAndMetadata(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('listVideosPage')
+            ->with(self::UUID, null, 60, ['promo', 'Sale'], ['cms_id' => '42'])
+            ->willReturn(['items' => [], 'pagination' => ['next_cursor' => null, 'has_more' => false]]);
+
+        $request = new Request(['limit' => '60', 'tags' => ' promo, Sale,', 'metadata' => ['cms_id' => '42']]);
+        $response = (new VideoOptimizerAdminController($client))->listVideos(self::UUID, $request);
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    /**
+     * @return iterable<string, array{array<string, mixed>}>
+     */
+    public static function invalidFilters(): iterable
+    {
+        yield 'too many tags' => [['tags' => implode(',', range(1, 21))]];
+        yield 'long tag' => [['tags' => str_repeat('a', 51)]];
+        yield 'bad metadata key' => [['metadata' => ['Bad Key' => 'x']]];
+        yield 'empty metadata value' => [['metadata' => ['cms_id' => '']]];
+        yield 'metadata not a map' => [['metadata' => 'cms_id']];
+    }
+
+    #[DataProvider('invalidFilters')]
+    public function testInvalidFiltersAreRejected(array $query): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('listVideosPage');
+
+        $response = (new VideoOptimizerAdminController($client))->listVideos(self::UUID, new Request(['limit' => '10'] + $query));
+
+        static::assertSame(400, $response->getStatusCode());
+        static::assertSame('SCALECOMMERCE_VO__INVALID_REQUEST', json_decode((string) $response->getContent(), true)['errors'][0]['code']);
+    }
+
+    public function testUpdateVideoForwardsTagsAndMetadata(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('updateVideo')
+            ->with(self::UUID, static::callback(static fn (array $payload): bool => $payload['title'] === 'T'
+                && $payload['tags'] === ['promo', 'Sale']
+                && json_encode($payload['metadata']) === '{"cms_id":"42","0":null}'
+                && !isset($payload['foo'])))
+            ->willReturn([]);
+
+        $body = '{"title":"T","tags":[" promo ","Sale"],"metadata":{"cms_id":" 42 ","0":null},"foo":1}';
+        $response = (new VideoOptimizerAdminController($client))->updateVideo(self::UUID, new Request([], [], [], [], [], [], $body));
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testEmptyMetadataValuesBecomeRemovals(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('updateVideo')
+            ->with(self::UUID, static::callback(static fn (array $p): bool => json_encode($p['metadata']) === '{"a":null,"b":null,"c":"x"}'))
+            ->willReturn([]);
+
+        (new VideoOptimizerAdminController($client))->updateVideo(self::UUID, new Request([], [], [], [], [], [], '{"metadata":{"a":"","b":"  ","c":"x"}}'));
+    }
+
+    public function testUpdateVideoCanClearTagsAndMetadata(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('updateVideo')->with(self::UUID, ['tags' => [], 'metadata' => null])->willReturn([]);
+
+        (new VideoOptimizerAdminController($client))->updateVideo(self::UUID, new Request([], [], [], [], [], [], '{"tags":[],"metadata":null}'));
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function invalidVideoPayloads(): iterable
+    {
+        yield 'tag with comma' => ['{"tags":["a,b"]}'];
+        yield 'empty tag' => ['{"tags":[" "]}'];
+        yield 'tags as map' => ['{"tags":{"a":"b"}}'];
+        yield 'too many tags' => ['{"tags":' . json_encode(range(1, 21)) . '}'];
+        yield 'metadata key' => ['{"metadata":{"Upper":"x"}}'];
+        yield 'metadata value type' => ['{"metadata":{"a":1}}'];
+        yield 'metadata value length' => ['{"metadata":{"a":"' . str_repeat('x', 65) . '"}}'];
+        yield 'too many metadata keys' => ['{"metadata":' . json_encode(array_fill_keys(array_map(static fn (int $i): string => 'k' . $i, range(1, 11)), 'x')) . '}'];
+    }
+
+    #[DataProvider('invalidVideoPayloads')]
+    public function testUpdateVideoRejectsInvalidTagsAndMetadata(string $body): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('updateVideo');
+
+        $response = (new VideoOptimizerAdminController($client))->updateVideo(self::UUID, new Request([], [], [], [], [], [], $body));
+
+        static::assertSame(400, $response->getStatusCode());
+    }
+
+    public function testSavingsPassesTheScope(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('getSavings')->with('2026-10-01', '2026-10-31', self::UUID, null)->willReturn(['traffic_available' => true]);
+
+        $response = (new VideoOptimizerAdminController($client))->getSavings(new Request(['from' => '2026-10-01', 'to' => '2026-10-31', 'libraryId' => self::UUID]));
+
+        static::assertSame(['data' => ['traffic_available' => true]], json_decode((string) $response->getContent(), true));
     }
 }

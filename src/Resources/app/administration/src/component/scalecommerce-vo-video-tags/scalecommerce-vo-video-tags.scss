@@ -1,0 +1,33 @@
+.scalecommerce-vo-video-tags {
+    margin-top: 16px;
+
+    &__heading {
+        display: block;
+        margin-top: 12px;
+    }
+
+    &__hint {
+        margin: 4px 0 8px;
+        color: #52667a;
+        font-size: 13px;
+    }
+
+    &__error {
+        margin: 4px 0;
+        color: #de294c;
+        font-size: 13px;
+    }
+
+    &__row {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        align-items: end;
+        gap: 8px;
+    }
+
+    &__actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+    }
+}

@@ -18,6 +18,44 @@ export default class VideoOptimizerApiService extends ApiService {
             .then((response) => ApiService.handleResponse(response));
     }
 
+    // scope: { from, to (YYYY-MM-DD), libraryId, videoUuid }, all optional
+    getSavings({ from, to, libraryId, videoUuid } = {}) {
+        const params = {};
+        if (from && to) {
+            params.from = from;
+            params.to = to;
+        }
+        if (libraryId) {
+            params.libraryId = libraryId;
+        }
+        if (videoUuid) {
+            params.videoUuid = videoUuid;
+        }
+        return this.httpClient
+            .get(`${this.getApiBasePath()}/savings`, {
+                headers: this.getBasicHeaders(),
+                params,
+            })
+            .then((response) => ApiService.handleResponse(response));
+    }
+
+    // { url, configured, lastDelivery } of the webhook receiver
+    getWebhookInfo() {
+        return this.httpClient
+            .get(`${this.getApiBasePath()}/webhook`, {
+                headers: this.getBasicHeaders(),
+            })
+            .then((response) => ApiService.handleResponse(response));
+    }
+
+    getTags() {
+        return this.httpClient
+            .get(`${this.getApiBasePath()}/tags`, {
+                headers: this.getBasicHeaders(),
+            })
+            .then((response) => ApiService.handleResponse(response));
+    }
+
     getEncodings() {
         return this.httpClient
             .get(`${this.getApiBasePath()}/encodings`, {
@@ -65,11 +103,18 @@ export default class VideoOptimizerApiService extends ApiService {
     }
 
     /**
+     * `tags` (all must match) and `metadata` ({ key: value }) filter the list.
      * With `limit` (and `cursor`), one page is returned as { data, meta: { next_cursor, has_more } };
      * without, the full list.
      */
-    getVideos(libraryId, { limit, cursor } = {}) {
+    getVideos(libraryId, { limit, cursor, tags, metadata } = {}) {
         const params = {};
+        if (tags?.length) {
+            params.tags = tags.join(',');
+        }
+        Object.entries(metadata ?? {}).forEach(([key, value]) => {
+            params[`metadata[${key}]`] = value;
+        });
         if (limit) {
             params.limit = limit;
         }
@@ -93,11 +138,15 @@ export default class VideoOptimizerApiService extends ApiService {
             .then((response) => ApiService.handleResponse(response));
     }
 
-    getPlayback(uuid) {
+    // fresh: bypass the cached embed (right after a video became ready it has no sources yet)
+    getPlayback(uuid, { fresh = false } = {}) {
         return this.httpClient
             .get(
                 `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/playback`,
-                { headers: this.getBasicHeaders() }
+                {
+                    headers: this.getBasicHeaders(),
+                    params: fresh ? { fresh: 1 } : {},
+                }
             )
             .then((response) => ApiService.handleResponse(response));
     }
@@ -280,6 +329,87 @@ export default class VideoOptimizerApiService extends ApiService {
         return this.httpClient
             .delete(
                 `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}`,
+                { headers: this.getBasicHeaders() }
+            )
+            .then((response) => ApiService.handleResponse(response));
+    }
+
+    getSubtitleLanguages() {
+        return this.httpClient
+            .get(`${this.getApiBasePath()}/subtitle-languages`, {
+                headers: this.getBasicHeaders(),
+            })
+            .then((response) => ApiService.handleResponse(response));
+    }
+
+    createSubtitleLanguage(payload) {
+        return this.httpClient
+            .post(`${this.getApiBasePath()}/subtitle-languages`, payload, {
+                headers: this.getBasicHeaders(),
+            })
+            .then((response) => ApiService.handleResponse(response));
+    }
+
+    deleteSubtitleLanguage(code) {
+        return this.httpClient
+            .delete(
+                `${this.getApiBasePath()}/subtitle-languages/${encodeURIComponent(code)}`,
+                { headers: this.getBasicHeaders() }
+            )
+            .then((response) => ApiService.handleResponse(response));
+    }
+
+    getSubtitles(uuid) {
+        return this.httpClient
+            .get(
+                `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/subtitles`,
+                { headers: this.getBasicHeaders() }
+            )
+            .then((response) => ApiService.handleResponse(response));
+    }
+
+    // `file` is a File (.vtt/.srt); the proxy relays it to the API as multipart.
+    uploadSubtitle(uuid, { file, language, kind, isDefault }) {
+        const form = new FormData();
+        form.append('file', file);
+        form.append('language', language);
+        if (kind) {
+            form.append('kind', kind);
+        }
+        if (isDefault !== null && isDefault !== undefined) {
+            form.append('is_default', isDefault ? 'true' : 'false');
+        }
+
+        return this.httpClient
+            .post(
+                `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/subtitles`,
+                form,
+                {
+                    // getBasicHeaders() forces JSON; a multipart body needs its own type with the
+                    // boundary, which the browser sets for FormData.
+                    headers: {
+                        ...this.getBasicHeaders(),
+                        'Content-Type': 'multipart/form-data',
+                    },
+                }
+            )
+            .then((response) => ApiService.handleResponse(response));
+    }
+
+    // The stored WebVTT file as a blob.
+    downloadSubtitle(uuid, language) {
+        return this.httpClient
+            .get(
+                `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/subtitles/${encodeURIComponent(language)}`,
+                { headers: this.getBasicHeaders(), responseType: 'blob' }
+            )
+            .then((response) => response.data);
+    }
+
+    deleteSubtitle(uuid, language) {
+        return this.httpClient
+            .delete(
+                `${this.getApiBasePath()}/videos/${encodeURIComponent(uuid)}/subtitles/${encodeURIComponent(language)}`,
                 { headers: this.getBasicHeaders() }
             )
             .then((response) => ApiService.handleResponse(response));

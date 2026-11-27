@@ -1,0 +1,32 @@
+{% block scalecommerce_vo_webhook %}
+<mt-card
+    class="scalecommerce-vo-webhook"
+    :title="$tc('scalecommerce-vo.webhook.title')"
+    :subtitle="$tc('scalecommerce-vo.webhook.subtitle')"
+    position-identifier="scalecommerce-vo-webhook">
+
+    <scalecommerce-vo-api-notice :error="error" />
+
+    <template v-if="info">
+        <div class="scalecommerce-vo-webhook__url">
+            <mt-text-field
+                :label="$tc('scalecommerce-vo.webhook.url')"
+                :help-text="$tc('scalecommerce-vo.webhook.urlHelp')"
+                :model-value="info.url"
+                readonly />
+            <mt-button size="small" variant="secondary" @click="onCopy">
+                {{ $tc('scalecommerce-vo.webhook.copy') }}
+            </mt-button>
+        </div>
+
+        <mt-banner :variant="info.configured ? 'positive' : 'attention'" class="scalecommerce-vo-webhook__banner">
+            {{ info.configured ? $tc('scalecommerce-vo.webhook.configured') : $tc('scalecommerce-vo.webhook.notConfigured') }}
+            <router-link v-if="!info.configured && canOpenConfig" :to="configRoute">
+                {{ $tc('scalecommerce-vo.webhook.openConfig') }}
+            </router-link>
+        </mt-banner>
+
+        <p class="scalecommerce-vo-webhook__last">{{ lastDeliveryText }}</p>
+    </template>
+</mt-card>
+{% endblock %}

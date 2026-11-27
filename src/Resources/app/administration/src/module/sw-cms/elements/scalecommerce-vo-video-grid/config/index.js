@@ -1,6 +1,7 @@
 import template from './scalecommerce-vo-video-grid-config.html.twig';
 import './scalecommerce-vo-video-grid-config.scss';
 import libraryLoader from '../../../../../mixin/scalecommerce-vo-library-loader';
+import { isNotFound } from '../../../../../helper/api-error';
 
 Shopware.Component.register('scalecommerce-vo-video-grid-config', {
     template,
@@ -10,6 +11,7 @@ Shopware.Component.register('scalecommerce-vo-video-grid-config', {
     data() {
         return {
             posters: {}, // uuid -> poster url
+            missing: {}, // uuid -> true when the video no longer exists (issue #35)
             pickerIndex: null, // null = closed, -1 = adding new, >=0 = editing that row
             pickerLibraryId: null,
         };
@@ -88,8 +90,11 @@ Shopware.Component.register('scalecommerce-vo-video-grid-config', {
                                 video?.thumbnail_url ||
                                 null,
                         };
-                    } catch {
+                    } catch (error) {
                         this.posters = { ...this.posters, [uuid]: null };
+                        if (isNotFound(error)) {
+                            this.missing = { ...this.missing, [uuid]: true };
+                        }
                     }
                 })
             );

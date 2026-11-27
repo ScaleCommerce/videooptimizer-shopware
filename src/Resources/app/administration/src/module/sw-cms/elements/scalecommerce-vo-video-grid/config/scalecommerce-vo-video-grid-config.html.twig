@@ -30,6 +30,9 @@
                 :label="$tc('scalecommerce-vo.videoGrid.itemLabel')"
                 :model-value="item.label"
                 @update:model-value="(value) => onLabelInput(index, value)" />
+            <sw-label v-if="item.video && missing[item.video]" variant="danger" size="small" role="alert">
+                {{ $tc('scalecommerce-vo.cms.videoMissing') }}
+            </sw-label>
             <div class="scalecommerce-vo-video-grid-config__row-actions">
                 <mt-button size="small" variant="secondary" :disabled="index === 0" :aria-label="$tc('scalecommerce-vo.videoGrid.moveUp')" @click="moveUp(index)">
                     <mt-icon name="regular-chevron-up" size="16" />

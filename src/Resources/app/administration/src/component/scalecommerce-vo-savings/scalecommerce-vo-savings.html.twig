@@ -1,0 +1,61 @@
+{% block scalecommerce_vo_savings %}
+<mt-card
+    class="scalecommerce-vo-savings"
+    :title="$tc('scalecommerce-vo.savings.title')"
+    :subtitle="$tc('scalecommerce-vo.savings.subtitle')"
+    position-identifier="scalecommerce-vo-savings">
+
+    <scalecommerce-vo-api-notice :error="error" />
+
+    <template v-if="!error">
+        <sw-container columns="1fr 1fr" gap="0 32px">
+            <mt-select
+                :label="$tc('scalecommerce-vo.savings.period')"
+                :options="presetOptions"
+                :model-value="preset"
+                hide-clearable-button
+                @update:model-value="preset = $event || preset" />
+            <mt-select
+                v-if="libraryId"
+                :label="$tc('scalecommerce-vo.savings.scope')"
+                :options="scopeOptions"
+                :model-value="onlyLibrary"
+                hide-clearable-button
+                @update:model-value="onlyLibrary = $event === true" />
+        </sw-container>
+
+        <p v-if="isLoading && !savings" class="scalecommerce-vo-savings__hint">{{ $tc('scalecommerce-vo.savings.loading') }}</p>
+
+        <template v-if="savings">
+            <h4 class="scalecommerce-vo-savings__heading">{{ $tc('scalecommerce-vo.savings.compressionTitle') }}</h4>
+            <p class="scalecommerce-vo-savings__hint">
+                {{ $tc('scalecommerce-vo.savings.compressionHint', compression ? compression.videos : 0, { count: compression ? compression.videos : 0 }) }}
+            </p>
+            <dl class="scalecommerce-vo-savings__list">
+                <template v-for="row in compressionRows" :key="row[0]">
+                    <dt>{{ $tc('scalecommerce-vo.savings.' + row[0]) }}</dt>
+                    <dd>{{ row[1] }}</dd>
+                </template>
+            </dl>
+
+            <h4 class="scalecommerce-vo-savings__heading">{{ $tc('scalecommerce-vo.savings.trafficTitle') }}</h4>
+            <p v-if="!savings.traffic_available" class="scalecommerce-vo-savings__hint">
+                {{ $tc('scalecommerce-vo.savings.noTraffic') }}
+            </p>
+            <p v-else-if="!traffic" class="scalecommerce-vo-savings__hint">
+                {{ $tc('scalecommerce-vo.savings.noRange') }}
+            </p>
+            <template v-else>
+                <p v-if="traffic.from" class="scalecommerce-vo-savings__hint">{{ traffic.from }} – {{ traffic.to }}</p>
+                <dl class="scalecommerce-vo-savings__list">
+                    <template v-for="row in rows" :key="row[0]">
+                        <dt>{{ $tc('scalecommerce-vo.savings.' + row[0]) }}</dt>
+                        <dd>{{ row[1] }}</dd>
+                    </template>
+                </dl>
+                <p class="scalecommerce-vo-savings__hint">{{ $tc('scalecommerce-vo.savings.estimate') }}</p>
+            </template>
+        </template>
+    </template>
+</mt-card>
+{% endblock %}

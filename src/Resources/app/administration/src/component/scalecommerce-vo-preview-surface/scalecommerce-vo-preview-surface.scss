@@ -24,6 +24,12 @@
         color: #758ca3;
         font-size: 12px;
         text-align: center;
+
+        // The configured video was deleted; stands out from the neutral "select a video" hint.
+        &.is-missing {
+            color: #de294c;
+            font-weight: 600;
+        }
     }
 
     // Layout content the element lays over the poster (hero copy, overlay).

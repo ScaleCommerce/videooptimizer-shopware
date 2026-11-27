@@ -1,0 +1,8 @@
+# Run from a Shopware project that has the plugin in custom/plugins (see .github/workflows/ci.yml).
+parameters:
+    level: 5
+    paths:
+        - src
+    excludePaths:
+        - src/Resources
+    treatPhpDocTypesAsCertain: false

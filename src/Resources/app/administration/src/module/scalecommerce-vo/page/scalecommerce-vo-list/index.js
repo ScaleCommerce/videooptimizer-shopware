@@ -209,6 +209,14 @@ Component.register('scalecommerce-vo-list', {
                     codecs: data.codecs ?? [],
                     resolutions: data.resolutions ?? [],
                 };
+                // The form was opened before the options arrived.
+                if (
+                    this.mode === 'create' &&
+                    this.selectedCodecs.length === 0 &&
+                    this.selectedResolutions.length === 0
+                ) {
+                    this._preselectDefaults();
+                }
             } catch (error) {
                 // Best effort: the pickers still work from the stored keys.
                 console.warn(
@@ -254,9 +262,23 @@ Component.register('scalecommerce-vo-list', {
             this.forceReprocessSuggestedFor = null;
             this.formName = '';
             this.formDescription = '';
-            this.selectedCodecs = [];
-            this.selectedResolutions = [];
+            this._preselectDefaults();
             this.formQuality = 'performance';
+        },
+
+        // A new library is created with what the form shows: the options every organization has
+        // (access "included") that are available. Without any, the API's default ladder applies.
+        _preselectDefaults() {
+            const keys = (group) =>
+                (this.encodings[group] || [])
+                    .filter(
+                        (option) =>
+                            option.access !== 'addon' &&
+                            option.available !== false
+                    )
+                    .map((option) => option.key);
+            this.selectedCodecs = keys('codecs');
+            this.selectedResolutions = keys('resolutions');
         },
 
         onCancelCreate() {

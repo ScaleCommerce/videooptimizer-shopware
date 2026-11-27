@@ -4,6 +4,28 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-11-27
+
+### Upgrade
+- To use webhooks, create a webhook in VideoOptimizer under Integrations, Webhooks with the URL shown in the VideoOptimizer module (`/api/scalecommerce-vo/webhook` on the shop's admin/API host) and set its signing secret in the plugin setting `webhookSecret`; until then the route answers 503 ([#39](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/39)).
+- `VideoOptimizerClient::listVideos()`, `listVideosPage()` and `listAllVideos()` take optional `$tags` and `$metadata` arguments; subclasses overriding them must accept and pass them on ([#37](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/37)).
+
+### Added
+- Subtitles per video (list, upload .vtt/.srt, download, delete) in the video detail and management of the organization's subtitle languages (list, add, delete; 409 shows how many videos still use a language) in the module ([#36](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/36)).
+- Tags and metadata (key/value, e.g. CMS IDs) editable in the video detail; the video lists filter by tag and by metadata value ([#37](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/37)).
+- Savings card in the module: file-size reduction and estimated bandwidth saved, for the organization or a library and a period ([#38](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/38)).
+- Webhook receiver `POST /api/scalecommerce-vo/webhook` (API route without login, HMAC-SHA256 signature, replay window, duplicate detection, 1 MiB limit) that drops the cached embed and the cached pages of a video on `video.ready` and `video.failed`; the plugin setting `webhookSecret` and a module card with the URL to enter in VideoOptimizer ([#39](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/39)).
+- The element configuration and the editor preview flag a selected video that no longer exists ([#35](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/35)).
+
+### Fixed
+- Subtitle upload sent the file with a JSON Content-Type and never reached the API; a failed upload now shows its error next to the form and keeps the file ([#36](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/36)).
+- The video detail retries the playback lookup (3 times, 5 s apart) for a video that just became ready before it says the video cannot be played.
+- A new library is created with the resolutions and codecs the form shows (included options preselected).
+
+### Changed
+- GitHub Actions run PHPUnit and PHPStan (level 5) on Shopware 6.6 and 6.7, Vitest and `shopware-cli extension validate` on every push and pull request ([#40](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/40)).
+- DOM tests (Vitest/jsdom) for the storefront player, the facade and lightbox blocks and the hero lifecycle ([#34](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/34)).
+
 ## [1.2.2] - 2026-11-27
 
 ### Upgrade

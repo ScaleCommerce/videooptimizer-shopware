@@ -19,7 +19,8 @@
                 :controls="showControls"
                 :status="tile.status"
                 :meta="tile.meta"
-                :has-video="!!tile.uuid"
+                :has-video="!!tile.uuid && !tile.missing"
+                :missing="tile.missing"
                 :tooltip="tile.title"
             />
             <figcaption class="scalecommerce-vo-video-grid-component__caption"

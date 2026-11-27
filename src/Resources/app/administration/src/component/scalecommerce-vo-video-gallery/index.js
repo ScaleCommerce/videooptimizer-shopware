@@ -6,6 +6,7 @@ import {
     orientationKey,
 } from '../../helper/video-meta';
 import { isVideoPlatformUrl } from '../../helper/video-platform';
+import { isNotFound } from '../../helper/api-error';
 
 // Videos per page in the gallery; further pages load on demand ("Load more videos").
 const PAGE_SIZE = 60;
@@ -46,16 +47,22 @@ Component.register('scalecommerce-vo-video-gallery', {
             nextCursor: null,
             isLoadingMore: false,
             selectedVideoRecord: null,
+            filter: { tags: [], metadata: {} },
+            // The selected video no longer exists in VideoOptimizer (issue #35).
+            selectedMissing: false,
         };
     },
 
     watch: {
         libraryId() {
+            // The filters belong to the library list that was shown.
+            this.filter = { tags: [], metadata: {} };
             // Don't leave the previous library's videos visible and clickable while loading.
             this.videos = [];
             this.loadVideos();
         },
         selectedUuid() {
+            this.selectedMissing = false;
             this._ensureSelectedVideo();
         },
     },
@@ -152,6 +159,12 @@ Component.register('scalecommerce-vo-video-gallery', {
                 .join(' · ');
         },
 
+        onFilterChange(filter) {
+            this.filter = filter;
+            this.videos = [];
+            this.loadVideos();
+        },
+
         // Loads the first page of the library; more pages via loadMoreVideos().
         async loadVideos() {
             this.nextCursor = null;
@@ -181,8 +194,12 @@ Component.register('scalecommerce-vo-video-gallery', {
                 if (this.selectedUuid === uuid) {
                     this.selectedVideoRecord = response.data ?? response;
                 }
-            } catch {
-                // Only the selection line is affected; the selection itself stays.
+            } catch (error) {
+                // Only the selection line is affected; the selection itself stays. A video that
+                // was deleted is flagged so the editor can replace it.
+                if (this.selectedUuid === uuid && isNotFound(error)) {
+                    this.selectedMissing = true;
+                }
             }
         },
 
@@ -206,7 +223,12 @@ Component.register('scalecommerce-vo-video-gallery', {
             try {
                 const response = await this.scalecommerceVoApiService.getVideos(
                     libraryId,
-                    { limit: PAGE_SIZE, cursor }
+                    {
+                        limit: PAGE_SIZE,
+                        cursor,
+                        tags: this.filter.tags,
+                        metadata: this.filter.metadata,
+                    }
                 );
                 if (
                     request !== this._loadRequest ||

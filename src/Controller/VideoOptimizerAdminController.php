@@ -8,6 +8,7 @@ use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidRequestException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -40,6 +41,30 @@ class VideoOptimizerAdminController
      * reaches the client as ".." and HttpClient's dot-segment removal re-targets the upstream request.
      */
     private const UUID_PATTERN = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
+
+    /**
+     * Route requirement for a subtitle language code (BCP 47 tag, at most 35 characters).
+     */
+    private const LANGUAGE_PATTERN = '[A-Za-z0-9][A-Za-z0-9_-]{0,34}';
+
+    private const MAX_TAGS = 20;
+
+    private const MAX_TAG_LENGTH = 50;
+
+    private const MAX_METADATA_KEYS = 10;
+
+    private const MAX_METADATA_FILTERS = 5;
+
+    private const MAX_METADATA_VALUE_LENGTH = 64;
+
+    /**
+     * Metadata keys: 1-40 characters of a-z 0-9 _ . - starting with a letter or digit.
+     */
+    private const METADATA_KEY_PATTERN = '/^[a-z0-9][a-z0-9_.-]{0,39}$/D';
+
+    private const SUBTITLE_MAX_BYTES = 2097152;
+
+    private const SUBTITLE_KINDS = ['subtitles', 'captions'];
 
     public function __construct(private readonly VideoOptimizerClient $client)
     {
@@ -86,7 +111,7 @@ class VideoOptimizerAdminController
         // With ?limit (and ?cursor) one page plus "meta" is returned; without them, the full list
         // as before, so existing callers keep working.
         if (!$request->query->has('limit') && !$request->query->has('cursor')) {
-            return $this->wrap(fn () => $this->client->listVideos($id));
+            return $this->wrap(fn () => $this->client->listVideos($id, $this->tagFilter($request), $this->metadataFilter($request)));
         }
 
         $limit = (string) $request->query->get('limit', '60');
@@ -96,7 +121,7 @@ class VideoOptimizerAdminController
         }
 
         try {
-            $page = $this->client->listVideosPage($id, is_string($cursor) ? $cursor : null, (int) $limit);
+            $page = $this->client->listVideosPage($id, is_string($cursor) ? $cursor : null, (int) $limit, $this->tagFilter($request), $this->metadataFilter($request));
         } catch (MissingApiTokenException|InvalidApiBaseUrlException|InvalidRequestException $e) {
             return $this->clientError($e);
         } catch (VideoOptimizerApiException $e) {
@@ -111,7 +136,25 @@ class VideoOptimizerAdminController
     {
         $libraryId = $request->query->get('libraryId');
 
-        return $this->wrap(fn () => $this->client->listAllVideos($libraryId !== null ? (string) $libraryId : null));
+        return $this->wrap(fn () => $this->client->listAllVideos($libraryId !== null ? (string) $libraryId : null, $this->tagFilter($request), $this->metadataFilter($request)));
+    }
+
+    #[Route(path: '/api/_action/scalecommerce-vo/tags', name: 'api.action.scalecommerce-vo.tags.list', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
+    public function listTags(): JsonResponse
+    {
+        return $this->wrap(fn () => $this->client->listTags());
+    }
+
+    #[Route(path: '/api/_action/scalecommerce-vo/savings', name: 'api.action.scalecommerce-vo.savings', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
+    public function getSavings(Request $request): JsonResponse
+    {
+        $param = static function (string $name) use ($request): ?string {
+            $value = $request->query->get($name);
+
+            return is_string($value) && $value !== '' ? $value : null;
+        };
+
+        return $this->wrap(fn () => $this->client->getSavings($param('from'), $param('to'), $param('libraryId'), $param('videoUuid')));
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/encodings', name: 'api.action.scalecommerce-vo.encodings.list', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
@@ -156,7 +199,7 @@ class VideoOptimizerAdminController
     #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}', name: 'api.action.scalecommerce-vo.videos.update', methods: ['PATCH'], requirements: ['uuid' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:update']])]
     public function updateVideo(string $uuid, Request $request): JsonResponse
     {
-        return $this->wrap(fn () => $this->client->updateVideo($uuid, $this->only($this->payload($request), ['title'])));
+        return $this->wrap(fn () => $this->client->updateVideo($uuid, $this->videoPayload($request)));
     }
 
     #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}', name: 'api.action.scalecommerce-vo.videos.delete', methods: ['DELETE'], requirements: ['uuid' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:delete']])]
@@ -175,9 +218,13 @@ class VideoOptimizerAdminController
      * the embed payload carries the CDN URLs themselves.
      */
     #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/playback', name: 'api.action.scalecommerce-vo.videos.playback', methods: ['GET'], requirements: ['uuid' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:read']])]
-    public function getPlayback(string $uuid): JsonResponse
+    public function getPlayback(string $uuid, Request $request): JsonResponse
     {
-        return $this->wrap(function () use ($uuid): array {
+        return $this->wrap(function () use ($uuid, $request): array {
+            if ($request->query->getBoolean('fresh')) {
+                // A video that just became ready is cached without sources for a minute.
+                $this->client->forgetEmbed($uuid);
+            }
             $embed = $this->client->getEmbed($uuid);
             $sources = is_array($embed['sources'] ?? null) ? $embed['sources'] : [];
 
@@ -260,6 +307,235 @@ class VideoOptimizerAdminController
 
             return [];
         }, Response::HTTP_NO_CONTENT);
+    }
+
+    #[Route(path: '/api/_action/scalecommerce-vo/subtitle-languages', name: 'api.action.scalecommerce-vo.subtitle-languages.list', methods: ['GET'], defaults: ['_acl' => ['scalecommerce_vo:read']])]
+    public function listSubtitleLanguages(): JsonResponse
+    {
+        return $this->wrap(fn () => $this->client->listSubtitleLanguages());
+    }
+
+    #[Route(path: '/api/_action/scalecommerce-vo/subtitle-languages', name: 'api.action.scalecommerce-vo.subtitle-languages.create', methods: ['POST'], defaults: ['_acl' => ['scalecommerce_vo:update']])]
+    public function createSubtitleLanguage(Request $request): JsonResponse
+    {
+        return $this->wrap(function () use ($request): array {
+            $payload = $this->payload($request);
+            $label = $payload['label'] ?? null;
+
+            return $this->client->createSubtitleLanguage((string) ($payload['code'] ?? ''), is_string($label) ? $label : null);
+        });
+    }
+
+    /**
+     * 409 `subtitle_language_in_use` (videos still carry the language) keeps its status and gets an
+     * own error code with the number of videos, so the administration can say what to do.
+     */
+    #[Route(path: '/api/_action/scalecommerce-vo/subtitle-languages/{code}', name: 'api.action.scalecommerce-vo.subtitle-languages.delete', methods: ['DELETE'], requirements: ['code' => self::LANGUAGE_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:delete']])]
+    public function deleteSubtitleLanguage(string $code): JsonResponse
+    {
+        return $this->wrap(function () use ($code): array {
+            $this->client->deleteSubtitleLanguage($code);
+
+            return [];
+        }, Response::HTTP_NO_CONTENT);
+    }
+
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/subtitles', name: 'api.action.scalecommerce-vo.subtitles.list', methods: ['GET'], requirements: ['uuid' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:read']])]
+    public function listSubtitles(string $uuid): JsonResponse
+    {
+        return $this->wrap(fn () => $this->client->listSubtitles($uuid));
+    }
+
+    /**
+     * Multipart upload from the administration (field `file` plus `language`, optional `kind` and
+     * `is_default`); the file is relayed to the API, the token stays on the server.
+     */
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/subtitles', name: 'api.action.scalecommerce-vo.subtitles.upload', methods: ['POST'], requirements: ['uuid' => self::UUID_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:update']])]
+    public function uploadSubtitle(string $uuid, Request $request): JsonResponse
+    {
+        return $this->wrap(function () use ($uuid, $request): array {
+            $file = $request->files->get('file');
+            if (!$file instanceof UploadedFile || !$file->isValid()) {
+                throw new InvalidRequestException('A subtitle file is required.');
+            }
+            if (!preg_match('/\.(vtt|srt)$/i', $file->getClientOriginalName())) {
+                throw new InvalidRequestException('The subtitle file must be a .vtt or .srt file.');
+            }
+            if ($file->getSize() > self::SUBTITLE_MAX_BYTES) {
+                throw new InvalidRequestException('The subtitle file must not be larger than 2 MB.');
+            }
+            $language = $request->request->get('language');
+            if (!is_string($language) || $language === '') {
+                throw new InvalidRequestException('language is required.');
+            }
+            $kind = $request->request->get('kind');
+            if ($kind !== null && $kind !== '' && !in_array($kind, self::SUBTITLE_KINDS, true)) {
+                throw new InvalidRequestException('kind must be "subtitles" or "captions".');
+            }
+            $content = file_get_contents($file->getPathname());
+            if ($content === false) {
+                throw new InvalidRequestException('The subtitle file could not be read.');
+            }
+
+            return $this->client->uploadSubtitle(
+                $uuid,
+                basename($file->getClientOriginalName()),
+                $content,
+                $language,
+                is_string($kind) && $kind !== '' ? $kind : null,
+                // Only when sent: the API keeps the existing value otherwise.
+                $request->request->has('is_default') ? filter_var($request->request->get('is_default'), FILTER_VALIDATE_BOOLEAN) : null,
+            );
+        });
+    }
+
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/subtitles/{language}', name: 'api.action.scalecommerce-vo.subtitles.download', methods: ['GET'], requirements: ['uuid' => self::UUID_PATTERN, 'language' => self::LANGUAGE_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:read']])]
+    public function downloadSubtitle(string $uuid, string $language): Response
+    {
+        try {
+            return new Response($this->client->downloadSubtitle($uuid, $language), Response::HTTP_OK, [
+                // Never rendered by the browser: always a download.
+                'Content-Type' => 'text/vtt; charset=utf-8',
+                'X-Content-Type-Options' => 'nosniff',
+                'Content-Disposition' => 'attachment; filename="subtitles-' . $language . '.vtt"',
+            ]);
+        } catch (MissingApiTokenException|InvalidApiBaseUrlException|InvalidRequestException $e) {
+            return $this->clientError($e);
+        } catch (VideoOptimizerApiException $e) {
+            return $this->apiError($e);
+        }
+    }
+
+    #[Route(path: '/api/_action/scalecommerce-vo/videos/{uuid}/subtitles/{language}', name: 'api.action.scalecommerce-vo.subtitles.delete', methods: ['DELETE'], requirements: ['uuid' => self::UUID_PATTERN, 'language' => self::LANGUAGE_PATTERN], defaults: ['_acl' => ['scalecommerce_vo:update']])]
+    public function deleteSubtitle(string $uuid, string $language): JsonResponse
+    {
+        return $this->wrap(function () use ($uuid, $language): array {
+            $this->client->deleteSubtitle($uuid, $language);
+
+            return [];
+        }, Response::HTTP_NO_CONTENT);
+    }
+
+    /**
+     * PATCH body of a video: `title`, `tags` (replaces the tag set) and `metadata` (merged; an
+     * empty value or null removes a key, `"metadata": null` removes all of them).
+     *
+     * @return array<string, mixed>
+     */
+    private function videoPayload(Request $request): array
+    {
+        $payload = $this->only($this->payload($request), ['title', 'tags', 'metadata']);
+
+        if (\array_key_exists('tags', $payload)) {
+            $payload['tags'] = $this->assertTags($payload['tags']);
+        }
+        if (\array_key_exists('metadata', $payload)) {
+            if ($payload['metadata'] === null) {
+                return $payload;
+            }
+            $metadata = $this->assertMetadata($payload['metadata']);
+            if ($metadata === []) {
+                unset($payload['metadata']);
+            } else {
+                // An object even for numeric keys ("0" would turn the array into a JSON list).
+                $payload['metadata'] = (object) $metadata;
+            }
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function assertTags(mixed $tags): array
+    {
+        if (!is_array($tags) || !array_is_list($tags) || count($tags) > self::MAX_TAGS) {
+            throw new InvalidRequestException(sprintf('tags must be a list of at most %d names.', self::MAX_TAGS));
+        }
+        $result = [];
+        foreach ($tags as $tag) {
+            $name = is_string($tag) ? trim($tag) : '';
+            if ($name === '' || mb_strlen($name) > self::MAX_TAG_LENGTH || str_contains($name, ',')) {
+                throw new InvalidRequestException(sprintf('A tag must have 1-%d characters and must not contain a comma.', self::MAX_TAG_LENGTH));
+            }
+            $result[] = $name;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return array<string, string|null>
+     */
+    private function assertMetadata(mixed $metadata): array
+    {
+        if (!is_array($metadata)) {
+            throw new InvalidRequestException('metadata must be an object.');
+        }
+        // The limit counts the keys that are set; removals (null or empty) are free.
+        $set = array_filter($metadata, static fn (mixed $value): bool => $value !== null && $value !== '');
+        if (count($set) > self::MAX_METADATA_KEYS) {
+            throw new InvalidRequestException(sprintf('metadata can set at most %d keys.', self::MAX_METADATA_KEYS));
+        }
+        $result = [];
+        foreach ($metadata as $key => $value) {
+            $key = (string) $key;
+            if (preg_match(self::METADATA_KEY_PATTERN, $key) !== 1) {
+                throw new InvalidRequestException('A metadata key must have 1-40 characters of a-z, 0-9, "_", "." and "-", starting with a letter or digit.');
+            }
+            if ($value !== null && (!is_string($value) || mb_strlen(trim($value)) > self::MAX_METADATA_VALUE_LENGTH || preg_match('/[\x00-\x1F\x7F]/', $value) === 1)) {
+                throw new InvalidRequestException(sprintf('A metadata value must be a string of at most %d characters without control characters.', self::MAX_METADATA_VALUE_LENGTH));
+            }
+            // An empty value removes the key, like null.
+            $result[$key] = $value === null || trim($value) === '' ? null : trim($value);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Video list filter `?tags=a,b`.
+     *
+     * @return list<string>
+     */
+    private function tagFilter(Request $request): array
+    {
+        $raw = $request->query->get('tags');
+        if (!is_string($raw) || trim($raw) === '') {
+            return [];
+        }
+
+        return $this->assertTags(array_values(array_filter(array_map('trim', explode(',', $raw)), static fn (string $tag): bool => $tag !== '')));
+    }
+
+    /**
+     * Video list filter `?metadata[key]=value`.
+     *
+     * @return array<string, string>
+     */
+    private function metadataFilter(Request $request): array
+    {
+        $raw = $request->query->all()['metadata'] ?? [];
+        if ($raw === []) {
+            return [];
+        }
+        if (!is_array($raw)) {
+            throw new InvalidRequestException('Invalid metadata filter.');
+        }
+        if (count($raw) > self::MAX_METADATA_FILTERS) {
+            throw new InvalidRequestException(sprintf('At most %d metadata filters are allowed.', self::MAX_METADATA_FILTERS));
+        }
+        $result = [];
+        foreach ($raw as $key => $value) {
+            $key = (string) $key;
+            if (preg_match(self::METADATA_KEY_PATTERN, $key) !== 1 || !is_string($value) || trim($value) === '' || mb_strlen(trim($value)) > self::MAX_METADATA_VALUE_LENGTH) {
+                throw new InvalidRequestException('Invalid metadata filter.');
+            }
+            $result[$key] = trim($value);
+        }
+
+        return $result;
     }
 
     /**
@@ -378,6 +654,15 @@ class VideoOptimizerAdminController
         if ($e->getApiCode() === 'source_url_video_platform') {
             // URL import of a YouTube & co. page link; the administration shows its own hint.
             $error['code'] = 'SCALECOMMERCE_VO__SOURCE_URL_VIDEO_PLATFORM';
+        }
+
+        if ($e->getApiCode() === 'subtitle_language_in_use') {
+            // Videos still carry this language; they have to lose their subtitles first.
+            $error['code'] = 'SCALECOMMERCE_VO__SUBTITLE_LANGUAGE_IN_USE';
+            $videos = $e->getApiDetails()['videos'] ?? null;
+            if (is_int($videos)) {
+                $error['meta'] = ['videos' => $videos];
+            }
         }
 
         if ($status === Response::HTTP_UNAUTHORIZED || $status === Response::HTTP_FORBIDDEN) {
