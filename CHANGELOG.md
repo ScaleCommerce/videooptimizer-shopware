@@ -4,11 +4,18 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Breaking
+- Admin proxy forwards `encoding_quality` on library create/update and rejects invalid values with 400 ([#22](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/22)).
+- Admin reprocess route reads the JSON body (malformed → 400) and passes `force` ([#22](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/22)).
+- Subclasses overriding `VideoOptimizerClient::reprocessLibrary()` must add `bool $force = false` ([#22](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/22)).
+
 ### Added
 - Library encoding quality (performance/quality) and forced reprocess ([#22](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/22)).
 
-### Fixed
+### Changed
 - Custom poster upload no longer sends a redundant poster selection ([#23](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/23)).
+
+### Fixed
 - URL import explains rejected YouTube links ([#24](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/24)).
 
 ## [1.2.0] - 2026-11-27

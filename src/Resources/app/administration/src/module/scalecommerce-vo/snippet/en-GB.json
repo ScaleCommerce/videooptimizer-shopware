@@ -32,7 +32,7 @@
             "ladderChangedHint": "The encoding ladder applies to new uploads. Use “Reprocess videos” to update existing videos.",
             "reprocess": "Reprocess videos",
             "reprocessConfirmTitle": "Reprocess videos?",
-            "reprocessConfirmText": "All videos in “{name}” will be re-encoded with the current encoding ladder. This may take a while.",
+            "reprocessConfirmText": "Videos in “{name}” will be reprocessed with the current settings. Qualities that are already finished are kept; only missing or failed ones are created. “Re-encode all qualities” also recreates finished ones. This may take a while.",
             "reprocessQueued": "{count} videos queued for reprocessing.",
             "quality": "Quality mode",
             "quality_performance": "Performance (default)",

@@ -5,6 +5,7 @@ import {
     formatDuration,
     orientationKey,
 } from '../../helper/video-meta';
+import { isVideoPlatformUrl } from '../../helper/video-platform';
 
 // Videos per page in the gallery; further pages load on demand ("Load more videos").
 const PAGE_SIZE = 60;
@@ -91,14 +92,7 @@ Component.register('scalecommerce-vo-video-gallery', {
 
         // The API refuses video platform page links (YouTube) for URL import; say so before sending.
         ingestUrlIsPlatform() {
-            try {
-                const host = new URL(this.ingestUrl).hostname.toLowerCase();
-                return ['youtube.com', 'youtu.be', 'youtube-nocookie.com'].some(
-                    (domain) => host === domain || host.endsWith(`.${domain}`)
-                );
-            } catch {
-                return false;
-            }
+            return isVideoPlatformUrl(this.ingestUrl);
         },
 
         canIngest() {

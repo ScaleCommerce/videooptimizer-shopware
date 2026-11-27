@@ -32,7 +32,7 @@
             "ladderChangedHint": "Die Encoding-Leiter gilt für neue Uploads. Bestehende Videos über „Videos neu verarbeiten“ aktualisieren.",
             "reprocess": "Videos neu verarbeiten",
             "reprocessConfirmTitle": "Videos neu verarbeiten?",
-            "reprocessConfirmText": "Alle Videos der Bibliothek „{name}“ werden mit der aktuellen Encoding-Leiter neu verarbeitet. Das kann einige Zeit dauern.",
+            "reprocessConfirmText": "Die Videos der Bibliothek „{name}“ werden mit den aktuellen Einstellungen neu verarbeitet. Bereits fertige Qualitäten bleiben erhalten, es werden nur fehlende oder fehlgeschlagene erzeugt. Mit „Alle Qualitäten neu kodieren“ werden auch fertige Qualitäten neu erstellt. Das kann einige Zeit dauern.",
             "reprocessQueued": "{count} Videos zur Neuverarbeitung eingereiht.",
             "quality": "Qualitätsstufe",
             "quality_performance": "Performance (Standard)",

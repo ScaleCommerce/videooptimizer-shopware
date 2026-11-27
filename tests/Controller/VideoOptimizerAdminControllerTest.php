@@ -257,6 +257,28 @@ class VideoOptimizerAdminControllerTest extends TestCase
         static::assertSame(200, $response->getStatusCode());
     }
 
+    public function testUpdateLibraryForwardsValidEncodingQuality(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('updateLibrary')
+            ->with('lib-1', ['encoding_quality' => 'quality'])
+            ->willReturn(['id' => 'lib-1']);
+
+        $response = (new VideoOptimizerAdminController($client))->updateLibrary('lib-1', new Request([], [], [], [], [], [], '{"encoding_quality":"quality"}'));
+
+        static::assertSame(200, $response->getStatusCode());
+    }
+
+    public function testMalformedReprocessBodyIsRejected(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::never())->method('reprocessLibrary');
+
+        $response = (new VideoOptimizerAdminController($client))->reprocessLibrary(self::UUID, new Request([], [], [], [], [], [], '{not json'));
+
+        static::assertSame(400, $response->getStatusCode());
+    }
+
     public function testUpdateVideoOnlyPassesTitle(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
@@ -419,7 +441,7 @@ class VideoOptimizerAdminControllerTest extends TestCase
     public function testReprocessLibraryReturnsClientData(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
-        $client->expects(static::once())->method('reprocessLibrary')->with('lib-1')->willReturn(['queued' => 3]);
+        $client->expects(static::once())->method('reprocessLibrary')->with('lib-1', false)->willReturn(['queued' => 3]);
 
         $controller = new VideoOptimizerAdminController($client);
         $response = $controller->reprocessLibrary('lib-1', new Request());

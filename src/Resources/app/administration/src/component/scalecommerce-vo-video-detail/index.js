@@ -355,6 +355,9 @@ Component.register('scalecommerce-vo-video-detail', {
                         (sawProcessing || attempt >= 3)
                     );
                 });
+                if (this._unmounted) {
+                    return;
+                }
                 if (this.video.poster?.custom_status === 'failed') {
                     throw new Error(
                         this.$tc('scalecommerce-vo.detail.posterFailed')
@@ -366,9 +369,15 @@ Component.register('scalecommerce-vo-video-detail', {
                         this.uuid,
                         { source: 'custom' }
                     );
+                    if (this._unmounted) {
+                        return;
+                    }
                     await this._pollPoster(
                         (video) => video.poster?.source === 'custom'
                     );
+                    if (this._unmounted) {
+                        return;
+                    }
                 }
                 this.createNotificationSuccess({
                     message: this.$tc('scalecommerce-vo.detail.posterUpdated'),
