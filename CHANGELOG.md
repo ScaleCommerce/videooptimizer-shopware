@@ -5,6 +5,10 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-11-27
+
+Fixes from an independent QA review (#1, #2, #3, #5, #9, #12, #14).
+
 ### Upgrade notes
 Nothing to do for a standard installation: configuration, CMS element data and the bundled administration keep working. Check the following if they apply to you:
 - **Custom API or embed base URL:** values with userinfo, a query or a fragment, pointing to `localhost`, to an IP address outside the global range (private, loopback, link-local, reserved, shared/CGNAT) or using a numeric/hex host form (e.g. `127.1`, `0x7f000001`) are now rejected. The administration module then shows a configuration error and video elements are hidden in the storefront. The defaults (`https://api.videooptimizer.eu/api/v1`, `https://player.videooptimizer.eu`) are not affected. (#5)
