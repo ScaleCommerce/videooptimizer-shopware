@@ -4,6 +4,8 @@ All notable changes to this package. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-11-27
+
 ### Upgrade
 - To use webhooks, create a webhook in VideoOptimizer under Integrations, Webhooks with the URL shown in the VideoOptimizer module (`/api/scalecommerce-vo/webhook` on the shop's admin/API host) and set its signing secret in the plugin setting `webhookSecret`; until then the route answers 503 ([#39](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/39)).
 - `VideoOptimizerClient::listVideos()`, `listVideosPage()` and `listAllVideos()` take optional `$tags` and `$metadata` arguments; subclasses overriding them must accept and pass them on ([#37](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/37)).
