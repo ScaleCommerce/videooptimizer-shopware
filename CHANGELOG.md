@@ -13,6 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - Development: JavaScript tests (Vitest with jsdom) for the storefront source helper (hls.js/MP4 fallback, deferred loading, visibility autoplay) and the administration API service (paging, upload retries, cancel, progress), under `tests/js` and not part of the distributed package. (#20)
 
 ### Changed
+- README: describes the 1.1 behaviour (lazy loading, accessibility, cache tags and invalidation, fail-fast during outages, paging, upload progress, permission-aware administration) and a new section on the data sent to VideoOptimizer, including the `User-Agent` with the shop URL. (#18)
 - Cleanup: the single-video element uses the shared video surface logic of the other elements, `buildVideoSurface()` lost its unused `$presentation` parameter, and the unused `getAllVideos()` was removed from the administration API service (the proxy route stays). (#21)
 
 ### Deprecated
