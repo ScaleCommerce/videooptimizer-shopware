@@ -6,9 +6,12 @@ use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidRequestException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -27,6 +30,7 @@ class VideoOptimizerClient
         private readonly HttpClientInterface $httpClient,
         private readonly SystemConfigService $systemConfig,
         private readonly CacheInterface $cache,
+        private readonly LoggerInterface $logger = new NullLogger(),
     ) {
     }
 
@@ -219,18 +223,24 @@ class VideoOptimizerClient
     public function getThumbnailImage(string $uuid, int $index): array
     {
         $url = $this->baseUrl() . '/videos/' . $this->pathId($uuid) . '/thumbnails/' . $index;
-        $response = $this->httpClient->request('GET', $url, [
-            'headers' => $this->buildHeaders(true, 'image/*'),
-            'max_duration' => self::ADMIN_MAX_DURATION,
-        ]);
-        if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 300) {
-            throw VideoOptimizerApiException::fromResponse($response->getStatusCode(), $response->getContent(false));
-        }
 
-        return [
-            'content' => $response->getContent(),
-            'contentType' => $response->getHeaders()['content-type'][0] ?? 'image/jpeg',
-        ];
+        try {
+            $response = $this->httpClient->request('GET', $url, [
+                'headers' => $this->buildHeaders(true, 'image/*'),
+                'max_duration' => self::ADMIN_MAX_DURATION,
+            ]);
+            $status = $response->getStatusCode();
+            if ($status < 200 || $status >= 300) {
+                throw VideoOptimizerApiException::fromResponse($status, $response->getContent(false));
+            }
+
+            return [
+                'content' => $response->getContent(),
+                'contentType' => $response->getHeaders()['content-type'][0] ?? 'image/jpeg',
+            ];
+        } catch (TransportExceptionInterface $e) {
+            throw $this->unreachable('GET', $url, $e);
+        }
     }
 
     public function selectThumbnail(string $uuid, int $index): array
@@ -333,31 +343,64 @@ class VideoOptimizerClient
 
         $url = $this->baseUrl() . $path;
 
-        for ($attempt = 0; ; ++$attempt) {
-            $response = $this->httpClient->request($method, $url, $options);
-            $status = $response->getStatusCode();
+        try {
+            for ($attempt = 0; ; ++$attempt) {
+                $response = $this->httpClient->request($method, $url, $options);
+                $status = $response->getStatusCode();
 
-            // Respect Retry-After once; paginated loops can trip the rate limit. Skipped entirely
-            // for calls that opt out (e.g. getEmbed() during storefront rendering), where a
-            // blocking sleep() would hold the response open.
-            if ($status === 429 && $attempt === 0 && $retryOnRateLimit) {
-                sleep($this->retryAfterSeconds($response));
-                continue;
+                // Respect Retry-After once; paginated loops can trip the rate limit. Skipped entirely
+                // for calls that opt out (e.g. getEmbed() during storefront rendering), where a
+                // blocking sleep() would hold the response open.
+                if ($status === 429 && $attempt === 0 && $retryOnRateLimit) {
+                    sleep($this->retryAfterSeconds($response));
+                    continue;
+                }
+                break;
             }
-            break;
+
+            if ($status < 200 || $status >= 300) {
+                throw VideoOptimizerApiException::fromResponse($status, $response->getContent(false));
+            }
+
+            $content = $response->getContent();
+        } catch (TransportExceptionInterface $e) {
+            throw $this->unreachable($method, $url, $e);
         }
 
-        if ($status < 200 || $status >= 300) {
-            throw VideoOptimizerApiException::fromResponse($status, $response->getContent(false));
-        }
-
-        $content = $response->getContent();
+        // An empty success body (204, DELETE, or any endpoint that answers without content) stays an
+        // empty result as before; only a body that is present but not a JSON object is an error.
         if ($content === '') {
             return [];
         }
         $decoded = json_decode($content, true);
+        if (!is_array($decoded)) {
+            // E.g. an HTML maintenance page served with 200 must not be reported as an empty success.
+            $this->logger->warning('VideoOptimizer API returned a success status without a JSON body.', [
+                'method' => $method,
+                'url' => $url,
+                'status' => $status,
+                'body' => mb_substr($content, 0, 200),
+            ]);
 
-        return is_array($decoded) ? $decoded : [];
+            throw VideoOptimizerApiException::badGateway('The VideoOptimizer API returned an invalid response.');
+        }
+
+        return $decoded;
+    }
+
+    /**
+     * Network, TLS, DNS errors and timeouts (incl. max_duration). The transport message contains
+     * the full upstream URL, so it is logged and replaced by a neutral message.
+     */
+    private function unreachable(string $method, string $url, TransportExceptionInterface $e): VideoOptimizerApiException
+    {
+        $this->logger->warning('VideoOptimizer API could not be reached.', [
+            'method' => $method,
+            'url' => $url,
+            'error' => $e->getMessage(),
+        ]);
+
+        return VideoOptimizerApiException::badGateway('The VideoOptimizer API could not be reached or did not respond in time.', $e);
     }
 
     /**

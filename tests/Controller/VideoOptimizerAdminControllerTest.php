@@ -5,6 +5,7 @@ namespace ScaleCommerce\VideoOptimizer\Tests\Controller;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ScaleCommerce\VideoOptimizer\Controller\VideoOptimizerAdminController;
+use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidRequestException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\VideoOptimizerApiException;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
@@ -613,5 +614,56 @@ class VideoOptimizerAdminControllerTest extends TestCase
 
         static::assertSame('api.action.scalecommerce-vo.videos.playback', $match['_route']);
         static::assertSame(['scalecommerce_vo:read'], $match['_acl']);
+    }
+
+    /**
+     * @return iterable<string, array{int, string}>
+     */
+    public static function upstreamAuthErrors(): iterable
+    {
+        yield 'token rejected' => [401, 'SCALECOMMERCE_VO__API_TOKEN_REJECTED'];
+        yield 'token not permitted' => [403, 'SCALECOMMERCE_VO__API_TOKEN_FORBIDDEN'];
+    }
+
+    /**
+     * The administration's HTTP client treats every 401 as an expired admin session (token
+     * refresh + retry), so an upstream auth error must not be passed through as-is (issue #2).
+     */
+    #[DataProvider('upstreamAuthErrors')]
+    public function testUpstreamAuthErrorBecomesBadGatewayWithOwnCode(int $upstreamStatus, string $code): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('listLibraries')->willThrowException(new VideoOptimizerApiException($upstreamStatus, 'Unauthorized'));
+
+        $response = (new VideoOptimizerAdminController($client))->listLibraries();
+
+        static::assertSame(502, $response->getStatusCode());
+        $error = json_decode((string) $response->getContent(), true)['errors'][0];
+        static::assertSame('502', $error['status']);
+        static::assertSame($code, $error['code']);
+        static::assertStringStartsWith('The VideoOptimizer API', $error['detail']);
+        static::assertStringContainsString('token', $error['detail']);
+    }
+
+    #[DataProvider('upstreamAuthErrors')]
+    public function testUpstreamAuthErrorOnThumbnailBecomesBadGateway(int $upstreamStatus, string $code): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('getThumbnailImage')->willThrowException(new VideoOptimizerApiException($upstreamStatus, 'Unauthorized'));
+
+        $response = (new VideoOptimizerAdminController($client))->getThumbnailImage(self::UUID, '1');
+
+        static::assertSame(502, $response->getStatusCode());
+        static::assertSame($code, json_decode((string) $response->getContent(), true)['errors'][0]['code']);
+    }
+
+    public function testInvalidRequestOnThumbnailReturns400(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('getThumbnailImage')->willThrowException(new InvalidRequestException('Invalid VideoOptimizer ID.'));
+
+        $response = (new VideoOptimizerAdminController($client))->getThumbnailImage(self::UUID, '1');
+
+        static::assertSame(400, $response->getStatusCode());
     }
 }

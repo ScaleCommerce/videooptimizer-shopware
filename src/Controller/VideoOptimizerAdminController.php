@@ -178,10 +178,10 @@ class VideoOptimizerAdminController
                 'X-Content-Type-Options' => 'nosniff',
                 'Content-Disposition' => 'inline',
             ]);
-        } catch (MissingApiTokenException|InvalidApiBaseUrlException $e) {
+        } catch (MissingApiTokenException|InvalidApiBaseUrlException|InvalidRequestException $e) {
             return new JsonResponse(['errors' => [['status' => '400', 'detail' => $e->getMessage()]]], 400);
         } catch (VideoOptimizerApiException $e) {
-            return new JsonResponse(['errors' => [['status' => (string) $e->getStatusCode(), 'detail' => $e->getMessage()]]], $e->getStatusCode());
+            return $this->apiError($e);
         }
     }
 
@@ -315,9 +315,37 @@ class VideoOptimizerAdminController
         } catch (MissingApiTokenException|InvalidApiBaseUrlException|InvalidRequestException $e) {
             return new JsonResponse(['errors' => [['status' => '400', 'detail' => $e->getMessage()]]], 400);
         } catch (VideoOptimizerApiException $e) {
-            return new JsonResponse(['errors' => [['status' => (string) $e->getStatusCode(), 'detail' => $e->getMessage()]]], $e->getStatusCode());
+            return $this->apiError($e);
         } catch (\JsonException) {
             return new JsonResponse(['errors' => [['status' => '400', 'detail' => 'Invalid JSON body.']]], 400);
         }
+    }
+
+    /**
+     * Upstream auth errors are not passed through as 401/403: the administration's HTTP client
+     * treats every 401 as an expired admin session (token refresh + retry), and 403 would read as
+     * a missing Shopware privilege. Both become 502 with an own error code and an actionable text.
+     */
+    private function apiError(VideoOptimizerApiException $e): JsonResponse
+    {
+        $status = $e->getStatusCode();
+        $error = ['status' => (string) $status, 'detail' => $e->getMessage()];
+
+        if ($status === Response::HTTP_UNAUTHORIZED || $status === Response::HTTP_FORBIDDEN) {
+            $status = Response::HTTP_BAD_GATEWAY;
+            $error = $e->getStatusCode() === Response::HTTP_UNAUTHORIZED
+                ? [
+                    'status' => (string) $status,
+                    'code' => 'SCALECOMMERCE_VO__API_TOKEN_REJECTED',
+                    'detail' => 'The VideoOptimizer API rejected the API token. Check the token in the plugin configuration.',
+                ]
+                : [
+                    'status' => (string) $status,
+                    'code' => 'SCALECOMMERCE_VO__API_TOKEN_FORBIDDEN',
+                    'detail' => 'The VideoOptimizer API token is not permitted to perform this action. Check the token permissions in VideoOptimizer.',
+                ];
+        }
+
+        return new JsonResponse(['errors' => [$error]], $status);
     }
 }

@@ -5,6 +5,21 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Upgrade notes
+Nothing to do for a standard installation: configuration, CMS element data and the bundled administration keep working. Check the following if they apply to you:
+- **Custom API or embed base URL:** values with userinfo, a query or a fragment, or pointing to `localhost` or a private, loopback, link-local or reserved IP address are now rejected. The administration module then shows a configuration error and video elements are hidden in the storefront. The defaults (`https://api.videooptimizer.eu/api/v1`, `https://player.videooptimizer.eu`) are not affected. (#5)
+- **Own code calling the admin proxy** (`/api/_action/scalecommerce-vo/…`) directly:
+  - routes with `{id}`/`{uuid}` only match UUIDs and answer 404 for anything else (#5);
+  - an upstream 401/403 is answered with 502 and the error `code` `SCALECOMMERCE_VO__API_TOKEN_REJECTED` or `SCALECOMMERCE_VO__API_TOKEN_FORBIDDEN` instead of being passed through (#2);
+  - an unreachable or timed-out API is answered with 502 instead of an unhandled 500, and a success response that is not JSON with 502 instead of an empty result (#1).
+- **Decorators or subclasses of `VideoOptimizerClient`:** the constructor has a new optional fourth argument (`LoggerInterface`). Existing service definitions keep working.
+
+### Fixed
+- An unreachable VideoOptimizer API (DNS, TLS, connection reset) or a timeout no longer surfaces as an unhandled HTTP 500 with the raw transport error, which contained the full upstream URL. The administration shows a neutral message, and the details are logged as a warning. This also applies to the thumbnail and playback proxies and to embed lookups during storefront rendering. (#1)
+- A success response from the API that is not JSON (for example a maintenance page served with 200) is reported as an error instead of being treated as an empty, successful result. (#1)
+- A rejected or under-privileged VideoOptimizer API token no longer makes the administration refresh its own session and repeat the request; the error now says that the token was rejected or lacks the permission. (#2)
+- Error messages from the API are passed to the administration as short plain text (max. 200 characters, markup removed), as admin notifications render HTML. (#2)
+
 ### Security
 - Admin API routes accept only UUIDs for `{id}`/`{uuid}`, and the client rejects any ID that is not a plain path segment before sending a request. Previously `%2E%2E` reached the client as `..`, and the dot-segment removal of the HTTP client re-targeted the upstream request one level up (for example `DELETE …/videos/%2E%2E/poster` → `DELETE /api/v1/poster`). (#5)
 - The API and embed base URLs must not contain userinfo, a query or a fragment, and must not point to `localhost` or a private, loopback, link-local or reserved IP address. (#5)

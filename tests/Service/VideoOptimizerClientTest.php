@@ -4,6 +4,7 @@ namespace ScaleCommerce\VideoOptimizer\Tests\Service;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidRequestException;
 use ScaleCommerce\VideoOptimizer\Service\Exception\MissingApiTokenException;
@@ -15,6 +16,7 @@ use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class VideoOptimizerClientTest extends TestCase
@@ -722,5 +724,93 @@ class VideoOptimizerClientTest extends TestCase
         static::assertStringEndsWith('/videos', $captured['url']);
         static::assertSame($payload, json_decode((string) $captured['body'], true));
         static::assertSame('processing', $result['status']);
+    }
+
+    public function testTransportErrorBecomesNeutralBadGateway(): void
+    {
+        $http = new MockHttpClient(new MockResponse('', ['error' => 'Could not resolve host: api.example for "https://api.example/api/v1/libraries?limit=100"']));
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(static::once())->method('warning')
+            ->with(static::stringContains('could not be reached'), static::callback(
+                fn (array $context) => str_contains((string) $context['error'], 'Could not resolve host')
+            ));
+
+        try {
+            (new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), $logger))->listLibraries();
+            static::fail('Expected VideoOptimizerApiException');
+        } catch (VideoOptimizerApiException $e) {
+            static::assertSame(502, $e->getStatusCode());
+            static::assertStringNotContainsString('api.example', $e->getMessage());
+            static::assertInstanceOf(TransportExceptionInterface::class, $e->getPrevious());
+        }
+    }
+
+    public function testTransportErrorOnThumbnailImageBecomesBadGateway(): void
+    {
+        $http = new MockHttpClient(new MockResponse('', ['error' => 'Connection reset']));
+
+        $this->expectException(VideoOptimizerApiException::class);
+        $this->expectExceptionCode(502);
+        $this->client($http)->getThumbnailImage('v1', 1);
+    }
+
+    public function testTransportErrorOnEmbedBecomesBadGateway(): void
+    {
+        $http = new MockHttpClient(new MockResponse('', ['error' => 'Connection reset']));
+
+        $this->expectException(VideoOptimizerApiException::class);
+        $this->expectExceptionCode(502);
+        $this->client($http)->getEmbed('v1');
+    }
+
+    /**
+     * @return iterable<string, array{string, int, string}>
+     */
+    public static function invalidSuccessBodies(): iterable
+    {
+        yield 'html maintenance page' => ['GET', 200, '<html><body>Maintenance</body></html>'];
+        yield 'truncated json' => ['GET', 200, '{"data": ['];
+        yield 'json scalar' => ['GET', 200, '"ok"'];
+    }
+
+    #[DataProvider('invalidSuccessBodies')]
+    public function testUndecodableSuccessBodyIsAnError(string $method, int $status, string $body): void
+    {
+        $http = new MockHttpClient(new MockResponse($body, ['http_code' => $status]));
+
+        $this->expectException(VideoOptimizerApiException::class);
+        $this->expectExceptionCode(502);
+        $this->client($http)->getVideo('v1');
+    }
+
+    public function testEmptySuccessBodyStaysAnEmptyResult(): void
+    {
+        $http = new MockHttpClient([
+            new MockResponse('', ['http_code' => 200]),
+            new MockResponse('', ['http_code' => 204]),
+            new MockResponse('', ['http_code' => 202]),
+        ]);
+        $client = $this->client($http);
+
+        $client->deleteVideo('v1');
+        $client->deletePoster('v1');
+
+        static::assertSame([], $client->reprocessLibrary('lib-1'));
+    }
+
+    public function testUpstreamErrorMessageIsReducedToShortPlainText(): void
+    {
+        $message = '<a href="https://evil.example">Click here</a>   to <b>fix</b>' . str_repeat(' x', 300);
+        $http = new MockHttpClient(new MockResponse(json_encode(['message' => $message]), ['http_code' => 422]));
+
+        try {
+            $this->client($http)->getVideo('v1');
+            static::fail('Expected VideoOptimizerApiException');
+        } catch (VideoOptimizerApiException $e) {
+            static::assertSame(422, $e->getStatusCode());
+            static::assertStringStartsWith('Click here to fix x x', $e->getMessage());
+            static::assertStringNotContainsString('<', $e->getMessage());
+            static::assertLessThanOrEqual(200, mb_strlen($e->getMessage()));
+        }
     }
 }
