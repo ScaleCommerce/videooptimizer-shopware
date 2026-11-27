@@ -23,26 +23,41 @@ class VideoJsonLdTest extends TestCase
             'name' => 'Imagevideo',
             'description' => 'Imagevideo',
             'thumbnailUrl' => ['https://p/t.jpg'],
-            'uploadDate' => '2026-03-01T09:00:00+00:00',
+            'uploadDate' => '2026-03-01T10:00:00+01:00',
             'duration' => 'PT1M5S',
             'contentUrl' => 'https://cdn/master.m3u8',
             'embedUrl' => 'https://player.example/embed/abc',
         ], json_decode((string) $json, true));
     }
 
-    public function testFallsBackToMp4AndOmitsWhatIsUnknown(): void
+    public function testFallsBackToMp4AndOmitsAnUnknownDuration(): void
     {
-        $data = json_decode((string) VideoJsonLd::build(['title' => 'T', 'mp4' => 'https://cdn/v.mp4'], 'https://player/embed/x', null), true);
+        $data = json_decode((string) VideoJsonLd::build(['title' => 'T', 'mp4' => 'https://cdn/v.mp4', 'poster' => 'https://p/t.jpg'], 'https://player/embed/x', '2026-03-01'), true);
 
         static::assertSame('https://cdn/v.mp4', $data['contentUrl']);
-        static::assertArrayNotHasKey('uploadDate', $data);
-        static::assertArrayNotHasKey('thumbnailUrl', $data);
         static::assertArrayNotHasKey('duration', $data);
+    }
+
+    public function testNothingWithoutUploadDateOrThumbnail(): void
+    {
+        $embed = ['title' => 'T', 'mp4' => 'https://cdn/v.mp4', 'poster' => 'https://p/t.jpg'];
+
+        static::assertNull(VideoJsonLd::build($embed, 'u', null));
+        static::assertNull(VideoJsonLd::build($embed, 'u', 'not a date'));
+        static::assertNull(VideoJsonLd::build(['poster' => null] + $embed, 'u', '2026-03-01T10:00:00Z'));
+    }
+
+    public function testUploadDateKeepsItsOffset(): void
+    {
+        $embed = ['title' => 'T', 'mp4' => 'https://cdn/v.mp4', 'poster' => 'https://p/t.jpg'];
+
+        static::assertSame('2026-03-01T00:30:00+01:00', json_decode((string) VideoJsonLd::build($embed, 'u', '2026-03-01T00:30:00+01:00'), true)['uploadDate']);
+        static::assertSame('2026-03-01T10:00:00+00:00', json_decode((string) VideoJsonLd::build($embed, 'u', '2026-03-01T10:00:00Z'), true)['uploadDate']);
     }
 
     public function testIsSafeInsideAScriptElement(): void
     {
-        $json = (string) VideoJsonLd::build(['title' => '</script><script>alert(1)</script> & "x"', 'mp4' => 'https://cdn/v.mp4'], 'https://player/embed/x', null);
+        $json = (string) VideoJsonLd::build(['title' => '</script><script>alert(1)</script> & "x"', 'mp4' => 'https://cdn/v.mp4', 'poster' => 'https://p/t.jpg'], 'https://player/embed/x', '2026-03-01');
 
         static::assertStringNotContainsString('</script>', $json);
         static::assertStringNotContainsString('<', $json);

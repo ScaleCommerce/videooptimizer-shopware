@@ -11,7 +11,7 @@ final class VideoJsonLd
      * @param array<string, mixed> $embed normalized embed (hls, mp4, poster, title, duration)
      * @param string $embedUrl the hosted player URL of the video, without query
      *
-     * @return string|null JSON that is safe inside a script element, null without a title or any media
+     * @return string|null JSON that is safe inside a script element, null without a title, media, poster or upload date
      */
     public static function build(array $embed, string $embedUrl, ?string $uploadDate): ?string
     {
@@ -28,12 +28,14 @@ final class VideoJsonLd
             // The API has no separate description; the title is the fallback Google accepts.
             'description' => $title,
         ];
-        if (is_string($embed['poster'] ?? null) && $embed['poster'] !== '') {
-            $data['thumbnailUrl'] = [$embed['poster']];
+        // Search engines flag a VideoObject without thumbnail or upload date, so without both nothing is output.
+        $poster = $embed['poster'] ?? null;
+        $date = self::date($uploadDate);
+        if (!is_string($poster) || $poster === '' || $date === null) {
+            return null;
         }
-        if ($uploadDate !== null && ($timestamp = strtotime($uploadDate)) !== false) {
-            $data['uploadDate'] = gmdate('c', $timestamp);
-        }
+        $data['thumbnailUrl'] = [$poster];
+        $data['uploadDate'] = $date;
         $duration = self::duration($embed['duration'] ?? null);
         if ($duration !== null) {
             $data['duration'] = $duration;
@@ -60,5 +62,20 @@ final class VideoJsonLd
         $rest = $total % 60;
 
         return 'PT' . ($hours > 0 ? $hours . 'H' : '') . ($minutes > 0 ? $minutes . 'M' : '') . ($rest > 0 || ($hours === 0 && $minutes === 0) ? $rest . 'S' : '');
+    }
+
+    /**
+     * The date as ISO 8601 with its own UTC offset kept (no shift of the day), null if unparseable.
+     */
+    private static function date(?string $value): ?string
+    {
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+        try {
+            return (new \DateTimeImmutable($value))->format(DATE_ATOM);
+        } catch (\Exception) {
+            return null;
+        }
     }
 }

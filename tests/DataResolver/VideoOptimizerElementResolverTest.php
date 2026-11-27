@@ -183,10 +183,10 @@ class VideoOptimizerElementResolverTest extends TestCase
         static::assertNull($second->getData()->getEmbed()['jsonLd']);
     }
 
-    public function testJsonLdOmitsUploadDateWhenTheEmbedHasNone(): void
+    public function testNoJsonLdWhenTheEmbedHasNoUploadDate(): void
     {
         $client = $this->createStub(VideoOptimizerClient::class);
-        $client->method('getEmbed')->willReturn(['sources' => [['src' => 'https://cdn/master.m3u8', 'codec' => 'hls']], 'title' => 'Demo', 'uploadDate' => null]);
+        $client->method('getEmbed')->willReturn(['sources' => [['src' => 'https://cdn/master.m3u8', 'codec' => 'hls']], 'title' => 'Demo', 'poster' => 'https://cdn/p.jpg', 'uploadDate' => null]);
         $client->method('jsonLdEnabled')->willReturn(true);
         $client->method('claimVideoJsonLd')->willReturn(true);
         $client->method('embedBaseUrl')->willReturn('https://player.example');
@@ -194,7 +194,8 @@ class VideoOptimizerElementResolverTest extends TestCase
         $slot = $this->slotWithUuid('uuid-1');
         $this->resolver($client)->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
 
-        static::assertArrayNotHasKey('uploadDate', json_decode($slot->getData()->getEmbed()['jsonLd'], true));
+        // No upload date, no structured data (search engines flag the missing field).
+        static::assertNull($slot->getData()->getEmbed()['jsonLd']);
     }
 
     public function testNoJsonLdWhenSwitchedOff(): void

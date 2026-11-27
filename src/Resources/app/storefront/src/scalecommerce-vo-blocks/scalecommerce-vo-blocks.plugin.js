@@ -121,7 +121,7 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
         video.muted =
             !!nativeOptions.muted || nativeOptions.theme?.mutedStart === true;
         video.preload = playback.preload;
-        applyPlayerTheme(video, wrap, nativeOptions);
+        applyPlayerTheme(video, wrap, nativeOptions, false);
         addTracks(video, nativeOptions.tracks);
         // Keeps the poster visible while loading and behind the "cannot be played" notice.
         if (nativeOptions.poster) {

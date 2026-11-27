@@ -231,7 +231,8 @@ export function markUnavailable(wrapper, video, label) {
 /**
  * Playback settings of a native player: the element's own options combined with the `theme` of the
  * video (GET /embed). The theme can only add behaviour the editor did not set (autoplay, muted start,
- * loop) or switch the controls off; the element's explicit choices are never overridden.
+ * loop); its `controls: false` (background style) applies only when the video autoplays, otherwise the
+ * controls stay so visitors can start and pause. The element's explicit choices are never overridden.
  * Keys the browser's native controls cannot honour (control bar colour, volume, time display,
  * quality menu) are ignored.
  */
@@ -240,7 +241,9 @@ export function resolvePlayback(options = {}) {
         options.theme && !Array.isArray(options.theme) ? options.theme : {};
     const autoplay = !!options.autoplay || theme.autoplay === true;
     return {
-        controls: options.controls !== false && theme.controls !== false,
+        controls:
+            options.controls !== false &&
+            !(theme.controls === false && autoplay),
         autoplay,
         // Browsers block autoplay with sound, so an autoplaying video starts muted.
         muted: !!options.muted || theme.mutedStart === true || autoplay,
@@ -253,9 +256,9 @@ export function resolvePlayback(options = {}) {
 /**
  * Applies the theme to a <video> as far as native controls allow: hides the fullscreen button and
  * the playback-rate menu (Chromium `controlsList`), disables Picture-in-Picture, and makes a
- * non-interactive (`interactive: false`) player ignore the pointer.
+ * non-interactive (`interactive: false`, direct players only) player ignore the pointer.
  */
-export function applyPlayerTheme(video, wrapper, options = {}) {
+export function applyPlayerTheme(video, wrapper, options = {}, direct = true) {
     const theme =
         options.theme && !Array.isArray(options.theme) ? options.theme : {};
     const list = [];
@@ -272,7 +275,8 @@ export function applyPlayerTheme(video, wrapper, options = {}) {
         video.disablePictureInPicture = true;
         video.setAttribute('disablepictureinpicture', '');
     }
-    if (theme.interactive === false && wrapper) {
+    // `interactive: false` is for the player placed in the page, not after a click on a facade.
+    if (direct && theme.interactive === false && wrapper) {
         wrapper.classList.add('scalecommerce-vo-video--static');
     }
 }

@@ -136,10 +136,16 @@ describe('player theme (#41)', () => {
         expect(video.play).toHaveBeenCalled();
     });
 
-    it('starts muted with mutedStart and hides the controls when the theme says so', () => {
+    it('starts muted with mutedStart and keeps the controls when the video does not autoplay', () => {
         const { video } = setup({ mp4: 'https://cdn/v.mp4', controls: true, theme: { mutedStart: true, controls: false } });
 
         expect(video.muted).toBe(true);
+        expect(video.controls).toBe(true);
+    });
+
+    it('hides the controls of an autoplaying background-style video', () => {
+        const { video } = setup({ mp4: 'https://cdn/v.mp4', controls: true, theme: { autoplay: true, loopButton: true, controls: false } });
+
         expect(video.controls).toBe(false);
     });
 

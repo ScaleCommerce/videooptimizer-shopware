@@ -16,6 +16,12 @@
     }
 }
 
+.scalecommerce-vo-surface__facade:focus-visible
+    .scalecommerce-vo-surface__play {
+    outline: 3px solid var(--vo-accent, #fff);
+    outline-offset: 3px;
+}
+
 .scalecommerce-vo-surface__play {
     position: absolute;
     top: 50%;
@@ -27,7 +33,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: var(--vo-accent, rgba(0, 0, 0, 0.55));
+    background: rgba(0, 0, 0, 0.55);
     color: #fff;
     font-size: 24px;
     pointer-events: none;

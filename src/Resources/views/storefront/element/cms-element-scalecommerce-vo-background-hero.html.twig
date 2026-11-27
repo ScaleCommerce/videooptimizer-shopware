@@ -9,12 +9,10 @@
                 {% set responsivePoster = embed.poster and embed.posterSrcsetAttr %}
                 {% if responsivePoster %}
                     {# The poster is an <img> with srcset, so small screens do not load the large poster; a priority
-                       hero (above the fold) preloads it with high fetch priority. The video has no poster then. #}
-                    {% if data.priority %}
-                        <link rel="preload" as="image" href="{{ embed.poster }}" imagesrcset="{{ embed.posterSrcsetAttr }}" imagesizes="100vw" fetchpriority="high">
-                    {% endif %}
+                       hero (above the fold) loads it with high fetch priority and gives the video the same poster
+                       URL (cache hit), so the poster shows when autoplay is blocked. #}
                     <img class="scalecommerce-vo-hero__poster" src="{{ embed.poster }}" srcset="{{ embed.posterSrcsetAttr }}" sizes="100vw" alt=""
-                         decoding="async" {% if data.priority %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
+                         decoding="async"{% if data.priority %} fetchpriority="high"{% endif %}>
                 {% endif %}
                 {# No autoplay attribute: the hero plugin starts playback only when the hero is visible and
                    motion is not reduced (prefers-reduced-motion, data saver). #}
@@ -22,7 +20,7 @@
                        preload="{{ data.priority ? 'auto' : 'metadata' }}"
                        data-scalecommerce-vo-hero="true"
                        {% if data.priority %}data-scalecommerce-vo-hero-priority="true"{% endif %}
-                       {% if embed.poster and not responsivePoster %}poster="{{ embed.poster }}"{% endif %}
+                       {% if embed.poster and (not responsivePoster or data.priority) %}poster="{{ embed.poster }}"{% endif %}
                        {% if embed.hls %}data-scalecommerce-vo-hero-hls="{{ embed.hls }}"{% endif %}
                        {% if embed.mp4 %}data-scalecommerce-vo-hero-mp4="{{ embed.mp4 }}"{% endif %}></video>
                 {% if embed.hls or embed.mp4 %}

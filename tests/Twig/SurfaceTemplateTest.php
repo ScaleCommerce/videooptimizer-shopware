@@ -120,10 +120,11 @@ class SurfaceTemplateTest extends TestCase
     {
         $html = $this->renderHero(['videoUuid' => 'u', 'embed' => self::HERO_EMBED, 'priority' => true, 'height' => 'large', 'overlay' => 'none']);
 
-        static::assertStringContainsString('<link rel="preload" as="image" href="https://p/t.jpg" imagesrcset="https://p/480.jpg 480w, https://p/1280.jpg 1280w" imagesizes="100vw" fetchpriority="high">', $html);
+        static::assertStringNotContainsString('rel="preload"', $html);
         static::assertMatchesRegularExpression('/<img class="scalecommerce-vo-hero__poster"[^>]*srcset="[^"]+"[^>]*fetchpriority="high"/', $html);
         static::assertStringNotContainsString('loading="lazy"', $html);
-        static::assertStringNotContainsString('poster="', explode('<video', $html)[1]);
+        // The video carries the same poster URL (cache hit) for blocked autoplay.
+        static::assertStringContainsString('poster="https://p/t.jpg"', explode('<video', $html)[1]);
     }
 
     public function testRegularHeroLoadsItsPosterLazily(): void
@@ -132,7 +133,10 @@ class SurfaceTemplateTest extends TestCase
 
         static::assertStringNotContainsString('rel="preload"', $html);
         static::assertStringNotContainsString('fetchpriority', $html);
-        static::assertMatchesRegularExpression('/<img class="scalecommerce-vo-hero__poster"[^>]*loading="lazy"/', $html);
+        static::assertStringContainsString('<img class="scalecommerce-vo-hero__poster"', $html);
+        static::assertStringNotContainsString('loading="lazy"', $html);
+        static::assertStringContainsString('decoding="async"', $html);
+        static::assertStringNotContainsString('poster="', explode('<video', $html)[1]);
     }
 
     public function testHeroWithoutSrcsetKeepsThePosterAttribute(): void

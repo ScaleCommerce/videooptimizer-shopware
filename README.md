@@ -168,7 +168,7 @@ Under **Settings → System → Plugins → VideoOptimizer**:
 | `apiToken` | Your VideoOptimizer API token (`vp_...`). |
 | `apiBaseUrl` | API base URL, must be `https://`. Default: `https://api.videooptimizer.eu/api/v1`. |
 | `embedBaseUrl` | Public host serving the hosted embed player, must be `https://`. Default: `https://player.videooptimizer.eu`. Existing installations that still use `https://videooptimizer.eu` keep working. |
-| `jsonLd` | Output a schema.org `VideoObject` (JSON-LD) once per video on a page (default on). Switch off if your theme or SEO plugin already outputs one. |
+| `jsonLd` | Output a schema.org `VideoObject` (JSON-LD) once per video on a page (default on). Switch off if your theme or SEO plugin already outputs one. Like all plugin settings it is global, not per sales channel. |
 | `blockPrivateNetworks` | Refuse connections to private, loopback and link-local addresses, also behind host names and redirects (default on). Switch off for a self-hosted VideoOptimizer on a private network; not applied behind an outbound proxy. |
 
 ### Permissions (ACL)

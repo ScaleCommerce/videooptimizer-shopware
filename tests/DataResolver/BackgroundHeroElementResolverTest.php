@@ -59,7 +59,7 @@ class BackgroundHeroElementResolverTest extends TestCase
     public function testHeroCarriesJsonLd(): void
     {
         $client = $this->createStub(VideoOptimizerClient::class);
-        $client->method('getEmbed')->willReturn(['sources' => [['src' => 'https://cdn/master.m3u8', 'codec' => 'hls']], 'title' => 'Hero']);
+        $client->method('getEmbed')->willReturn(['sources' => [['src' => 'https://cdn/master.m3u8', 'codec' => 'hls']], 'title' => 'Hero', 'poster' => 'https://cdn/p.jpg', 'uploadDate' => '2026-03-01T10:00:00Z']);
         $client->method('jsonLdEnabled')->willReturn(true);
         $client->method('claimVideoJsonLd')->willReturn(true);
         $client->method('embedBaseUrl')->willReturn('https://player.example');
