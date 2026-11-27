@@ -428,6 +428,15 @@ class VideoOptimizerClientTest extends TestCase
         static::assertSame($first, $second);
     }
 
+    public function testJsonLdIsOnUnlessSwitchedOff(): void
+    {
+        static::assertTrue($this->client(new MockHttpClient())->jsonLdEnabled());
+
+        $config = $this->createStub(SystemConfigService::class);
+        $config->method('get')->willReturnMap([['ScaleVideoOptimizer.config.jsonLd', null, false]]);
+        static::assertFalse($this->client(new MockHttpClient(), $config)->jsonLdEnabled());
+    }
+
     public function testGetEmbedCachesFailedLookupsForSixtySeconds(): void
     {
         $count = 0;

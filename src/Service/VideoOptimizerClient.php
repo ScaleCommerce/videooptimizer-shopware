@@ -346,6 +346,22 @@ class VideoOptimizerClient implements ResetInterface
     }
 
     /**
+     * Plugin setting `jsonLd` (schema.org VideoObject on the storefront), on unless switched off.
+     */
+    public function jsonLdEnabled(): bool
+    {
+        return $this->systemConfig->get('ScaleVideoOptimizer.config.jsonLd') !== false;
+    }
+
+    /**
+     * True once per video and request, see EmbedRenderState::claimJsonLd().
+     */
+    public function claimVideoJsonLd(string $uuid): bool
+    {
+        return $this->availability->claimJsonLd($uuid);
+    }
+
+    /**
      * Invalidates the cached getEmbed() result for a video, so a title/poster/thumbnail change or
      * deletion made through the admin is reflected on the storefront without waiting out the TTL.
      * A no-op if nothing is cached for this UUID (e.g. it was never rendered, or already expired).

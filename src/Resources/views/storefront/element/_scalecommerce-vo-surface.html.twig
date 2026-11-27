@@ -2,6 +2,8 @@
     {% set aspect = (embed.aspectRatio ?? null)|default('16 / 9') %}
     {% set opts = options|default({}) %}
     {% set videoTitle = label ?: (embed.title ?? null) ?: ('scalecommerce-vo.storefront.video'|trans) %}
+    {% set theme = embed.theme ?? {} %}
+    {% set accent = theme.accentColor ?? null %}
     {% set nativeOptions = {
         hls: embed.hls ?? null,
         mp4: embed.mp4 ?? null,
@@ -10,9 +12,11 @@
         autoplay: opts.autoplay ?? false,
         muted: opts.muted ?? false,
         loop: opts.loop ?? false,
+        theme: theme,
+        tracks: embed.tracks ?? [],
         unavailableLabel: 'scalecommerce-vo.storefront.unavailable'|trans
     } %}
-    <div class="scalecommerce-vo-surface" style="--scvo-aspect: {{ aspect }}"
+    <div class="scalecommerce-vo-surface" style="--scvo-aspect: {{ aspect }}{% if accent %}; --vo-accent: {{ accent }}{% endif %}"
          data-scalecommerce-vo-block="true"
          data-vo-presentation="{{ presentation }}"
          data-vo-player-mode="{{ playerMode }}"
@@ -28,17 +32,24 @@
             {% else %}
                 <div class="scalecommerce-vo-video scalecommerce-vo-fill" data-scalecommerce-vo-player="true"
                      data-scalecommerce-vo-player-options='{{ nativeOptions|json_encode }}'>
+                    {# crossorigin: the subtitle files come from the CDN, which allows any origin. #}
                     <video class="scalecommerce-vo-video__player" playsinline
-                           {% if embed.poster %}poster="{{ embed.poster }}"{% endif %}></video>
+                           {% if embed.tracks %}crossorigin="anonymous"{% endif %}
+                           {% if embed.poster %}poster="{{ embed.poster }}"{% endif %}>
+                        {% for track in embed.tracks ?? [] %}<track kind="{{ track.kind }}" srclang="{{ track.srclang }}" label="{{ track.label }}" src="{{ track.src }}"{% if track.default %} default{% endif %}>{% endfor %}
+                    </video>
                 </div>
             {% endif %}
         {% else %}
             <button type="button" class="scalecommerce-vo-surface__facade"
                     data-vo-action="{{ presentation == 'lightbox' ? 'lightbox' : 'facade' }}"
                     aria-label="{{ label|default('scalecommerce-vo.storefront.play'|trans) }}">
-                {% if embed.poster %}<img class="scalecommerce-vo-surface__poster" src="{{ embed.poster }}" alt="" loading="lazy">{% endif %}
-                <span class="scalecommerce-vo-surface__play" aria-hidden="true">▶</span>
+                {% if embed.poster %}<img class="scalecommerce-vo-surface__poster" src="{{ embed.poster }}"
+                         {% if embed.posterSrcsetAttr %}srcset="{{ embed.posterSrcsetAttr }}" sizes="{{ opts.posterSizes ?? '(min-width: 1280px) 1280px, 100vw' }}"{% endif %}
+                         alt="" loading="lazy" decoding="async">{% endif %}
+                <span class="scalecommerce-vo-surface__play scalecommerce-vo-surface__play--{{ theme.playButtonShape ?? 'round' }} scalecommerce-vo-surface__play--{{ theme.playButtonSize ?? 'medium' }}{% if (theme.bigPlayButton ?? true) == false %} scalecommerce-vo-surface__play--hidden{% endif %}" aria-hidden="true">▶</span>
             </button>
         {% endif %}
     </div>
+    {% if embed.jsonLd ?? null %}<script type="application/ld+json">{{ embed.jsonLd|raw }}</script>{% endif %}
 {% endmacro %}

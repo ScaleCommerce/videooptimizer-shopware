@@ -40,6 +40,9 @@ class VideoOptimizerElementResolverTest extends TestCase
             'title' => 'Demo',
             'duration' => '10',
             'resolution' => '1260x750',
+            'theme' => ['accentColor' => '#C72876', 'loopButton' => true, 'preload' => 'bogus', 'x' => 1],
+            'posterSrcset' => [['width' => 640, 'height' => 360, 'url' => 'https://cdn/p640.jpg'], ['width' => 480, 'height' => 270, 'url' => 'https://cdn/p480.jpg']],
+            'tracks' => [['src' => 'https://cdn/de.vtt', 'srclang' => 'de', 'label' => 'Deutsch', 'kind' => 'captions', 'default' => true]],
         ]);
 
         $slot = $this->slotWithUuid('uuid-1');
@@ -56,6 +59,13 @@ class VideoOptimizerElementResolverTest extends TestCase
         static::assertSame('https://cdn/poster.jpg', $embed['poster']);
         static::assertSame('Demo', $embed['title']);
         static::assertSame('1260 / 750', $embed['aspectRatio']);
+        // The theme is reduced to valid keys and values (#41).
+        static::assertSame(['loopButton' => true, 'accentColor' => '#C72876'], $embed['theme']);
+        // Responsive posters for srcset (#43).
+        static::assertSame('https://cdn/p480.jpg 480w, https://cdn/p640.jpg 640w', $embed['posterSrcsetAttr']);
+        static::assertCount(2, $embed['posterSrcset']);
+        // Subtitle tracks for the <track> elements (#42).
+        static::assertSame([['src' => 'https://cdn/de.vtt', 'srclang' => 'de', 'label' => 'Deutsch', 'kind' => 'captions', 'default' => true]], $embed['tracks']);
     }
 
     /**
@@ -144,6 +154,61 @@ class VideoOptimizerElementResolverTest extends TestCase
         static::assertStringContainsString('muted=1', $url);
         static::assertStringContainsString('loop=0', $url);
         static::assertStringContainsString('controls=0', $url);
+    }
+
+    public function testEmbedCarriesTheVideoObjectJsonLdOncePerVideo(): void
+    {
+        $client = $this->createStub(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willReturn([
+            'sources' => [['src' => 'https://cdn/master.m3u8', 'type' => 'application/vnd.apple.mpegurl', 'codec' => 'hls']],
+            'poster' => 'https://cdn/p.jpg',
+            'title' => 'Demo',
+            'duration' => 65,
+            'uploadDate' => '2026-03-01T10:00:00Z',
+        ]);
+        $client->method('jsonLdEnabled')->willReturn(true);
+        $client->method('embedBaseUrl')->willReturn('https://player.example');
+        $client->method('claimVideoJsonLd')->willReturnOnConsecutiveCalls(true, false);
+        $resolver = $this->resolver($client);
+
+        $first = $this->slotWithUuid('uuid-1');
+        $second = $this->slotWithUuid('uuid-1');
+        $resolver->enrich($first, $this->createStub(ResolverContext::class), new ElementDataCollection());
+        $resolver->enrich($second, $this->createStub(ResolverContext::class), new ElementDataCollection());
+
+        $json = json_decode((string) $first->getData()->getEmbed()['jsonLd'], true);
+        static::assertSame('VideoObject', $json['@type']);
+        static::assertSame('https://player.example/embed/uuid-1', $json['embedUrl']);
+        static::assertSame('2026-03-01T10:00:00+00:00', $json['uploadDate']);
+        static::assertNull($second->getData()->getEmbed()['jsonLd']);
+    }
+
+    public function testNoJsonLdWhenTheEmbedHasNoUploadDate(): void
+    {
+        $client = $this->createStub(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willReturn(['sources' => [['src' => 'https://cdn/master.m3u8', 'codec' => 'hls']], 'title' => 'Demo', 'poster' => 'https://cdn/p.jpg', 'uploadDate' => null]);
+        $client->method('jsonLdEnabled')->willReturn(true);
+        $client->method('claimVideoJsonLd')->willReturn(true);
+        $client->method('embedBaseUrl')->willReturn('https://player.example');
+
+        $slot = $this->slotWithUuid('uuid-1');
+        $this->resolver($client)->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
+
+        // No upload date, no structured data (search engines flag the missing field).
+        static::assertNull($slot->getData()->getEmbed()['jsonLd']);
+    }
+
+    public function testNoJsonLdWhenSwitchedOff(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willReturn(['sources' => [['src' => 'https://cdn/master.m3u8', 'codec' => 'hls']], 'title' => 'Demo']);
+        $client->method('jsonLdEnabled')->willReturn(false);
+        $client->expects(static::never())->method('claimVideoJsonLd');
+
+        $slot = $this->slotWithUuid('uuid-1');
+        $this->resolver($client)->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
+
+        static::assertNull($slot->getData()->getEmbed()['jsonLd']);
     }
 
     public function testEmbedModeFlagsErrorWhenUpstreamVideoIsGone(): void

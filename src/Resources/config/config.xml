@@ -34,6 +34,14 @@
             <helpText lang="de-DE">Signatur-Secret des VideoOptimizer-Webhooks (Integrationen, Webhooks). Ohne Secret antwortet die Webhook-URL mit 503. Die in VideoOptimizer einzutragende URL steht im VideoOptimizer-Modul.</helpText>
         </input-field>
         <input-field type="bool">
+            <name>jsonLd</name>
+            <label>Structured data (schema.org VideoObject)</label>
+            <label lang="de-DE">Strukturierte Daten (schema.org VideoObject)</label>
+            <defaultValue>true</defaultValue>
+            <helpText>Adds a schema.org VideoObject (JSON-LD) for every video shown on a page, once per video, so search engines can index it. Switch off if your theme or SEO plugin already outputs it.</helpText>
+            <helpText lang="de-DE">Gibt für jedes auf einer Seite gezeigte Video ein schema.org-VideoObject (JSON-LD) aus, einmal pro Video, damit Suchmaschinen es indexieren können. Ausschalten, wenn Theme oder SEO-Plugin es bereits ausgeben.</helpText>
+        </input-field>
+        <input-field type="bool">
             <name>blockPrivateNetworks</name>
             <label>Block private networks</label>
             <label lang="de-DE">Private Netzwerke sperren</label>

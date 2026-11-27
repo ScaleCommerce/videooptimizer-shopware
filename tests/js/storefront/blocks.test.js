@@ -38,6 +38,59 @@ afterEach(() => {
     document.body.innerHTML = '';
 });
 
+describe('player theme (#41)', () => {
+    it('applies the theme to the player built from the facade', () => {
+        document.body.innerHTML = `<div class="block" data-vo-player-mode="native" data-vo-title="D" data-vo-native-options='${JSON.stringify({ mp4: 'https://cdn/v.mp4', theme: { loopButton: true, mutedStart: true, preload: 'auto', interactive: false, accentColor: '#C72876' } })}'>
+            <button type="button" class="facade" data-vo-action="lightbox">Play</button></div>`;
+        new ScalecommerceVoBlocks(document.querySelector('.block'));
+
+        document.querySelector('.facade').click();
+
+        const video = document.querySelector('.scalecommerce-vo-lightbox video');
+        expect(video.loop).toBe(true);
+        expect(video.muted).toBe(true);
+        // The theme's "auto" is capped: no video download before play.
+        expect(video.preload).toBe('metadata');
+        // interactive: false is for the direct player, not for one opened by a click.
+        expect(video.parentElement.classList.contains('scalecommerce-vo-video--static')).toBe(false);
+        expect(document.querySelector('.scalecommerce-vo-lightbox').style.getPropertyValue('--vo-accent')).toBe('#C72876');
+    });
+});
+
+describe('subtitle tracks (#42)', () => {
+    it('adds the tracks to the player built from the facade and loads them cross-origin', () => {
+        const tracks = [
+            { src: 'https://cdn/de.vtt?v=2', srclang: 'de', label: 'Deutsch', kind: 'subtitles', default: true },
+            { src: 'https://cdn/en.vtt', srclang: 'en', label: 'English', kind: 'captions', default: false },
+        ];
+        document.body.innerHTML = `<div class="block" data-vo-player-mode="native" data-vo-title="D" data-vo-native-options='${JSON.stringify({ mp4: 'https://cdn/v.mp4', tracks })}'>
+            <button type="button" class="facade" data-vo-action="facade">Play</button></div>`;
+        new ScalecommerceVoBlocks(document.querySelector('.block'));
+
+        document.querySelector('.facade').click();
+
+        const video = document.querySelector('.block video');
+        expect(video.getAttribute('crossorigin')).toBe('anonymous');
+        const elements = [...video.querySelectorAll('track')];
+        expect(elements.map((track) => [track.kind, track.srclang, track.label, track.getAttribute('src'), track.default])).toEqual([
+            ['subtitles', 'de', 'Deutsch', 'https://cdn/de.vtt?v=2', true],
+            ['captions', 'en', 'English', 'https://cdn/en.vtt', false],
+        ]);
+    });
+
+    it('leaves a video without tracks alone', () => {
+        document.body.innerHTML = `<div class="block" data-vo-player-mode="native" data-vo-title="D" data-vo-native-options='${JSON.stringify({ mp4: 'https://cdn/v.mp4' })}'>
+            <button type="button" class="facade" data-vo-action="facade">Play</button></div>`;
+        new ScalecommerceVoBlocks(document.querySelector('.block'));
+
+        document.querySelector('.facade').click();
+
+        const video = document.querySelector('.block video');
+        expect(video.hasAttribute('crossorigin')).toBe(false);
+        expect(video.querySelector('track')).toBeNull();
+    });
+});
+
 describe('facade (#34)', () => {
     it('replaces the poster button with the native player and focuses it', () => {
         const { el, facade } = setup({ action: 'facade' });
@@ -179,5 +232,103 @@ describe('lightbox (#34)', () => {
 
         expect(video.pause).toBeDefined();
         expect(video.hasAttribute('src')).toBe(false);
+    });
+});
+
+describe('lightbox as a native dialog (#32)', () => {
+    let showModal;
+    let close;
+
+    // jsdom has no showModal(): this stand-in opens and closes the dialog like a browser does (the
+    // close event is dispatched by the browser when Escape closes a modal dialog).
+    beforeEach(() => {
+        showModal = vi.fn(function open() {
+            this.setAttribute('open', '');
+        });
+        close = vi.fn(function closeDialog() {
+            this.removeAttribute('open');
+            this.dispatchEvent(new Event('close'));
+        });
+        window.HTMLDialogElement.prototype.showModal = showModal;
+        window.HTMLDialogElement.prototype.close = close;
+    });
+
+    afterEach(() => {
+        // Closes the dialog while the stand-in still exists (the top-level hook runs after this one).
+        if (overlay()) {
+            key('Escape');
+        }
+        delete window.HTMLDialogElement.prototype.showModal;
+        delete window.HTMLDialogElement.prototype.close;
+    });
+
+    it('opens a <dialog> with showModal() and leaves focus and inert to the browser', () => {
+        const { facade } = setup();
+
+        facade.click();
+
+        expect(overlay().tagName).toBe('DIALOG');
+        expect(showModal).toHaveBeenCalledTimes(1);
+        expect(overlay().hasAttribute('open')).toBe(true);
+        expect(overlay().getAttribute('aria-label')).toBe('Demo');
+        // The browser provides role and modality; no manual inert or aria-modal.
+        expect(overlay().hasAttribute('role')).toBe(false);
+        expect(document.getElementById('page').hasAttribute('inert')).toBe(false);
+        expect(document.activeElement).toBe(overlay().querySelector('.scalecommerce-vo-lightbox__close'));
+    });
+
+    it('closes when the browser closes the dialog on Escape (focus inside the native controls)', () => {
+        const { facade } = setup();
+        facade.click();
+        const dialog = overlay();
+
+        // Escape while the <video> controls or the embed iframe hold the focus never reaches the
+        // page as a key event; the browser closes the dialog and fires "close".
+        dialog.dispatchEvent(new Event('close'));
+
+        expect(overlay()).toBeNull();
+        expect(document.body.classList.contains('scalecommerce-vo-lightbox-open')).toBe(false);
+        expect(document.activeElement).toBe(facade);
+        // The guard is released.
+        facade.click();
+        expect(overlay()).not.toBeNull();
+    });
+
+    it('closes with the close button, Escape and a backdrop click, and closes the dialog once', () => {
+        const { facade } = setup();
+
+        facade.click();
+        overlay().querySelector('.scalecommerce-vo-lightbox__close').click();
+        expect(overlay()).toBeNull();
+        expect(close).toHaveBeenCalledTimes(1);
+
+        facade.click();
+        key('Escape');
+        expect(overlay()).toBeNull();
+
+        facade.click();
+        overlay().click();
+        expect(overlay()).toBeNull();
+        expect(close).toHaveBeenCalledTimes(3);
+    });
+
+    it('does not trap Tab itself while the browser keeps the focus in the modal dialog', () => {
+        const { facade } = setup({ mode: 'embed' });
+        facade.click();
+
+        const tab = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
+        document.dispatchEvent(tab);
+
+        expect(tab.defaultPrevented).toBe(false);
+    });
+
+    it('closes the dialog when the plugin is destroyed', () => {
+        const { plugin, facade } = setup();
+        facade.click();
+
+        plugin.destroy();
+
+        expect(overlay()).toBeNull();
+        expect(close).toHaveBeenCalledTimes(1);
     });
 });

@@ -6,7 +6,8 @@
         controls: config.showControls.value ?? true,
         autoplay: config.autoplay.value ?? false,
         muted: config.muted.value ?? false,
-        loop: config.loop.value ?? false
+        loop: config.loop.value ?? false,
+        posterSizes: '(min-width: 600px) 50vw, 100vw'
     } %}
     {% if data and data.items|length > 0 %}
         <div class="scalecommerce-vo-video-grid">

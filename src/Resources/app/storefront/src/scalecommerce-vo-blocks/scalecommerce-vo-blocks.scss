@@ -16,6 +16,12 @@
     }
 }
 
+.scalecommerce-vo-surface__facade:focus-visible
+    .scalecommerce-vo-surface__play {
+    outline: 3px solid var(--vo-accent, #fff);
+    outline-offset: 3px;
+}
+
 .scalecommerce-vo-surface__play {
     position: absolute;
     top: 50%;
@@ -31,6 +37,28 @@
     color: #fff;
     font-size: 24px;
     pointer-events: none;
+
+    // Player theme: shape and size of the play button, or none.
+    &--rectangle {
+        border-radius: 12px;
+        width: 88px;
+    }
+    &--small {
+        height: 48px;
+        &:not(.scalecommerce-vo-surface__play--rectangle) {
+            width: 48px;
+        }
+    }
+    &--large {
+        height: 88px;
+        font-size: 36px;
+        &:not(.scalecommerce-vo-surface__play--rectangle) {
+            width: 88px;
+        }
+    }
+    &--hidden {
+        display: none;
+    }
 }
 
 .scalecommerce-vo-lightbox-open {
@@ -38,13 +66,29 @@
 }
 
 .scalecommerce-vo-lightbox {
+    // A <dialog> opened with showModal(); reset the browser's dialog box and cover the viewport.
     position: fixed;
     inset: 0;
     z-index: 9999;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
     background: rgba(0, 0, 0, 0.85);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    color: #fff;
+
+    &[open] {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    &::backdrop {
+        background: transparent;
+    }
 
     &__stage {
         position: relative;
@@ -65,5 +109,10 @@
         color: #fff;
         font-size: 28px;
         cursor: pointer;
+
+        &:focus-visible {
+            outline: 3px solid var(--vo-accent, #fff);
+            outline-offset: 2px;
+        }
     }
 }

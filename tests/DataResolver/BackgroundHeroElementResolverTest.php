@@ -56,6 +56,20 @@ class BackgroundHeroElementResolverTest extends TestCase
         static::assertFalse($data->hasError());
     }
 
+    public function testHeroCarriesJsonLd(): void
+    {
+        $client = $this->createStub(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willReturn(['sources' => [['src' => 'https://cdn/master.m3u8', 'codec' => 'hls']], 'title' => 'Hero', 'poster' => 'https://cdn/p.jpg', 'uploadDate' => '2026-03-01T10:00:00Z']);
+        $client->method('jsonLdEnabled')->willReturn(true);
+        $client->method('claimVideoJsonLd')->willReturn(true);
+        $client->method('embedBaseUrl')->willReturn('https://player.example');
+
+        $slot = $this->slot(['video' => 'uuid-1']);
+        $this->resolver($client)->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
+
+        static::assertSame('Hero', json_decode($slot->getData()->getEmbed()['jsonLd'], true)['name']);
+    }
+
     public function testEnrichMarksTheConfiguredLibrary(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);

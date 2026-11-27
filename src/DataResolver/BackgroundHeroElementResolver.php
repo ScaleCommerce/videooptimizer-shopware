@@ -64,7 +64,11 @@ class BackgroundHeroElementResolver extends AbstractCmsElementResolver
         $this->markLibraryRendered($config, $this->client, $uuid);
 
         try {
-            $struct->setEmbed($this->normalizeEmbed($this->client->getEmbed($uuid)));
+            $embed = $this->normalizeEmbed($this->client->getEmbed($uuid));
+            if ($this->isPlayable($embed)) {
+                $embed['jsonLd'] = $this->buildJsonLd($this->client, $uuid, $embed);
+            }
+            $struct->setEmbed($embed);
         } catch (\Throwable $e) {
             $this->logger->warning('VideoOptimizer embed lookup failed; hiding background video.', [
                 'uuid' => $uuid,

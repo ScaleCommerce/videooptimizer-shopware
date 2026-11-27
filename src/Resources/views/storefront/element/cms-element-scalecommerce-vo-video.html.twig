@@ -2,6 +2,7 @@
     {% set videoData = element.data %}
     {% set config = element.config %}
     {% if videoData and videoData.videoUuid and not videoData.hasError %}
+        {% if videoData.embed.jsonLd ?? null %}<script type="application/ld+json">{{ videoData.embed.jsonLd|raw }}</script>{% endif %}
         {% if videoData.playerMode == 'embed' %}
             <div class="cms-element-scalecommerce-vo-video">
                 <div class="scalecommerce-vo-video scalecommerce-vo-video--sized">
@@ -27,12 +28,17 @@
                          autoplay: config.autoplay.value ?? false,
                          muted: config.muted.value ?? false,
                          loop: config.loop.value ?? false,
+                         theme: videoData.embed.theme ?? {},
+                         tracks: videoData.embed.tracks ?? [],
                          unavailableLabel: 'scalecommerce-vo.storefront.unavailable'|trans
                      }|json_encode }}'
-                     style="--scvo-aspect: {{ aspectRatio }}">
+                     style="--scvo-aspect: {{ aspectRatio }}{% if videoData.embed.theme.accentColor ?? null %}; --vo-accent: {{ videoData.embed.theme.accentColor }}{% endif %}">
                     <video class="scalecommerce-vo-video__player"
                            playsinline
-                           {% if videoData.embed.poster %}poster="{{ videoData.embed.poster }}"{% endif %}></video>
+                           {% if videoData.embed.tracks %}crossorigin="anonymous"{% endif %}
+                           {% if videoData.embed.poster %}poster="{{ videoData.embed.poster }}"{% endif %}>
+                        {% for track in videoData.embed.tracks ?? [] %}<track kind="{{ track.kind }}" srclang="{{ track.srclang }}" label="{{ track.label }}" src="{{ track.src }}"{% if track.default %} default{% endif %}>{% endfor %}
+                    </video>
                 </div>
             </div>
         {% endif %}

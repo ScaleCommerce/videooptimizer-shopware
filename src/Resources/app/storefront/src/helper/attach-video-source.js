@@ -227,3 +227,78 @@ export function markUnavailable(wrapper, video, label) {
     wrapper.classList.add('scalecommerce-vo-video--unavailable');
     wrapper.setAttribute('data-vo-unavailable', label || 'Video unavailable');
 }
+
+/**
+ * Playback settings of a native player: the element's own options combined with the `theme` of the
+ * video (GET /embed). The theme can only add behaviour the editor did not set (autoplay, muted start,
+ * loop); its `controls: false` (background style) applies only when the video autoplays, otherwise the
+ * controls stay so visitors can start and pause. The element's explicit choices are never overridden.
+ * Keys the browser's native controls cannot honour (control bar colour, volume, time display,
+ * quality menu) are ignored.
+ */
+export function resolvePlayback(options = {}) {
+    const theme =
+        options.theme && !Array.isArray(options.theme) ? options.theme : {};
+    const autoplay = !!options.autoplay || theme.autoplay === true;
+    return {
+        controls:
+            options.controls !== false &&
+            !(theme.controls === false && autoplay),
+        autoplay,
+        // Browsers block autoplay with sound, so an autoplaying video starts muted.
+        muted: !!options.muted || theme.mutedStart === true || autoplay,
+        loop: !!options.loop || theme.loopButton === true,
+        // Capped at "metadata": video is downloaded only on play (the theme default is "auto").
+        preload: theme.preload === 'none' ? 'none' : 'metadata',
+    };
+}
+
+/**
+ * Applies the theme to a <video> as far as native controls allow: hides the fullscreen button and
+ * the playback-rate menu (Chromium `controlsList`), disables Picture-in-Picture, and makes a
+ * non-interactive (`interactive: false`, direct players only) player ignore the pointer.
+ */
+export function applyPlayerTheme(video, wrapper, options = {}, direct = true) {
+    const theme =
+        options.theme && !Array.isArray(options.theme) ? options.theme : {};
+    const list = [];
+    if (theme.fullscreenButton === false) {
+        list.push('nofullscreen');
+    }
+    if (theme.playbackSpeed === false) {
+        list.push('noplaybackrate');
+    }
+    if (list.length) {
+        video.setAttribute('controlslist', list.join(' '));
+    }
+    if (theme.pictureInPicture === false) {
+        video.disablePictureInPicture = true;
+        video.setAttribute('disablepictureinpicture', '');
+    }
+    // `interactive: false` is for the player placed in the page, not after a click on a facade.
+    if (direct && theme.interactive === false && wrapper) {
+        wrapper.classList.add('scalecommerce-vo-video--static');
+    }
+}
+
+/**
+ * Adds the subtitle tracks of a video as <track> children. The CDN allows any origin, so the
+ * <video> gets crossorigin="anonymous" (needed to load the files from another origin).
+ */
+export function addTracks(video, tracks = []) {
+    if (!Array.isArray(tracks) || !tracks.length) {
+        return;
+    }
+    video.setAttribute('crossorigin', 'anonymous');
+    tracks.forEach((track) => {
+        const element = document.createElement('track');
+        element.kind = track.kind === 'captions' ? 'captions' : 'subtitles';
+        element.srclang = track.srclang;
+        element.label = track.label || track.srclang;
+        element.src = track.src;
+        if (track.default) {
+            element.default = true;
+        }
+        video.appendChild(element);
+    });
+}

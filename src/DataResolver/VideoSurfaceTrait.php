@@ -5,6 +5,7 @@ namespace ScaleCommerce\VideoOptimizer\DataResolver;
 use Psr\Log\LoggerInterface;
 use ScaleCommerce\VideoOptimizer\Service\EmbedSources;
 use ScaleCommerce\VideoOptimizer\Service\Exception\InvalidApiBaseUrlException;
+use ScaleCommerce\VideoOptimizer\Service\VideoJsonLd;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use Shopware\Core\Content\Cms\DataResolver\FieldConfigCollection;
 
@@ -56,7 +57,29 @@ trait VideoSurfaceTrait
             return ['playerMode' => $playerMode, 'embedUrl' => $embedUrl, 'embed' => null, 'error' => true];
         }
 
+        $embed['jsonLd'] = $this->buildJsonLd($client, $uuid, $embed);
+
         return ['playerMode' => $playerMode, 'embedUrl' => $embedUrl, 'embed' => $embed, 'error' => false];
+    }
+
+    /**
+     * The schema.org VideoObject JSON of a playable video; null when switched off in the plugin
+     * config or when the video's structured data was already output on this page.
+     *
+     * @param array<string, mixed> $embed result of normalizeEmbed()
+     */
+    protected function buildJsonLd(VideoOptimizerClient $client, string $uuid, array $embed): ?string
+    {
+        if (!$client->jsonLdEnabled() || !$client->claimVideoJsonLd($uuid)) {
+            return null;
+        }
+        try {
+            $embedUrl = $client->embedBaseUrl() . '/embed/' . rawurlencode($uuid);
+        } catch (InvalidApiBaseUrlException) {
+            return null;
+        }
+
+        return VideoJsonLd::build($embed, $embedUrl, is_string($embed['uploadDate'] ?? null) ? $embed['uploadDate'] : null);
     }
 
     /**
@@ -120,12 +143,18 @@ trait VideoSurfaceTrait
     protected function normalizeEmbed(array $embed): array
     {
         $sources = $embed['sources'] ?? [];
+        $posterSrcset = EmbedSources::posterSrcset($embed['posterSrcset'] ?? null);
 
         return [
             'hls' => EmbedSources::hls($sources),
             'mp4' => EmbedSources::mp4($sources),
             'poster' => $embed['poster'] ?? null,
+            'posterSrcset' => $posterSrcset,
+            'posterSrcsetAttr' => EmbedSources::srcsetAttribute($posterSrcset),
             'title' => $embed['title'] ?? null,
+            'uploadDate' => is_string($embed['uploadDate'] ?? null) && $embed['uploadDate'] !== '' ? $embed['uploadDate'] : null,
+            'theme' => EmbedSources::theme($embed['theme'] ?? null),
+            'tracks' => EmbedSources::tracks($embed['tracks'] ?? null),
             'duration' => $embed['duration'] ?? null,
             'aspectRatio' => $this->deriveAspectRatio($embed['resolution'] ?? null),
         ];
