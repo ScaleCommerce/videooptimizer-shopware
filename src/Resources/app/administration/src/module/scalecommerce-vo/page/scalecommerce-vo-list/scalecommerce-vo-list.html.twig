@@ -150,6 +150,9 @@
                         :help-text="$tc('scalecommerce-vo.library.qualityHelp')"
                         hide-clearable-button
                         @update:model-value="formQuality = $event || formQuality" />
+                    <p class="scalecommerce-vo-list__quality-note">
+                        {{ $tc('scalecommerce-vo.library.qualityApplyNote') }}
+                    </p>
                 </div>
 
                 <mt-banner v-if="ladderChanged" class="scalecommerce-vo-list__banner" variant="attention">
