@@ -3,7 +3,10 @@
         "storefront": {
             "play": "Video abspielen",
             "close": "Schließen",
-            "unavailable": "Video kann nicht abgespielt werden"
+            "unavailable": "Video kann nicht abgespielt werden",
+            "video": "Video",
+            "heroPause": "Hintergrundvideo pausieren",
+            "heroPlay": "Hintergrundvideo abspielen"
         }
     }
 }

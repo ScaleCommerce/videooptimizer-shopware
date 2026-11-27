@@ -6,6 +6,7 @@
             <div class="cms-element-scalecommerce-vo-video" style="width:100%">
                 <div class="scalecommerce-vo-video" style="position:relative;width:100%;aspect-ratio:16 / 9">
                     <iframe src="{{ videoData.embedUrl }}"
+                            title="{{ (videoData.embed.title ?? null) ?: ('scalecommerce-vo.storefront.video'|trans) }}"
                             allow="autoplay; fullscreen; picture-in-picture" allowfullscreen
                             loading="lazy"
                             referrerpolicy="strict-origin-when-cross-origin"

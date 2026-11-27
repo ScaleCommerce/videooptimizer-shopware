@@ -5,6 +5,19 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Upgrade notes
+- **Background hero markup:** the `<video>` no longer has the `autoplay` attribute (and an MP4-only hero no longer a `src`); the hero plugin starts playback when the hero is visible and motion is not reduced. The video carries `data-scalecommerce-vo-hero` plus `data-scalecommerce-vo-hero-hls`/`-mp4`/`-priority`, and a pause/play button follows it. Theme overrides of `cms-element-scalecommerce-vo-background-hero.html.twig` keep working (the plugin still picks up `data-scalecommerce-vo-hero-hls`), but only the new markup respects reduced motion and shows the button. (#6)
+- **Autoplaying native players** (single video, media split, spotlight, grid with presentation "direct") start when they scroll into view and pause when they leave it, instead of all starting at page load. (#8)
+
+### Added
+- Background hero: a pause/play button for the looping video. With `prefers-reduced-motion` or the browser's data saver, the video doesn't start and nothing is preloaded; the poster stays. (#6)
+
+### Changed
+- Native players load video segments only when playback starts; until then only the playlists are fetched. hls.js caps the rendition at the player size, so small tiles no longer pull 4K. The hero option "priority" now means "start buffering right away" (others load once visible). (#8)
+
+### Fixed
+- Accessibility: hosted-embed iframes have a `title` (video title or label), the player gets the focus after clicking a facade, and the lightbox is named, keeps the keyboard focus inside and makes the rest of the page inert while open. (#7)
+
 ## [1.0.2] - 2026-11-27
 
 Fixes from an independent QA review (#1, #2, #3, #5, #9, #12, #14).

@@ -18,5 +18,6 @@ PluginManager.register(
 PluginManager.register(
     'ScalecommerceVoHero',
     ScalecommerceVoHero,
-    '[data-scalecommerce-vo-hero-hls]'
+    // The second selector keeps theme overrides of the pre-1.1 hero template working.
+    '[data-scalecommerce-vo-hero], [data-scalecommerce-vo-hero-hls]'
 );

@@ -46,11 +46,36 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
             this._openLightbox(playerMode, embedUrl, nativeOptions);
             return;
         }
-        // facade: replace the poster button with the player in place.
-        this.facade.remove();
-        this.el.appendChild(
-            this._buildPlayer(playerMode, embedUrl, nativeOptions, true)
+        // facade: replace the poster button with the player in place and move the focus there,
+        // otherwise it falls back to <body> once the focused button is removed.
+        const player = this._buildPlayer(
+            playerMode,
+            embedUrl,
+            nativeOptions,
+            true
         );
+        this.facade.remove();
+        this.el.appendChild(player);
+        this._focusPlayer(player);
+    }
+
+    _title() {
+        return this.el.getAttribute('data-vo-title') || 'Video';
+    }
+
+    _focusPlayer(player) {
+        const target =
+            player.tagName === 'IFRAME'
+                ? player
+                : player.querySelector('video');
+        if (!target) {
+            return;
+        }
+        // A <video> without controls is not focusable on its own.
+        if (target.tagName === 'VIDEO' && !target.controls) {
+            target.setAttribute('tabindex', '-1');
+        }
+        target.focus({ preventScroll: true });
     }
 
     _buildPlayer(playerMode, embedUrl, nativeOptions, autoplay) {
@@ -63,6 +88,7 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
             url.searchParams.set('autoplay', '1');
             url.searchParams.set('muted', '1');
             iframe.src = url.toString();
+            iframe.title = this._title();
             iframe.setAttribute(
                 'allow',
                 'autoplay; fullscreen; picture-in-picture'
@@ -100,6 +126,9 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
         if (autoplay) {
             video.autoplay = true;
         }
+        if (!video.controls) {
+            video.setAttribute('tabindex', '-1');
+        }
         wrap.appendChild(video);
         this._attachNative(video, nativeOptions, autoplay);
         return wrap;
@@ -121,6 +150,25 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
         );
     }
 
+    // Keeps Tab/Shift+Tab inside the lightbox (close button and player).
+    _trapFocus(event, overlay, close) {
+        const player = overlay.querySelector('iframe, video');
+        const focusables = [close, player].filter(Boolean);
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement;
+        if (!overlay.contains(active)) {
+            event.preventDefault();
+            first.focus();
+        } else if (event.shiftKey && active === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && active === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    }
+
     _destroyVideo(video) {
         destroyVideoSource(video);
         video.pause();
@@ -140,6 +188,7 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
         overlay.className = 'scalecommerce-vo-lightbox';
         overlay.setAttribute('role', 'dialog');
         overlay.setAttribute('aria-modal', 'true');
+        overlay.setAttribute('aria-label', this._title());
         const stage = document.createElement('div');
         stage.className = 'scalecommerce-vo-lightbox__stage';
         const close = document.createElement('button');
@@ -163,6 +212,9 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
                     .querySelectorAll('video')
                     .forEach((video) => this._destroyVideo(video));
                 overlay.remove();
+                inertSiblings.forEach((element) =>
+                    element.removeAttribute('inert')
+                );
                 document.removeEventListener('keydown', onKey);
                 document.body.classList.remove(
                     'scalecommerce-vo-lightbox-open'
@@ -175,12 +227,23 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
         const onKey = (event) => {
             if (event.key === 'Escape') {
                 dismiss({ currentTarget: close });
+                return;
+            }
+            if (event.key === 'Tab') {
+                this._trapFocus(event, overlay, close);
             }
         };
         overlay.addEventListener('click', dismiss);
         close.addEventListener('click', dismiss);
         document.addEventListener('keydown', onKey);
         document.body.classList.add('scalecommerce-vo-lightbox-open');
+        // Everything behind the dialog becomes inert, so neither Tab nor screen readers leave it.
+        const inertSiblings = [...document.body.children].filter(
+            (element) =>
+                !element.hasAttribute('inert') &&
+                !['SCRIPT', 'STYLE', 'LINK'].includes(element.tagName)
+        );
+        inertSiblings.forEach((element) => element.setAttribute('inert', ''));
         document.body.appendChild(overlay);
         close.focus();
         this._closeLightbox = () => dismiss({ currentTarget: close });
