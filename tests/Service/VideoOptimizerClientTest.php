@@ -643,6 +643,8 @@ class VideoOptimizerClientTest extends TestCase
         yield 'thumbnail image a/b' => [fn (VideoOptimizerClient $c) => $c->getThumbnailImage('a/b', 1)];
         yield 'embed a/b' => [fn (VideoOptimizerClient $c) => $c->getEmbed('a/b')];
         yield 'embed with query' => [fn (VideoOptimizerClient $c) => $c->getEmbed('v1?x=1')];
+        yield 'trailing newline' => [fn (VideoOptimizerClient $c) => $c->getVideo("v1\n")];
+        yield 'leading newline' => [fn (VideoOptimizerClient $c) => $c->getVideo("\nv1")];
     }
 
     /**
@@ -697,6 +699,12 @@ class VideoOptimizerClientTest extends TestCase
         yield 'short ipv4' => ['https://127.1/api/v1'];
         yield 'hex ipv4' => ['https://0x7f000001/api/v1'];
         yield 'cgnat' => ['https://100.64.0.1/api/v1'];
+        yield 'localhost upper case' => ['https://LOCALHOST/api/v1'];
+        yield 'localhost subdomain upper case' => ['https://API.LocalHost/api/v1'];
+        yield 'user name without password' => ['https://user@api.example/api/v1'];
+        yield 'password without user name' => ['https://:pass@api.example/api/v1'];
+        yield 'hex ipv4 upper case' => ['https://0X7F000001/api/v1'];
+        yield 'hex label' => ['https://api.0x7f.example/api/v1'];
     }
 
     #[DataProvider('rejectedBaseUrls')]
@@ -715,6 +723,66 @@ class VideoOptimizerClientTest extends TestCase
     {
         $this->expectException(InvalidApiBaseUrlException::class);
         $this->client(new MockHttpClient(), $this->config(embedBaseUrl: $baseUrl))->embedBaseUrl();
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function acceptedBaseUrls(): iterable
+    {
+        yield 'starts with digits' => ['https://1api.example.com/api/v1'];
+        yield 'ends with digits' => ['https://api.example2/api/v1'];
+        yield 'digits in the middle' => ['https://my2api.example.com/api/v1'];
+        yield 'digit-only label with letters elsewhere' => ['https://123.example.com/api/v1'];
+        yield 'upper case host' => ['https://API.Example.COM/api/v1'];
+        yield 'hex-like word' => ['https://0xample.example.com/api/v1'];
+        yield 'public ipv6' => ['https://[2606:4700:4700::1111]/api/v1'];
+    }
+
+    #[DataProvider('acceptedBaseUrls')]
+    public function testValidHostNamesAreAccepted(string $baseUrl): void
+    {
+        $http = new MockHttpClient(fn (): MockResponse => new MockResponse(json_encode(['data' => []])));
+
+        static::assertSame([], $this->client($http, $this->config(baseUrl: $baseUrl))->listLibraries());
+    }
+
+    /**
+     * Only plain IDs reach the embed lookup queue; a newline-terminated one would match a "$" without "D".
+     */
+    public function testQueueEmbedIgnoresMalformedIds(): void
+    {
+        $requested = [];
+        $http = new MockHttpClient(function (string $method, string $url) use (&$requested): MockResponse {
+            $requested[] = $url;
+
+            return $this->playable(basename($url));
+        });
+        $client = $this->client($http);
+        foreach (["a1\n", "\na1", 'a/1', ''] as $id) {
+            $client->queueEmbed($id);
+        }
+        $client->queueEmbed('ok1');
+
+        $client->getEmbed('ok1');
+
+        static::assertSame(['https://api.videooptimizer.eu/api/v1/embed/ok1'], $requested);
+    }
+
+    public function testLibraryActionsIgnoreMalformedVideoIdsFromTheListing(): void
+    {
+        $http = new MockHttpClient(fn (string $method): MockResponse => $method === 'GET'
+            ? new MockResponse(json_encode(['data' => [['uuid' => "v1\n"], ['uuid' => 'v2'], ['uuid' => 5]]]))
+            : new MockResponse(json_encode(['data' => []])));
+        $invalidated = [];
+        $invalidator = $this->createStub(CacheInvalidator::class);
+        $invalidator->method('invalidate')->willReturnCallback(function (array $tags) use (&$invalidated): void {
+            $invalidated = [...$invalidated, ...$tags];
+        });
+
+        (new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), new EmbedRenderState(), $invalidator))->deleteLibrary('lib-1');
+
+        static::assertSame(['scalecommerce-vo-video-v2'], $invalidated);
     }
 
     public function testPublicIpApiBaseUrlIsAccepted(): void
