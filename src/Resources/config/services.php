@@ -23,8 +23,10 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 return static function (ContainerConfigurator $container): void {
     $services = $container->services();
 
-    // Set to true by HttpProxyConfiguredPass when the shop's HTTP client is configured with a proxy.
-    $container->parameters()->set(HttpProxyConfiguredPass::PARAMETER, false);
+    // The proxy options of the shop's HTTP client, set by HttpProxyConfiguredPass (null: not configured).
+    $container->parameters()
+        ->set(HttpProxyConfiguredPass::PROXY, null)
+        ->set(HttpProxyConfiguredPass::NO_PROXY, null);
 
     // The shared HTTP client behind a guard that checks the resolved IP of every connection, redirect
     // targets included, so the configurable base URLs cannot reach internal services (issue #33).
@@ -32,7 +34,8 @@ return static function (ContainerConfigurator $container): void {
         ->args([
             service(HttpClientInterface::class),
             service(SystemConfigService::class),
-            '%' . HttpProxyConfiguredPass::PARAMETER . '%',
+            '%' . HttpProxyConfiguredPass::PROXY . '%',
+            '%' . HttpProxyConfiguredPass::NO_PROXY . '%',
         ])
         ->tag('kernel.reset', ['method' => 'reset']);
 

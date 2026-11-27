@@ -3,7 +3,10 @@
 namespace ScaleCommerce\VideoOptimizer\Service;
 
 use Shopware\Core\System\SystemConfig\SystemConfigService;
+use Symfony\Component\HttpClient\Exception\InvalidArgumentException;
+use Symfony\Component\HttpClient\HttpClientTrait;
 use Symfony\Component\HttpClient\NoPrivateNetworkHttpClient;
+use Symfony\Component\HttpClient\Response\AsyncResponse;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
@@ -27,27 +30,42 @@ final class GuardedHttpClient implements HttpClientInterface, ResetInterface
     private ?NoPrivateNetworkHttpClient $guarded = null;
 
     /**
-     * @param bool $proxyConfigured a proxy is set in the framework's http_client default options
+     * @param string|null $configuredProxy `framework.http_client.default_options.proxy`, null if not configured; an
+     *                                     empty string is configured but empty, which is no proxy (the environment is ignored then, like Symfony does)
+     * @param string|null $configuredNoProxy `framework.http_client.default_options.no_proxy`
      * @param array<string, mixed>|null $server the environment proxy variables are read from, `$_SERVER` like Symfony's HttpClient does
      */
     public function __construct(
         private HttpClientInterface $inner,
         private readonly SystemConfigService $systemConfig,
-        private readonly bool $proxyConfigured = false,
+        private readonly ?string $configuredProxy = null,
+        private readonly ?string $configuredNoProxy = null,
         private readonly ?array $server = null,
     ) {
     }
 
     public function request(string $method, string $url, array $options = []): ResponseInterface
     {
-        return $this->clientFor($url, $options)->request($method, $url, $options);
+        $maxRedirects = $options['max_redirects'] ?? 20;
+        if (!\is_int($maxRedirects) || $maxRedirects <= 0 || !\in_array($method, ['GET', 'HEAD'], true)) {
+            return $this->clientFor($url, $options)->request($method, $url, $options);
+        }
+
+        return $this->followRedirects($method, $url, $options, $maxRedirects);
     }
 
     public function stream(ResponseInterface|iterable $responses, ?float $timeout = null): ResponseStreamInterface
     {
-        // The guard's responses are async wrappers that only its own stream() understands; it passes
-        // plain responses through to the decorated client.
-        return $this->guarded()->stream($responses, $timeout);
+        $list = $responses instanceof ResponseInterface ? [$responses] : $responses;
+        foreach ($list as $response) {
+            // The guard's responses are async wrappers that only its own stream() can read (it also
+            // passes plain ones through); without any, the decorated client reads them itself.
+            if ($response instanceof AsyncResponse) {
+                return $this->guarded()->stream($responses, $timeout);
+            }
+        }
+
+        return $this->inner->stream($responses, $timeout);
     }
 
     public function withOptions(array $options): static
@@ -65,6 +83,80 @@ final class GuardedHttpClient implements HttpClientInterface, ResetInterface
         if ($this->inner instanceof ResetInterface) {
             $this->inner->reset();
         }
+    }
+
+    /**
+     * Follows redirects hop by hop, so the guard decision (proxy or not, see usesProxy()) is made for
+     * every target: the decorated client would otherwise decide about the proxy again for each hop
+     * (curl: no_proxy, scheme) and send a redirect to e.g. a no_proxy host out unchecked. Only GET and
+     * HEAD are followed; Authorization and Cookie are dropped on a cross-origin hop like Symfony does.
+     *
+     * @param array<string, mixed> $options
+     */
+    private function followRedirects(string $method, string $url, array $options, int $maxRedirects): ResponseInterface
+    {
+        $options['max_redirects'] = 0;
+        $origin = $this->origin($url);
+
+        for ($hop = 0;; ++$hop) {
+            $response = $this->clientFor($url, $options)->request($method, $url, $options);
+            $status = $response->getStatusCode();
+            if ($hop >= $maxRedirects || $status < 300 || $status >= 400) {
+                return $response;
+            }
+            // From the Location header: not every transport reports redirect_url when it is told not to follow.
+            $next = $this->resolveLocation($url, $response->getHeaders(false)['location'][0] ?? null);
+            if ($next === null) {
+                return $response;
+            }
+
+            $url = $next;
+            if ($this->origin($url) !== $origin) {
+                $options['headers'] = $this->withoutCredentials($options['headers'] ?? []);
+            }
+        }
+    }
+
+    private function resolveLocation(string $base, ?string $location): ?string
+    {
+        if ($location === null || $location === '') {
+            return null;
+        }
+        $resolver = new class {
+            use HttpClientTrait {
+                parseUrl as public;
+                resolveUrl as public;
+            }
+        };
+
+        try {
+            return implode('', $resolver::resolveUrl($resolver::parseUrl($location), $resolver::parseUrl($base)));
+        } catch (InvalidArgumentException) {
+            // Like the transports, ignore locations that are not valid URLs.
+            return null;
+        }
+    }
+
+    private function origin(string $url): string
+    {
+        $parts = parse_url($url);
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+
+        return $scheme . '://' . strtolower((string) ($parts['host'] ?? '')) . ':' . ($parts['port'] ?? ($scheme === 'https' ? 443 : 80));
+    }
+
+    /**
+     * @param array<array-key, mixed> $headers "Name: value" lines or name => value(s)
+     *
+     * @return array<array-key, mixed>
+     */
+    private function withoutCredentials(array $headers): array
+    {
+        return array_filter($headers, static function (mixed $value, int|string $key): bool {
+            $name = \is_string($key) ? $key : (\is_string($value) ? explode(':', $value, 2)[0] : '');
+
+            return !\in_array(strtolower(trim($name)), ['authorization', 'cookie'], true);
+        }, \ARRAY_FILTER_USE_BOTH);
     }
 
     /**
@@ -104,13 +196,13 @@ final class GuardedHttpClient implements HttpClientInterface, ResetInterface
 
         $proxy = $options['proxy'] ?? null;
         if (!\is_string($proxy) || $proxy === '') {
-            $proxy = $this->proxyConfigured ? 'configured' : $this->environmentProxy($url, $server);
+            $proxy = $this->configuredProxy ?? $this->environmentProxy($url, $server);
         }
         if ($proxy === null || $proxy === '') {
             return false;
         }
 
-        $noProxy = $options['no_proxy'] ?? $server['no_proxy'] ?? $server['NO_PROXY'] ?? '';
+        $noProxy = $options['no_proxy'] ?? $this->configuredNoProxy ?? $server['no_proxy'] ?? $server['NO_PROXY'] ?? '';
 
         return !$this->excludedFromProxy($host, \is_string($noProxy) ? $noProxy : '');
     }

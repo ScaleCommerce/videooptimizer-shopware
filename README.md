@@ -293,7 +293,7 @@ addresses, also behind host names and redirects, so the configurable base URLs c
 services. API calls do not follow redirects; thumbnails may be redirected to the CDN, but only to public
 addresses. The guard is not applied when the shop uses an outbound proxy (`HTTPS_PROXY`, `https_proxy`,
 `ALL_PROXY` or a `proxy` in the framework's `http_client` default options; hosts in `NO_PROXY` are still
-guarded): the connection then goes to the proxy, which has to filter. A self-hosted VideoOptimizer on a private
+guarded, and so is every redirect hop that the proxy rules do not cover, checked per hop): the connection then goes to the proxy, which has to filter. A self-hosted VideoOptimizer on a private
 network needs **Block private networks** switched off in the plugin configuration. The protection relies on a
 current `symfony/http-client` (6.4.14 or 7.1.7 and later; the plugin does not enforce this through Composer).
 
