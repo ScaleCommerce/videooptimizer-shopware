@@ -432,6 +432,14 @@ class VideoOptimizerClient implements ResetInterface
             return $failed;
         }
 
+        // A page for a cursor from the URL costs the same budget as an unknown video (crafted cursors).
+        $listCached = $this->cache instanceof CacheItemPoolInterface && $this->cache->hasItem($key);
+        if ($cursor !== null && !$listCached && !$this->allowUncachedLookup()) {
+            $this->availability->markDegraded();
+
+            return $failed;
+        }
+
         $result = $this->cache->get($key, function (ItemInterface $item) use ($path, $libraryId, $cursor, $limit, $tags, $failed): array {
             $items = [];
             $next = $cursor;
@@ -464,6 +472,10 @@ class VideoOptimizerClient implements ResetInterface
                 return $failed;
             }
             $item->expiresAfter(self::STOREFRONT_LIST_CACHE_TTL);
+            // The listed videos are the token's own: the detail page of a card needs no lookup of its own.
+            foreach ($items as $video) {
+                $this->seedOwner((string) $video['uuid'], $libraryId);
+            }
             try {
                 // A change of one of the videos (title, poster) drops the list as well as the pages.
                 $item->tag([
@@ -514,7 +526,8 @@ class VideoOptimizerClient implements ResetInterface
     /**
      * Checks a video UUID that came from a URL against the organization of the token (authenticated
      * `GET /videos/{uuid}`; the public embed proves nothing): `ok` with the video's library, `missing`
-     * for a foreign or unknown video, `unavailable` when the API cannot answer. Cached: a found video
+     * for a foreign or unknown video (404 only), `unavailable` when the API cannot answer or refuses
+     * (400, 403, 5xx, rate limit). Cached: a found video
      * for the embed TTL, a missing one for five minutes, an outage for one minute. Uncached lookups
      * of unknown videos are limited to 30 per minute for the whole site (beyond that: `unavailable`,
      * temporary, without asking the API and without caching anything), and a lookup like this never sets the site-wide fail-fast flag.
@@ -548,7 +561,9 @@ class VideoOptimizerClient implements ResetInterface
             try {
                 $video = $this->requestData('GET', $path, ['max_duration' => self::EMBED_MAX_DURATION], true, false);
             } catch (VideoOptimizerApiException $e) {
-                if (\in_array($e->getStatusCode(), [400, 403, 404], true)) {
+                // Only a 404 is an answer about the video. 400/403 are plan limits, a trial lock, a locked
+                // organization or a token without the scope: temporary for the visitor, nothing to cache.
+                if ($e->getStatusCode() === 404) {
                     $item->expiresAfter(self::OWNER_MISSING_CACHE_TTL);
 
                     return $missing;
@@ -809,6 +824,20 @@ class VideoOptimizerClient implements ResetInterface
         $this->assertHttpsUrl($url, 'The VideoOptimizer embed base URL must be an absolute https URL.');
 
         return $url;
+    }
+
+    /**
+     * Records that a video belongs to the token's organization and library (from a list result).
+     */
+    private function seedOwner(string $uuid, string $libraryId): void
+    {
+        if (!$this->cache instanceof CacheItemPoolInterface || preg_match('/^[A-Za-z0-9_-]+$/D', $uuid) !== 1) {
+            return;
+        }
+        $item = $this->cache->getItem($this->ownerCacheKey($uuid));
+        $item->set(['status' => 'ok', 'library' => $libraryId]);
+        $item->expiresAfter(self::EMBED_CACHE_TTL);
+        $this->cache->save($item);
     }
 
     /**

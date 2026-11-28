@@ -343,3 +343,32 @@ describe('expected playback (#49)', () => {
         expect(markExpectedPlayback).toBeTypeOf('function');
     });
 });
+
+describe('MP4 fallback marking (#49)', () => {
+    it('continues the plugin\'s own playback on the MP4 as expected, not as a visitor action', async () => {
+        const { isExpectedPlayback, markExpectedPlayback } = await import(
+            '../../../src/Resources/app/storefront/src/helper/attach-video-source.js'
+        );
+        expect(markExpectedPlayback).toBeTypeOf('function');
+        const video = document.createElement('video');
+        video.play = () => Promise.resolve();
+        let visible;
+        window.IntersectionObserver = class {
+            constructor(callback) {
+                visible = (value) => callback([{ isIntersecting: value }]);
+            }
+
+            observe() {}
+
+            disconnect() {}
+        };
+        autoplayWhileVisible(video);
+        visible(true);
+
+        // Long after the first mark ran out, the fallback restarts on the MP4 as its own.
+        video.__scvoExpectedUntil = 0;
+        expect(video.__scvoOwnPlay).toBe(true);
+        expect(isExpectedPlayback(video)).toBe(false);
+        delete window.IntersectionObserver;
+    });
+});

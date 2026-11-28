@@ -8,6 +8,7 @@ use Shopware\Storefront\Page\LandingPage\LandingPageLoadedEvent;
 use Shopware\Storefront\Page\MetaInformation;
 use Shopware\Storefront\Page\Navigation\NavigationPageLoadedEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * The page title of a page with a video detail element is the title of the shown video, and a
@@ -28,16 +29,16 @@ class VideoDetailMetaSubscriber implements EventSubscriberInterface
     public function onNavigationPageLoaded(NavigationPageLoadedEvent $event): void
     {
         $page = $event->getPage();
-        $this->apply($page->getCmsPage(), $page->getMetaInformation());
+        $this->apply($page->getCmsPage(), $page->getMetaInformation(), $event->getRequest());
     }
 
     public function onLandingPageLoaded(LandingPageLoadedEvent $event): void
     {
         $page = $event->getPage();
-        $this->apply($page->getLandingPage()?->getCmsPage(), $page->getMetaInformation());
+        $this->apply($page->getLandingPage()?->getCmsPage(), $page->getMetaInformation(), $event->getRequest());
     }
 
-    private function apply(?CmsPageEntity $cmsPage, ?MetaInformation $meta): void
+    private function apply(?CmsPageEntity $cmsPage, ?MetaInformation $meta, Request $request): void
     {
         if ($cmsPage === null || $meta === null) {
             return;
@@ -51,9 +52,22 @@ class VideoDetailMetaSubscriber implements EventSubscriberInterface
 
             return;
         }
+        // A verified video: its own title, description and canonical (one URL per video).
         $title = $detail->getTitle();
         if ($title !== null && $title !== '') {
             $meta->setMetaTitle($title);
+        }
+        $description = $detail->getDescription() ?? $title;
+        if ($description !== null && $description !== '') {
+            $meta->setMetaDescription($description);
+        }
+        $uuid = $detail->getVideoUuid();
+        if ($uuid !== null && $uuid !== '' && $request->query->has('vo_video')) {
+            $base = $meta->getCanonical();
+            if ($base === null || $base === '') {
+                $base = $request->getSchemeAndHttpHost() . $request->getBaseUrl() . $request->getPathInfo();
+            }
+            $meta->setCanonical(explode('?', $base, 2)[0] . '?vo_video=' . rawurlencode($uuid));
         }
     }
 }

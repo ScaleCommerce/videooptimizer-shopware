@@ -194,6 +194,7 @@ trait VideoSurfaceTrait
             'posterSrcset' => $posterSrcset,
             'posterSrcsetAttr' => EmbedSources::srcsetAttribute($posterSrcset),
             'title' => $embed['title'] ?? null,
+            'description' => is_string($embed['description'] ?? null) ? $embed['description'] : null,
             'uploadDate' => is_string($embed['uploadDate'] ?? null) && $embed['uploadDate'] !== '' ? $embed['uploadDate'] : null,
             'theme' => EmbedSources::theme($embed['theme'] ?? null),
             'tracks' => EmbedSources::tracks($embed['tracks'] ?? null),

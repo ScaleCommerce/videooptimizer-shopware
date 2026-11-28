@@ -176,12 +176,31 @@ class VideoDetailElementResolverTest extends TestCase
         static::assertFalse($slot->getData()->isNotFound());
     }
 
-    public function testCollectQueuesTheRequestedVideo(): void
+    public function testCollectDoesNotAnnounceAVideoFromTheUrlBeforeItIsVerified(): void
     {
         $client = $this->createMock(VideoOptimizerClient::class);
-        $client->expects(static::once())->method('queueEmbed')->with(self::URL_VIDEO);
+        $client->expects(static::never())->method('queueEmbed');
 
         (new VideoDetailElementResolver($client, new NullLogger()))->collect($this->slot(['libraryId' => 'lib-1']), $this->context(['vo_video' => self::URL_VIDEO]));
+    }
+
+    public function testCollectAnnouncesTheDefaultVideo(): void
+    {
+        $client = $this->createMock(VideoOptimizerClient::class);
+        $client->expects(static::once())->method('queueEmbed')->with(self::DEFAULT_VIDEO);
+
+        (new VideoDetailElementResolver($client, new NullLogger()))->collect($this->slot(['videoUuid' => self::DEFAULT_VIDEO]), $this->context());
+    }
+
+    public function testNotFoundAndUnavailablePagesAreTaggedWithTheVideo(): void
+    {
+        foreach (['missing', 'unavailable'] as $status) {
+            $client = $this->createMock(VideoOptimizerClient::class);
+            $client->method('storefrontVideoOwner')->willReturn(['status' => $status, 'library' => null]);
+            $client->expects(static::once())->method('markVideoRendered')->with(self::URL_VIDEO);
+
+            $this->enrich($client, $this->slot(['libraryId' => 'lib-1']), ['vo_video' => self::URL_VIDEO]);
+        }
     }
 
     /**

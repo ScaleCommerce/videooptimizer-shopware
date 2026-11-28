@@ -60,6 +60,7 @@ export default class ScalecommerceVoMini extends window.PluginBaseClass {
         if (this.video) {
             this._onInteraction = () => {
                 if (!isExpectedPlayback(this.video)) {
+                    this.video.__scvoOwnPlay = false;
                     this.started = true;
                     this.el.__scvoMiniStarted = true;
                 }

@@ -221,6 +221,61 @@ class VideoOptimizerClientTest extends TestCase
         static::assertSame(3, $count);
     }
 
+    public function testListedVideosAreSeededAsOwnedSoTheirDetailPageCostsNoLookup(): void
+    {
+        $urls = [];
+        $http = new MockHttpClient(function (string $method, string $url) use (&$urls): MockResponse {
+            $urls[] = $url;
+
+            return new MockResponse(json_encode(['data' => [['uuid' => 'a', 'status' => 'ready'], ['uuid' => 'b', 'status' => 'processing']], 'pagination' => ['has_more' => false]]));
+        });
+        $client = $this->client($http);
+
+        $client->storefrontVideoPage('lib-1', null, 12);
+
+        static::assertSame(['status' => 'ok', 'library' => 'lib-1'], $client->storefrontVideoOwner('a'));
+        static::assertCount(1, $urls);
+    }
+
+    public function testRefusalsOtherThanNotFoundAreTemporaryAndNotCached(): void
+    {
+        foreach ([400, 403] as $status) {
+            $count = 0;
+            $http = new MockHttpClient(function () use (&$count, $status): MockResponse {
+                ++$count;
+
+                return new MockResponse('', ['http_code' => $status]);
+            });
+            $state = new EmbedRenderState();
+            $client = new VideoOptimizerClient($http, $this->config(), new ArrayAdapter(), new NullLogger(), $state);
+
+            static::assertSame('unavailable', $client->storefrontVideoOwner('v1')['status']);
+            static::assertTrue($state->isDegraded());
+            static::assertSame('unavailable', $client->storefrontVideoOwner('v1')['status']);
+            // Cached as an outage for a minute only, never as "missing".
+            static::assertSame(1, $count);
+        }
+    }
+
+    public function testCraftedCursorsCountAgainstTheLookupBudget(): void
+    {
+        $count = 0;
+        $http = new MockHttpClient(function () use (&$count): MockResponse {
+            ++$count;
+
+            return new MockResponse(json_encode(['data' => []]));
+        });
+        $client = $this->client($http);
+
+        for ($i = 0; $i < 40; ++$i) {
+            $client->storefrontVideoPage('lib-1', 'cursor' . $i, 12);
+        }
+
+        static::assertSame(30, $count);
+        // A first page (no cursor) is not limited.
+        static::assertFalse($client->storefrontVideoPage('lib-1', null, 12)['failed']);
+    }
+
     public function testPeekEmbedOnlyReadsTheCache(): void
     {
         $count = 0;

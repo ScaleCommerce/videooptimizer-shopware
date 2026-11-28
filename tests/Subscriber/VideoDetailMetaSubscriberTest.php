@@ -45,6 +45,40 @@ class VideoDetailMetaSubscriberTest extends TestCase
         static::assertSame('index,follow', $meta->getRobots());
     }
 
+    public function testAVerifiedVideoGetsItsOwnCanonicalAndDescription(): void
+    {
+        $meta = $this->meta();
+        $meta->setCanonical('https://shop.example/videos/?other=1');
+        $detail = $this->detail('Product tour');
+        $detail->setVideoUuid('11111111-2222-3333-4444-555555555555');
+        $page = new NavigationPage();
+        $page->setMetaInformation($meta);
+        $page->setCmsPage($this->cmsPage($detail));
+
+        (new VideoDetailMetaSubscriber())->onNavigationPageLoaded(new NavigationPageLoadedEvent($page, $this->createStub(SalesChannelContext::class), new Request(['vo_video' => '11111111-2222-3333-4444-555555555555'])));
+
+        static::assertSame('https://shop.example/videos/?vo_video=11111111-2222-3333-4444-555555555555', $meta->getCanonical());
+        static::assertSame('Product tour', $meta->getMetaDescription());
+    }
+
+    public function testAnUnverifiedPageKeepsTheBareCanonicalAndNoVideoText(): void
+    {
+        $meta = $this->meta();
+        $meta->setCanonical('https://shop.example/videos/');
+        $meta->setMetaDescription('Shop text');
+        $detail = $this->detail(null);
+        $detail->setNotFound(true);
+        $page = new NavigationPage();
+        $page->setMetaInformation($meta);
+        $page->setCmsPage($this->cmsPage($detail));
+
+        (new VideoDetailMetaSubscriber())->onNavigationPageLoaded(new NavigationPageLoadedEvent($page, $this->createStub(SalesChannelContext::class), new Request(['vo_video' => 'x'])));
+
+        static::assertSame('https://shop.example/videos/', $meta->getCanonical());
+        static::assertSame('Shop text', $meta->getMetaDescription());
+        static::assertSame('noindex,follow', $meta->getRobots());
+    }
+
     public function testTheVideoTitleBecomesThePageTitleOfALandingPage(): void
     {
         $meta = $this->meta();

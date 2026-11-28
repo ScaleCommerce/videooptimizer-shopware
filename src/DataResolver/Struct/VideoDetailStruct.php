@@ -10,6 +10,8 @@ class VideoDetailStruct extends Struct
 
     protected ?string $title = null;
 
+    protected ?string $description = null;
+
     protected ?string $playerMode = null;
 
     protected ?string $embedUrl = null;
@@ -47,6 +49,16 @@ class VideoDetailStruct extends Struct
     public function setTitle(?string $v): void
     {
         $this->title = $v;
+    }
+
+    public function getDescription(): ?string
+    {
+        return $this->description;
+    }
+
+    public function setDescription(?string $v): void
+    {
+        $this->description = $v;
     }
 
     public function getPlayerMode(): ?string

@@ -37,6 +37,9 @@ export function markExpectedPlayback(video) {
 // Starts playback as the plugin's own action; a rejected play() (autoplay blocked) leaves nothing to
 // expect, so the mark is cleared at once and a later visitor action is not mistaken for it.
 function playMarked(video) {
+    // The mini player clears this when the visitor takes over; the MP4 fallback after a failed HLS
+    // source then continues as the plugin's own playback (see useMp4).
+    video.__scvoOwnPlay = true;
     markExpectedPlayback(video);
     video.play().catch(() => {
         video.__scvoExpectedUntil = 0;
@@ -84,6 +87,10 @@ export async function attachVideoSource(
             );
         }
         if (wasPlaying) {
+            // The same playback on another source: the plugin's own when the plugin started it.
+            if (video.__scvoOwnPlay === true) {
+                markExpectedPlayback(video);
+            }
             video.play().catch(() => {});
         } else {
             play();

@@ -39,8 +39,10 @@ class VideoDetailElementResolver extends AbstractCmsElementResolver
 
     public function collect(CmsSlotEntity $slot, ResolverContext $resolverContext): ?CriteriaCollection
     {
-        [$uuid] = $this->requestedVideo($slot, $resolverContext);
-        if ($uuid !== null) {
+        [$uuid, $fromUrl] = $this->requestedVideo($slot, $resolverContext);
+        // A uuid from the URL is not announced before the ownership check: the public embed endpoint
+        // would answer for any video and bypass the lookup budget. Its embed is fetched in enrich().
+        if ($uuid !== null && !$fromUrl) {
             $this->client->queueEmbed($uuid);
         }
 
@@ -65,6 +67,8 @@ class VideoDetailElementResolver extends AbstractCmsElementResolver
             // The embed is public and proves nothing: the video has to belong to the organization of
             // the token (and to the element's library, if one is chosen), checked with the token.
             $owner = $this->client->storefrontVideoOwner($uuid);
+            // Whatever the answer, a change of this video (webhook, admin) has to refresh the page.
+            $this->client->markVideoRendered($uuid);
             if ($owner['status'] === 'unavailable') {
                 $struct->setUnavailable(true);
 
@@ -94,6 +98,8 @@ class VideoDetailElementResolver extends AbstractCmsElementResolver
         $struct->setEmbed($embed);
         $title = $embed['title'] ?? null;
         $struct->setTitle(is_string($title) && trim($title) !== '' ? trim($title) : null);
+        $description = $embed['description'] ?? null;
+        $struct->setDescription(is_string($description) && trim($description) !== '' ? trim($description) : null);
         $duration = (int) round((float) ($embed['duration'] ?? 0));
         $struct->setDurationLabel($duration > 0 ? Scenes::formatTime($duration) : null);
     }

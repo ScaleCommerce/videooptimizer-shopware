@@ -14,6 +14,8 @@ use Shopware\Core\Content\Cms\Aggregate\CmsSection\CmsSectionEntity;
 use Shopware\Core\Content\Cms\Aggregate\CmsSlot\CmsSlotCollection;
 use Shopware\Core\Content\Cms\Aggregate\CmsSlot\CmsSlotEntity;
 use Shopware\Core\Content\Cms\CmsPageEntity;
+use Shopware\Core\Content\Cms\DataResolver\FieldConfig;
+use Shopware\Core\Content\Cms\DataResolver\FieldConfigCollection;
 use Shopware\Core\Content\Cms\SalesChannel\Struct\ImageSliderItemStruct;
 use Shopware\Core\Content\Cms\SalesChannel\Struct\ImageSliderStruct;
 use Shopware\Core\Content\Media\MediaEntity;
@@ -50,6 +52,14 @@ class ProductVideoSubscriberTest extends TestCase
         $this->handle($this->event([$manual], [ProductVideoSlide::FIELD => 'vid-1']));
 
         static::assertNull($manual->getSliderItems());
+    }
+
+    public function testManuallyFilledGalleriesAreLeftAlone(): void
+    {
+        $gallery = $this->gallery();
+        $this->handle($this->event([$gallery], [ProductVideoSlide::FIELD => 'vid-1'], true, false));
+
+        static::assertCount(1, $gallery->getSliderItems());
     }
 
     public function testNothingChangesWithoutAProductVideo(): void
@@ -95,7 +105,7 @@ class ProductVideoSubscriberTest extends TestCase
      * @param list<ImageSliderStruct> $galleries
      * @param array<string, mixed>|null $customFields
      */
-    private function event(array $galleries, ?array $customFields, bool $withCms = true): ProductPageLoadedEvent
+    private function event(array $galleries, ?array $customFields, bool $withCms = true, bool $mapped = true): ProductPageLoadedEvent
     {
         $slots = [];
         foreach ($galleries as $index => $data) {
@@ -104,6 +114,7 @@ class ProductVideoSubscriberTest extends TestCase
             $slot->setType('image-gallery');
             $slot->setSlot('left');
             $slot->setData($data);
+            $slot->setFieldConfig(new FieldConfigCollection([new FieldConfig('sliderItems', $mapped ? FieldConfig::SOURCE_MAPPED : FieldConfig::SOURCE_STATIC, $mapped ? 'product.media' : [])]));
             $slots[] = $slot;
         }
         $block = new CmsBlockEntity();

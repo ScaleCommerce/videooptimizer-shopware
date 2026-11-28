@@ -34,8 +34,10 @@ class ProductVideoSubscriber implements EventSubscriberInterface
         }
         foreach ($cmsPage?->getElementsOfType('image-gallery') ?? [] as $slot) {
             $data = $slot->getData();
-            // Only galleries fed by the product's media (not a gallery with manually chosen images).
-            if ($data instanceof ImageSliderStruct && $data->getSliderItems() !== null) {
+            // Only galleries fed by the product's media (mapped `sliderItems`), not a gallery whose
+            // images were chosen by hand.
+            $source = $slot->getFieldConfig()->get('sliderItems');
+            if ($data instanceof ImageSliderStruct && $data->getSliderItems() !== null && $source?->isMapped() === true && $source->getValue() === 'product.media') {
                 $galleries[] = $data;
             }
         }
