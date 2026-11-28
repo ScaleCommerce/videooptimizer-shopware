@@ -6,7 +6,8 @@
 // lightbox is open.
 import { isExpectedPlayback } from '../helper/attach-video-source';
 
-const BOX_SELECTOR = '.scalecommerce-vo-video--sized, .scalecommerce-vo-surface';
+const BOX_SELECTOR =
+    '.scalecommerce-vo-video--sized, .scalecommerce-vo-surface';
 const MIN_WIDTH = '(min-width: 600px)';
 const PINNED = 'is-pinned';
 const INTERACTIONS = ['play', 'volumechange', 'seeking'];
@@ -71,18 +72,30 @@ export default class ScalecommerceVoMini extends window.PluginBaseClass {
         // Opening a lightbox takes over: the mini player goes away (and stops).
         if (typeof window.MutationObserver === 'function') {
             this._lightboxObserver = new window.MutationObserver(() => {
-                if (this.pinned && document.body.classList.contains('scalecommerce-vo-lightbox-open')) {
+                if (
+                    this.pinned &&
+                    document.body.classList.contains(
+                        'scalecommerce-vo-lightbox-open'
+                    )
+                ) {
                     this._dismiss(true, false);
                 }
             });
-            this._lightboxObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+            this._lightboxObserver.observe(document.body, {
+                attributes: true,
+                attributeFilter: ['class'],
+            });
         }
 
         this._onClose = () => this._dismiss(true);
         this.close.addEventListener('click', this._onClose);
 
         this._onKey = (event) => {
-            if (event.key === 'Escape' && this.pinned && this.box.contains(document.activeElement)) {
+            if (
+                event.key === 'Escape' &&
+                this.pinned &&
+                this.box.contains(document.activeElement)
+            ) {
                 this._dismiss(false);
             }
         };
@@ -107,7 +120,13 @@ export default class ScalecommerceVoMini extends window.PluginBaseClass {
 
         if (typeof window.IntersectionObserver === 'function') {
             this.observer = new window.IntersectionObserver(
-                (entries) => entries.forEach((entry) => this._onVisible(entry.isIntersecting && entry.intersectionRatio >= 0.01)),
+                (entries) =>
+                    entries.forEach((entry) =>
+                        this._onVisible(
+                            entry.isIntersecting &&
+                                entry.intersectionRatio >= 0.01
+                        )
+                    ),
                 { threshold: [0, 0.01, 0.5] }
             );
             this.observer.observe(this.el);
@@ -134,7 +153,9 @@ export default class ScalecommerceVoMini extends window.PluginBaseClass {
         if (this._media && !this._media.matches) {
             return;
         }
-        if (document.body.classList.contains('scalecommerce-vo-lightbox-open')) {
+        if (
+            document.body.classList.contains('scalecommerce-vo-lightbox-open')
+        ) {
             return;
         }
         this._pin();
@@ -176,7 +197,10 @@ export default class ScalecommerceVoMini extends window.PluginBaseClass {
         } else if (this.frame) {
             // An iframe cannot be paused from outside: reload it without autoplay, which stops it.
             this.hostedStarted = false;
-            const url = new URL(this.frame.getAttribute('src'), window.location.href);
+            const url = new URL(
+                this.frame.getAttribute('src'),
+                window.location.href
+            );
             url.searchParams.set('autoplay', '0');
             this.frame.setAttribute('src', url.href);
         }

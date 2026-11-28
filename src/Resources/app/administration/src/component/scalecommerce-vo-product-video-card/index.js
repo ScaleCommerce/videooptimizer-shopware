@@ -30,7 +30,11 @@ Shopware.Component.register('scalecommerce-vo-product-video-card', {
             return productVideo(this.parentProduct);
         },
         isInherited() {
-            return !this.own.uuid && !!this.inherited.uuid && !!this.product.parentId;
+            return (
+                !this.own.uuid &&
+                !!this.inherited.uuid &&
+                !!this.product.parentId
+            );
         },
         shown() {
             return this.isInherited ? this.inherited : this.own;

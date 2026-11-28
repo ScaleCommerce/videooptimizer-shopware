@@ -1,5 +1,7 @@
 {% import "@ScaleVideoOptimizer/storefront/element/_scalecommerce-vo-surface.html.twig" as vo %}
 {% block element_scalecommerce_vo_video_list %}
+    {# Card posters are decorative: the link text is the title (an empty alt on purpose). #}
+    {% set decorative = '' %}
     {% set data = element.data %}
     {% set config = element.config %}
     {% set surfaceOptions = {
@@ -21,7 +23,7 @@
                                     <span class="scalecommerce-vo-video-list__thumb">
                                         {% if item.embed.poster %}<img src="{{ item.embed.poster }}"
                                              {% if item.embed.posterSrcsetAttr %}srcset="{{ item.embed.posterSrcsetAttr }}" sizes="{{ surfaceOptions.posterSizes }}"{% endif %}
-                                             alt="" width="640" height="360" loading="lazy" decoding="async">{% endif %}
+                                             alt="{{ decorative }}" class="scalecommerce-vo-video-list__image" width="640" height="360" loading="lazy" decoding="async">{% endif %}
                                         <span class="scalecommerce-vo-surface__play scalecommerce-vo-surface__play--round scalecommerce-vo-surface__play--medium" aria-hidden="true">▶</span>
                                     </span>
                                     <span class="scalecommerce-vo-video-list__title">{{ item.title ?: ('scalecommerce-vo.storefront.video'|trans) }}</span>

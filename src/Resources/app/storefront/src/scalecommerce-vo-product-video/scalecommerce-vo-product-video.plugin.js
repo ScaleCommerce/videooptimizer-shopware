@@ -3,7 +3,9 @@ import { destroyVideoSource } from '../helper/attach-video-source';
 // The product video in the image gallery stops when the visitor moves to another slide: the slide
 // is clipped by the gallery, so it counts as hidden once less than half of it is visible. A native
 // video is paused, a hosted player (iframe) is reloaded without autoplay, which stops it.
-export default class ScalecommerceVoProductVideo extends window.PluginBaseClass {
+export default class ScalecommerceVoProductVideo
+    extends window.PluginBaseClass
+{
     init() {
         // A click on the video slide belongs to the player: the gallery would open its zoom modal.
         // The zoom modal listens on every <img> of the gallery, the poster included, so a click on
@@ -24,7 +26,10 @@ export default class ScalecommerceVoProductVideo extends window.PluginBaseClass 
         this.observer = new window.IntersectionObserver(
             (entries) =>
                 entries.forEach((entry) => {
-                    if (!entry.isIntersecting || entry.intersectionRatio < 0.5) {
+                    if (
+                        !entry.isIntersecting ||
+                        entry.intersectionRatio < 0.5
+                    ) {
                         this._stop();
                     }
                 }),
@@ -41,7 +46,10 @@ export default class ScalecommerceVoProductVideo extends window.PluginBaseClass 
         const frame = this.el.querySelector('iframe');
         if (frame) {
             try {
-                const url = new URL(frame.getAttribute('src'), window.location.href);
+                const url = new URL(
+                    frame.getAttribute('src'),
+                    window.location.href
+                );
                 if (url.searchParams.get('autoplay') === '1') {
                     url.searchParams.set('autoplay', '0');
                     frame.setAttribute('src', url.href);
@@ -56,6 +64,8 @@ export default class ScalecommerceVoProductVideo extends window.PluginBaseClass 
         this.el.removeEventListener('click', this._onCapture, true);
         this.el.removeEventListener('click', this._onClick);
         this.observer?.disconnect();
-        this.el.querySelectorAll('video').forEach((video) => destroyVideoSource(video));
+        this.el
+            .querySelectorAll('video')
+            .forEach((video) => destroyVideoSource(video));
     }
 }

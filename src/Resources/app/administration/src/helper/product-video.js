@@ -7,7 +7,10 @@ export const FIELD_LIBRARY = 'scalecommerce_vo_product_video_library';
 export function productVideo(product) {
     const fields = product?.customFields ?? {};
     return {
-        uuid: typeof fields[FIELD] === 'string' && fields[FIELD] ? fields[FIELD] : null,
+        uuid:
+            typeof fields[FIELD] === 'string' && fields[FIELD]
+                ? fields[FIELD]
+                : null,
         libraryId:
             typeof fields[FIELD_LIBRARY] === 'string' && fields[FIELD_LIBRARY]
                 ? fields[FIELD_LIBRARY]
@@ -20,7 +23,10 @@ export function productVideo(product) {
  * save has to overwrite the stored ones (a variant then inherits the main product's again). Other
  * custom fields stay untouched.
  */
-export function withProductVideo(customFields, { uuid = null, libraryId = null }) {
+export function withProductVideo(
+    customFields,
+    { uuid = null, libraryId = null }
+) {
     return {
         ...(customFields ?? {}),
         [FIELD]: uuid || null,

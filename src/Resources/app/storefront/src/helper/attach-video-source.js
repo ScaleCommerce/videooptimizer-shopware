@@ -243,7 +243,9 @@ export function autoplayWhileVisible(
  * the browser's data saver.
  */
 export function motionReduced() {
-    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    const reduce = window.matchMedia?.(
+        '(prefers-reduced-motion: reduce)'
+    )?.matches;
 
     return !!reduce || window.navigator.connection?.saveData === true;
 }

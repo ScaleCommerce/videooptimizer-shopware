@@ -179,7 +179,7 @@ class SurfaceTemplateTest extends TestCase
         static::assertStringContainsString('data-scalecommerce-vo-player="true"', $html);
         static::assertSame(2, substr_count($html, 'data-vo-scene="'));
         static::assertStringContainsString('data-vo-scene="59"', $html);
-        static::assertMatchesRegularExpression('#<img src="https://api.example/videos/abc/thumbnails/9" alt="" width="320" height="180" loading="lazy" decoding="async">#', $html);
+        static::assertMatchesRegularExpression('#<img class="scalecommerce-vo-scene__image" src="https://api.example/videos/abc/thumbnails/9" alt="" width="320" height="180" loading="lazy" decoding="async">#', $html);
         static::assertStringContainsString('scalecommerce-vo-scene__label">Finale &lt;b&gt;<', $html);
         static::assertStringContainsString('scalecommerce-vo-scene__time">0:59<', $html);
     }

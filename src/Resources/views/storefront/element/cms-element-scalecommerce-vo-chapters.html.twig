@@ -1,5 +1,7 @@
 {% import "@ScaleVideoOptimizer/storefront/element/_scalecommerce-vo-surface.html.twig" as vo %}
 {% block element_scalecommerce_vo_chapters %}
+    {# The previews are decorative: the button carries the label (an empty alt on purpose). #}
+    {% set decorative = '' %}
     {% set data = element.data %}
     {% set config = element.config %}
     {% set surfaceOptions = {
@@ -30,7 +32,7 @@
                                 <button type="button" class="scalecommerce-vo-scene" data-vo-scene="{{ scene.start }}"
                                         aria-label="{{ 'scalecommerce-vo.storefront.sceneAria'|trans({'%label%': label, '%time%': scene.time}) }}">
                                     <span class="scalecommerce-vo-scene__thumb">
-                                        <img src="{{ scene.thumb }}" alt="" width="320" height="180" loading="lazy" decoding="async">
+                                        <img class="scalecommerce-vo-scene__image" src="{{ scene.thumb }}" alt="{{ decorative }}" width="320" height="180" loading="lazy" decoding="async">
                                         <span class="scalecommerce-vo-scene__time">{{ scene.time }}</span>
                                     </span>
                                     <span class="scalecommerce-vo-scene__label">{{ label }}</span>

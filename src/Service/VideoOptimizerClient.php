@@ -575,41 +575,6 @@ class VideoOptimizerClient implements ResetInterface
     }
 
     /**
-     * Cache key of the ownership answer: scoped by the token (another token, another organization)
-     * and dropped by forgetEmbed() when the video changes.
-     */
-    private function ownerCacheKey(string $uuid): string
-    {
-        try {
-            $scope = substr(hash('sha256', $this->token()), 0, 16);
-        } catch (\Throwable) {
-            $scope = 'notoken';
-        }
-
-        return 'scalecommerce_vo_video_owner_' . $scope . '_' . rawurlencode($uuid);
-    }
-
-    /**
-     * True for the first 30 uncached lookups per minute and site; counted in the cache.
-     */
-    private function allowUncachedLookup(): bool
-    {
-        if (!$this->cache instanceof CacheItemPoolInterface) {
-            return true;
-        }
-        $item = $this->cache->getItem('scalecommerce_vo_lookup_budget_' . intdiv(time(), 60));
-        $count = $item->isHit() ? (int) $item->get() : 0;
-        if ($count >= self::UNCACHED_LOOKUPS_PER_MINUTE) {
-            return false;
-        }
-        $item->set($count + 1);
-        $item->expiresAfter(120);
-        $this->cache->save($item);
-
-        return true;
-    }
-
-    /**
      * Public URL of scene thumbnail $index (0..9); the endpoint needs no token and redirects to the CDN.
      */
     public function thumbnailUrl(string $uuid, int $index): string
@@ -844,6 +809,41 @@ class VideoOptimizerClient implements ResetInterface
         $this->assertHttpsUrl($url, 'The VideoOptimizer embed base URL must be an absolute https URL.');
 
         return $url;
+    }
+
+    /**
+     * Cache key of the ownership answer: scoped by the token (another token, another organization)
+     * and dropped by forgetEmbed() when the video changes.
+     */
+    private function ownerCacheKey(string $uuid): string
+    {
+        try {
+            $scope = substr(hash('sha256', $this->token()), 0, 16);
+        } catch (\Throwable) {
+            $scope = 'notoken';
+        }
+
+        return 'scalecommerce_vo_video_owner_' . $scope . '_' . rawurlencode($uuid);
+    }
+
+    /**
+     * True for the first 30 uncached lookups per minute and site; counted in the cache.
+     */
+    private function allowUncachedLookup(): bool
+    {
+        if (!$this->cache instanceof CacheItemPoolInterface) {
+            return true;
+        }
+        $item = $this->cache->getItem('scalecommerce_vo_lookup_budget_' . intdiv(time(), 60));
+        $count = $item->isHit() ? (int) $item->get() : 0;
+        if ($count >= self::UNCACHED_LOOKUPS_PER_MINUTE) {
+            return false;
+        }
+        $item->set($count + 1);
+        $item->expiresAfter(120);
+        $this->cache->save($item);
+
+        return true;
     }
 
     /**

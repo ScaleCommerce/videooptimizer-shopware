@@ -16,6 +16,17 @@ use Shopware\Core\Content\Cms\DataResolver\FieldConfigCollection;
 trait VideoSurfaceTrait
 {
     /**
+     * Aspect ratios of the "format" option (config value => CSS aspect-ratio).
+     */
+    private const FORMAT_ASPECTS = [
+        '16-9' => '16 / 9',
+        '9-16' => '9 / 16',
+        '1-1' => '1 / 1',
+        '4-5' => '4 / 5',
+        '21-9' => '21 / 9',
+    ];
+
+    /**
      * @return array{playerMode: string, embedUrl: string, embed: array<string, mixed>|null, error: bool, layout: array<string, mixed>}
      */
     protected function buildVideoSurface(FieldConfigCollection $config, string $uuid, VideoOptimizerClient $client, LoggerInterface $logger): array
@@ -62,17 +73,6 @@ trait VideoSurfaceTrait
 
         return ['playerMode' => $playerMode, 'embedUrl' => $embedUrl, 'embed' => $embed, 'error' => false, 'layout' => $layout];
     }
-
-    /**
-     * Aspect ratios of the "format" option (config value => CSS aspect-ratio).
-     */
-    private const FORMAT_ASPECTS = [
-        '16-9' => '16 / 9',
-        '9-16' => '9 / 16',
-        '1-1' => '1 / 1',
-        '4-5' => '4 / 5',
-        '21-9' => '21 / 9',
-    ];
 
     /**
      * Presentation options of the video surface: the "format" (original ratio or a fixed one, with

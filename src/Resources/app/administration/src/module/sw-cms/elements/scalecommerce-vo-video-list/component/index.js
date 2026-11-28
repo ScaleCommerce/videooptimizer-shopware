@@ -14,7 +14,10 @@ Shopware.Component.register('scalecommerce-vo-video-list-component', {
         cards() {
             const size = Number(this.element.config?.pageSize?.value);
             const count = Number.isFinite(size) && size > 0 ? size : 12;
-            return Array.from({ length: Math.min(count, PLACEHOLDER_CARDS) }, (_, index) => index);
+            return Array.from(
+                { length: Math.min(count, PLACEHOLDER_CARDS) },
+                (_, index) => index
+            );
         },
     },
 

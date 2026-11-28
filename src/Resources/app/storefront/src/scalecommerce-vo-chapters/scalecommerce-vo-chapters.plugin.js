@@ -60,7 +60,9 @@ export default class ScalecommerceVoChapters extends window.PluginBaseClass {
             (button) => Number(button.getAttribute('data-vo-scene')) || 0
         );
         this.playerEl = this.el.querySelector('[data-scalecommerce-vo-player]');
-        this.video = this.el.querySelector('video.scalecommerce-vo-video__player');
+        this.video = this.el.querySelector(
+            'video.scalecommerce-vo-video__player'
+        );
         this.frame = this.el.querySelector('iframe.scalecommerce-vo-frame');
 
         this._handlers = this.buttons.map((button, index) => {
@@ -71,7 +73,13 @@ export default class ScalecommerceVoChapters extends window.PluginBaseClass {
 
         if (this.video) {
             this._update = () => this._markActive(this._playingIndex());
-            for (const event of ['timeupdate', 'play', 'pause', 'ended', 'seeked']) {
+            for (const event of [
+                'timeupdate',
+                'play',
+                'pause',
+                'ended',
+                'seeked',
+            ]) {
                 this.video.addEventListener(event, this._update);
             }
         }
@@ -98,7 +106,10 @@ export default class ScalecommerceVoChapters extends window.PluginBaseClass {
         if (this.video) {
             await this._seekAndPlay(seconds);
         } else if (this.frame) {
-            const src = embedUrlAt(this.frame.getAttribute('src') || '', seconds);
+            const src = embedUrlAt(
+                this.frame.getAttribute('src') || '',
+                seconds
+            );
             if (src) {
                 this.frame.setAttribute('src', src);
                 this._markActive(index);
@@ -134,7 +145,13 @@ export default class ScalecommerceVoChapters extends window.PluginBaseClass {
     destroy() {
         this._destroyed = true;
         if (this.video && this._update) {
-            for (const event of ['timeupdate', 'play', 'pause', 'ended', 'seeked']) {
+            for (const event of [
+                'timeupdate',
+                'play',
+                'pause',
+                'ended',
+                'seeked',
+            ]) {
                 this.video.removeEventListener(event, this._update);
             }
         }

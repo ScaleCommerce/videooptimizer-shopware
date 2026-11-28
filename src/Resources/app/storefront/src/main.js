@@ -38,9 +38,7 @@ PluginManager.register(
     'ScalecommerceVoChapters',
     load(
         () =>
-            import(
-                './scalecommerce-vo-chapters/scalecommerce-vo-chapters.plugin'
-            )
+            import('./scalecommerce-vo-chapters/scalecommerce-vo-chapters.plugin')
     ),
     '[data-scalecommerce-vo-chapters]'
 );
@@ -53,9 +51,7 @@ PluginManager.register(
     'ScalecommerceVoProductVideo',
     load(
         () =>
-            import(
-                './scalecommerce-vo-product-video/scalecommerce-vo-product-video.plugin'
-            )
+            import('./scalecommerce-vo-product-video/scalecommerce-vo-product-video.plugin')
     ),
     '[data-scalecommerce-vo-gallery-video]'
 );
