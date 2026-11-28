@@ -25,6 +25,7 @@
          data-vo-embed-url="{{ embedUrl }}"
          data-vo-title="{{ videoTitle }}"
          {% if layout.cover ?? false %}data-vo-fit="cover"{% endif %}
+         {% if opts.sound ?? false %}data-vo-sound="true"{% endif %}
          data-vo-native-options='{{ nativeOptions|json_encode }}'
          data-vo-label-close="{{ 'scalecommerce-vo.storefront.close'|trans }}">
         {% if presentation == 'direct' %}

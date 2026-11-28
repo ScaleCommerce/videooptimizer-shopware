@@ -12,6 +12,8 @@ import './component/scalecommerce-vo-savings';
 import './component/scalecommerce-vo-webhook';
 import './component/scalecommerce-vo-subtitles';
 import './component/scalecommerce-vo-subtitle-languages';
+import './component/scalecommerce-vo-product-video-card';
+import './module/sw-product';
 import './module/sw-cms/elements/scalecommerce-vo-video';
 import './module/sw-cms/blocks/video/scalecommerce-vo-video';
 import './module/sw-cms/elements/scalecommerce-vo-media-split';

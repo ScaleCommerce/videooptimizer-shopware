@@ -49,3 +49,13 @@ PluginManager.register(
     load(() => import('./scalecommerce-vo-mini/scalecommerce-vo-mini.plugin')),
     '[data-scalecommerce-vo-mini]'
 );
+PluginManager.register(
+    'ScalecommerceVoProductVideo',
+    load(
+        () =>
+            import(
+                './scalecommerce-vo-product-video/scalecommerce-vo-product-video.plugin'
+            )
+    ),
+    '[data-scalecommerce-vo-gallery-video]'
+);

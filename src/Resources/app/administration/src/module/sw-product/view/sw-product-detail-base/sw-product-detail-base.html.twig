@@ -1,0 +1,10 @@
+{% block sw_product_detail_base_media %}
+    {% parent %}
+
+    {% block scalecommerce_vo_product_video_card %}
+    <scalecommerce-vo-product-video-card
+        v-if="product && !loading.product"
+        :product="product"
+        :parent-product="parentProduct" />
+    {% endblock %}
+{% endblock %}

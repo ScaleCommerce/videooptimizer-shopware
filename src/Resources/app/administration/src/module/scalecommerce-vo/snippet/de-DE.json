@@ -365,6 +365,12 @@
             "defaultVideo": "Standardvideo",
             "libraryHint": "Das gezeigte Video kommt aus der URL (?vo_video=...) und muss zu Ihrer VideoOptimizer-Organisation gehören (und zu dieser Bibliothek, falls eine gewählt ist); ohne Video in der URL wird das Standardvideo gezeigt.",
             "titlePlaceholder": "Videotitel"
+        },
+        "productVideo": {
+            "title": "VideoOptimizer-Video",
+            "subtitle": "Wird als Slide in der Produktbildergalerie gezeigt",
+            "inherited": "Vom Hauptprodukt geerbt. Wählen Sie ein Video, um es für diese Variante zu ersetzen.",
+            "remove": "Video entfernen"
         }
     },
     "sw-privileges": {

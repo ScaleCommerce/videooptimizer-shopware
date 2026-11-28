@@ -16,8 +16,10 @@ use ScaleCommerce\VideoOptimizer\DependencyInjection\HttpProxyConfiguredPass;
 use ScaleCommerce\VideoOptimizer\Service\EmbedRenderState;
 use ScaleCommerce\VideoOptimizer\Service\GuardedHttpClient;
 use ScaleCommerce\VideoOptimizer\Service\PluginUserAgent;
+use ScaleCommerce\VideoOptimizer\Service\ProductVideoSlide;
 use ScaleCommerce\VideoOptimizer\Service\VideoOptimizerClient;
 use ScaleCommerce\VideoOptimizer\Subscriber\EmbedPageCacheSubscriber;
+use ScaleCommerce\VideoOptimizer\Subscriber\ProductVideoSubscriber;
 use ScaleCommerce\VideoOptimizer\Subscriber\VideoDetailMetaSubscriber;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
 use Shopware\Core\Framework\Util\HtmlSanitizer;
@@ -71,6 +73,13 @@ return static function (ContainerConfigurator $container): void {
             service('event_dispatcher'),
             service(VideoOptimizerClient::class),
         ])
+        ->tag('kernel.event_subscriber');
+
+    $services->set(ProductVideoSlide::class)
+        ->args([service(VideoOptimizerClient::class), service(SystemConfigService::class), service('logger')]);
+
+    $services->set(ProductVideoSubscriber::class)
+        ->args([service(ProductVideoSlide::class)])
         ->tag('kernel.event_subscriber');
 
     $services->set(VideoDetailMetaSubscriber::class)

@@ -1,0 +1,39 @@
+// The product video slide of the image gallery (see views/storefront/utilities/video.html.twig).
+.scalecommerce-vo-gallery-video {
+    width: 100%;
+
+    .scalecommerce-vo-surface {
+        // The gallery decides the height of its slides; the video keeps its ratio inside the slide.
+        max-height: 100%;
+    }
+}
+
+.gallery-slider-thumbnails-item-inner .scalecommerce-vo-gallery-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.scalecommerce-vo-gallery-thumbwrap {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+
+    &__play {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.6);
+        color: #fff;
+        font-size: 10px;
+        pointer-events: none;
+    }
+}

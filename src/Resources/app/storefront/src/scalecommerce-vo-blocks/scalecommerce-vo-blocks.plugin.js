@@ -91,7 +91,11 @@ export default class ScalecommerceVoBlocks extends window.PluginBaseClass {
             // rather than appending duplicate query keys.
             const url = new URL(embedUrl);
             url.searchParams.set('autoplay', '1');
-            url.searchParams.set('muted', '1');
+            // The click allows playback with sound; only elements that ask for it (product video) use it.
+            url.searchParams.set(
+                'muted',
+                this.el.getAttribute('data-vo-sound') === 'true' ? '0' : '1'
+            );
             iframe.src = url.toString();
             iframe.title = this._title();
             iframe.setAttribute(

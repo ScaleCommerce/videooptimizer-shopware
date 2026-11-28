@@ -365,6 +365,12 @@
             "defaultVideo": "Default video",
             "libraryHint": "The video shown comes from the URL (?vo_video=...) and has to belong to your VideoOptimizer organization (and to this library, if one is selected); without a video in the URL the default video is shown.",
             "titlePlaceholder": "Video title"
+        },
+        "productVideo": {
+            "title": "VideoOptimizer video",
+            "subtitle": "Shown as a slide in the product image gallery",
+            "inherited": "Inherited from the main product. Choose a video to replace it for this variant.",
+            "remove": "Remove video"
         }
     },
     "sw-privileges": {

@@ -261,6 +261,12 @@ video covers the area; portrait formats are limited to 420 px); a focal point (X
 **Floating mini player.** Single video and chapters: once a visitor has started the video and it scrolls out of
 view, it is pinned bottom right (screens from 600 px) with a close button; Escape unpins, scrolling back too.
 
+**Product video.** On the product detail page in the administration, the card "VideoOptimizer video" chooses a
+video (variants inherit the main product's and can replace it). It appears as the last slide of the product image
+gallery (poster in the thumbnail strip); a click plays it in place with sound and it stops when the visitor
+switches slides. The player (native or hosted embed) is the plugin setting "Product video player". The choice is
+stored in the product's custom fields `scalecommerce_vo_product_video` / `scalecommerce_vo_product_video_library`.
+
 <div align="center">
 
 ![Shopping Experiences editor with the media-split and background-hero VideoOptimizer elements placed](https://raw.githubusercontent.com/ScaleCommerce/videooptimizer-shopware/main/docs/screenshots/shopping-experiences.jpg)

@@ -361,3 +361,22 @@ describe('format (#47)', () => {
         expect(document.querySelector('.block video').classList.contains('scalecommerce-vo-video__player--contain')).toBe(true);
     });
 });
+
+describe('sound on click (#48)', () => {
+    function hosted(sound) {
+        document.body.innerHTML = `<div class="block" ${sound ? 'data-vo-sound="true"' : ''} data-vo-player-mode="embed" data-vo-embed-url="https://player.example/embed/abc?muted=0" data-vo-title="D" data-vo-native-options='{}'>
+            <button type="button" class="facade" data-vo-action="facade">Play</button></div>`;
+        new ScalecommerceVoBlocks(document.querySelector('.block'));
+        document.querySelector('.facade').click();
+        return new URL(document.querySelector('.block iframe').getAttribute('src')).searchParams;
+    }
+
+    it('starts a hosted player with sound when the element asks for it', () => {
+        expect(hosted(true).get('muted')).toBe('0');
+        expect(hosted(true).get('autoplay')).toBe('1');
+    });
+
+    it('keeps starting other hosted facades muted', () => {
+        expect(hosted(false).get('muted')).toBe('1');
+    });
+});
