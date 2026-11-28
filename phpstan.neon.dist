@@ -7,11 +7,13 @@ parameters:
         - src/Resources
     treatPhpDocTypesAsCertain: false
     # The storefront bundle is not a requirement of the plugin (it only needs shopware/core); the
-    # page subscribers react to its events when it is installed.
+    # page subscribers react to its events when it is installed. Unmatched where the storefront is installed.
     ignoreErrors:
         -
             identifier: class.notFound
             path: src/Subscriber/ProductVideoSubscriber.php
+            reportUnmatched: false
         -
             identifier: class.notFound
             path: src/Subscriber/VideoDetailMetaSubscriber.php
+            reportUnmatched: false
