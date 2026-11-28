@@ -32,7 +32,7 @@ jobs:
           cd shop
           composer require --dev "phpunit/phpunit:*" phpstan/phpstan --no-interaction --no-scripts -W
       # The tests load the project's autoloader from custom/plugins/<plugin>/tests.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: shop/custom/plugins/ScaleVideoOptimizer
       - name: PHPUnit
@@ -46,10 +46,10 @@ jobs:
     name: Vitest
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
           cache-dependency-path: tests/js/package-lock.json
       - run: npm ci --no-audit --no-fund
@@ -61,6 +61,6 @@ jobs:
     name: shopware-cli extension validate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: shopware/shopware-cli-action@v1
+      - uses: actions/checkout@v7
+      - uses: shopware/shopware-cli-action@v3
       - run: shopware-cli extension validate . --check-against lowest
