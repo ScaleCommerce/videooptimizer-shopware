@@ -36,7 +36,7 @@ YouTube, Vimeo and self-hosting — the API token stays server-side, proxied thr
 - 📚 **Library management** — create and edit libraries (name, description) and their encoding ladder (codecs and resolutions), with add-on/unavailable options shown but disabled per the organization's plan; requeue all of a library's videos for re-encoding with the current ladder ("reprocess").
 - ⬆️ **Upload, URL import, rename, delete** — upload via presigned multipart upload (transferred directly to storage, not through Shopware) with progress, cancel and automatic retries, or import a video from a public `https://` URL. Processing is tracked in the background; large libraries load page by page. Deleting a video or a library asks for confirmation first.
 - 🖼️ **Video detail overlay** — pick the poster from 10 auto-generated frames, or upload a custom one (from disk or the Shopware media library); shows dimensions, duration and orientation.
-- 🧱 **Five CMS elements/blocks** — `Video`, `Media split`, `Background hero`, `Spotlight` and `Video grid`, each with a presentation mode (poster/facade, lightbox, or embedded directly) and a player mode (native adaptive HLS via hls.js, or the hosted VideoOptimizer embed).
+- 🧱 **Eight CMS elements/blocks** — `Video`, `Media split`, `Background hero`, `Spotlight`, `Video grid`, `Video list`, `Video detail` and `Video with chapters`, each with a presentation mode (poster/facade, lightbox, or embedded directly) and a player mode (native adaptive HLS via hls.js, or the hosted VideoOptimizer embed).
 - ⚡ **Storefront performance** — the player code and hls.js (light build) load only on pages with a video, and segments only once playback starts; autoplaying videos run only while visible. Embed lookups of a page run concurrently and are cached per video.
 - ♿ **Accessible** — titled embeds, keyboard-friendly facade and a lightbox built on a native modal `<dialog>` (focus stays inside, inert background, Escape), a pause button for the background hero and no autoplay with `prefers-reduced-motion`.
 - 🗂️ **Cache-aware** — pages are tagged per video, so changes in the administration invalidate exactly the affected storefront pages; a page rendered during an API outage is cached for 60 seconds only.
@@ -224,8 +224,9 @@ than five minutes and repeated deliveries are ignored.
 
 ### Shopping Experiences
 
-In a Shopping Experiences layout, add one of the five VideoOptimizer blocks from the **Video** category:
-`Video`, `Media split`, `Background hero`, `Spotlight`, `Video grid`. Pick a video (or videos, for the grid)
+In a Shopping Experiences layout, add one of the eight VideoOptimizer blocks from the **Video** category:
+`Video`, `Media split`, `Background hero`, `Spotlight`, `Video grid`, `Video list`, `Video detail`,
+`Video with chapters`. Pick a video (or videos, for the grid)
 via the gallery picker, then configure per element:
 
 - **Presentation mode** — poster/facade, lightbox, or embedded directly (background hero is always a
@@ -238,6 +239,33 @@ via the gallery picker, then configure per element:
   play button shape and size, accent colour as `--vo-accent`) and shows its subtitle tracks. The theme's `preload: auto` is capped to `metadata` for native players: video is only downloaded on play. Control bar colour,
   volume, time display and quality menu cannot be changed on the browser's native controls and are ignored;
   the hosted embed applies the whole theme itself.
+
+**Video list and video detail.** The list shows cards (poster, title, duration) of the ready videos of a
+library, optionally only those with all chosen tags, `3-48` per page with "More videos" links (the API
+cursor; other query parameters stay). A card links to a page with a `Video detail` element (choose it as
+"Detail page"; the video's UUID is added as `?vo_video=<uuid>`) or, without a detail page, opens the hosted
+player in a lightbox. The cards come from one cached list request (5 minutes) and need no request per video;
+the responsive poster sizes are used for videos whose embed is cached anyway. The detail element shows the
+video from the URL (only videos of its library, anything else shows a neutral "not found" and the page is set to
+`noindex`), otherwise its default video; the page title becomes the video title.
+
+**Video with chapters.** The player (shown directly) with 3-10 scene previews below it: the video's ten
+automatic thumbnails, spread evenly, labelled with their start time and optional titles (one per line). A click
+jumps to the scene and plays; the playing scene is marked. Needs a known video duration. A Content-Security-Policy
+`img-src` has to allow the API host and `*.cdn.videooptimizer.eu`.
+
+**Format.** Single video, media split and chapters can be shown as original, 16:9, 9:16, 1:1, 4:5 or 21:9 (the
+video covers the area; portrait formats are limited to 420 px); a focal point (X/Y %) chooses what stays visible
+(not supported by the hosted embed).
+
+**Floating mini player.** Single video and chapters: once a visitor has started the video and it scrolls out of
+view, it is pinned bottom right (screens from 600 px) with a close button; Escape unpins, scrolling back too.
+
+**Product video.** On the product detail page in the administration, the card "VideoOptimizer video" chooses a
+video (variants inherit the main product's and can replace it). It appears as the last slide of the product image
+gallery (poster in the thumbnail strip); a click plays it in place with sound and it stops when the visitor
+switches slides. The player (native or hosted embed) is the plugin setting "Product video player". The choice is
+stored in the product's custom fields `scalecommerce_vo_product_video` / `scalecommerce_vo_product_video_library`.
 
 <div align="center">
 

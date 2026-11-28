@@ -3,6 +3,8 @@ import {
     autoplayWhileVisible,
     destroyVideoSource,
     markUnavailable,
+    markExpectedPlayback,
+    motionReduced,
     resolvePlayback,
     applyPlayerTheme,
 } from '../helper/attach-video-source';
@@ -42,6 +44,7 @@ export default class ScalecommerceVoPlayer extends window.PluginBaseClass {
         this.video.loop = playback.loop;
         // Browsers block autoplay with sound, so a video set to autoplay must start muted
         // (mirrors the hosted VideoOptimizer embed). An explicit "muted" option still applies.
+        markExpectedPlayback(this.video);
         this.video.muted = playback.muted;
         applyPlayerTheme(this.video, this.el, this.options);
         if (this.options.poster) {
@@ -62,12 +65,21 @@ export default class ScalecommerceVoPlayer extends window.PluginBaseClass {
                     markUnavailable(this.el, this.video, unavailableLabel),
             }
         );
-        if (autoplay) {
+        // Other plugins (chapters) wait for the source before they seek.
+        this.el.__scvoReady = attached;
+        // Reduced motion / data saver: no autoplay, the poster and the controls stay.
+        if (autoplay && !motionReduced()) {
             attached.then(() => {
                 if (!this._destroyed) {
                     this._stopAutoplay = autoplayWhileVisible(
                         this.video,
-                        this.el
+                        this.el,
+                        {
+                            // The mini player takes over once the visitor interacted with the video.
+                            keepPlaying: () =>
+                                this.el.closest('[data-scalecommerce-vo-mini]')
+                                    ?.__scvoMiniStarted === true,
+                        }
                     );
                 }
             });

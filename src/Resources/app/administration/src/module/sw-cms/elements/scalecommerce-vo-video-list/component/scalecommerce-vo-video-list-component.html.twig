@@ -1,0 +1,14 @@
+{% block element_scalecommerce_vo_video_list %}
+<div class="scalecommerce-vo-video-list-component">
+    <p class="scalecommerce-vo-video-list-component__headline"
+       :class="{ 'scvo-preview-placeholder': !headline }">
+        {{ headline || $tc('scalecommerce-vo.cms.placeholder.headline') }}
+    </p>
+    <ul class="scalecommerce-vo-video-list-component__items" aria-hidden="true">
+        <li v-for="card in cards" :key="card" class="scalecommerce-vo-video-list-component__item">
+            <span class="scalecommerce-vo-video-list-component__thumb"><mt-icon name="regular-play" size="16" /></span>
+            <span class="scalecommerce-vo-video-list-component__title">{{ $tc('scalecommerce-vo.videoList.cardsPlaceholder') }} {{ card + 1 }}</span>
+        </li>
+    </ul>
+</div>
+{% endblock %}

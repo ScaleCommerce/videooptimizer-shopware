@@ -2,6 +2,7 @@
 <div class="scalecommerce-vo-media-split-component" :class="{ 'is-reversed': side === 'right' }">
     <div class="scalecommerce-vo-media-split-component__media">
         <scalecommerce-vo-preview-surface
+        :aspect="formatAspect"
             :poster-url="posterUrl"
             :presentation="presentation"
             :player-mode="playerMode"

@@ -1,6 +1,8 @@
 {% macro surface(embed, presentation, playerMode, embedUrl, label, options) %}
-    {% set aspect = (embed.aspectRatio ?? null)|default('16 / 9') %}
     {% set opts = options|default({}) %}
+    {# opts.layout: format, focal point (VideoSurfaceTrait::layoutOptions()); the format overrides the video's own ratio. #}
+    {% set layout = opts.layout ?? {} %}
+    {% set aspect = layout.aspect ?? (embed.aspectRatio ?? null)|default('16 / 9') %}
     {% set videoTitle = label ?: (embed.title ?? null) ?: ('scalecommerce-vo.storefront.video'|trans) %}
     {% set theme = embed.theme ?? {} %}
     {% set accent = theme.accentColor ?? null %}
@@ -16,12 +18,14 @@
         tracks: embed.tracks ?? [],
         unavailableLabel: 'scalecommerce-vo.storefront.unavailable'|trans
     } %}
-    <div class="scalecommerce-vo-surface" style="--scvo-aspect: {{ aspect }}{% if accent %}; --vo-accent: {{ accent }}{% endif %}"
+    <div class="scalecommerce-vo-surface{% if layout.portrait ?? false %} scalecommerce-vo-surface--portrait{% endif %}" style="--scvo-aspect: {{ aspect }}{% if layout.position ?? null %}; --scvo-pos: {{ layout.position }}{% endif %}{% if accent %}; --vo-accent: {{ accent }}{% endif %}"
          data-scalecommerce-vo-block="true"
          data-vo-presentation="{{ presentation }}"
          data-vo-player-mode="{{ playerMode }}"
          data-vo-embed-url="{{ embedUrl }}"
          data-vo-title="{{ videoTitle }}"
+         {% if layout.cover ?? false %}data-vo-fit="cover"{% endif %}
+         {% if opts.sound ?? false %}data-vo-sound="true"{% endif %}
          data-vo-native-options='{{ nativeOptions|json_encode }}'
          data-vo-label-close="{{ 'scalecommerce-vo.storefront.close'|trans }}">
         {% if presentation == 'direct' %}

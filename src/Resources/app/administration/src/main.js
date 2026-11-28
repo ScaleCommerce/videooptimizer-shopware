@@ -12,6 +12,8 @@ import './component/scalecommerce-vo-savings';
 import './component/scalecommerce-vo-webhook';
 import './component/scalecommerce-vo-subtitles';
 import './component/scalecommerce-vo-subtitle-languages';
+import './component/scalecommerce-vo-product-video-card';
+import './module/sw-product';
 import './module/sw-cms/elements/scalecommerce-vo-video';
 import './module/sw-cms/blocks/video/scalecommerce-vo-video';
 import './module/sw-cms/elements/scalecommerce-vo-media-split';
@@ -22,6 +24,12 @@ import './module/sw-cms/elements/scalecommerce-vo-spotlight';
 import './module/sw-cms/blocks/video/scalecommerce-vo-spotlight';
 import './module/sw-cms/elements/scalecommerce-vo-video-grid';
 import './module/sw-cms/blocks/video/scalecommerce-vo-video-grid';
+import './module/sw-cms/elements/scalecommerce-vo-chapters';
+import './module/sw-cms/blocks/video/scalecommerce-vo-chapters';
+import './module/sw-cms/elements/scalecommerce-vo-video-list';
+import './module/sw-cms/blocks/video/scalecommerce-vo-video-list';
+import './module/sw-cms/elements/scalecommerce-vo-video-detail';
+import './module/sw-cms/blocks/video/scalecommerce-vo-video-detail';
 
 Shopware.Service().register('scalecommerceVoApiService', (container) => {
     const initContainer = Shopware.Application.getContainer('init');

@@ -1,9 +1,10 @@
 import template from './scalecommerce-vo-media-split-config.html.twig';
 import libraryLoader from '../../../../../mixin/scalecommerce-vo-library-loader';
+import layout from '../../../../../mixin/scalecommerce-vo-layout';
 
 Shopware.Component.register('scalecommerce-vo-media-split-config', {
     template,
-    mixins: ['cms-element', libraryLoader],
+    mixins: ['cms-element', libraryLoader, layout],
     inject: ['scalecommerceVoApiService', 'feature'],
 
     computed: {
@@ -82,6 +83,10 @@ Shopware.Component.register('scalecommerce-vo-media-split-config', {
         },
         onPresentationChange(presentation) {
             this.element.config.presentation.value = presentation;
+            this.$emit('element-update', this.element);
+        },
+        onFormatChange(format) {
+            this.element.config.format.value = format;
             this.$emit('element-update', this.element);
         },
         onPlayerModeChange(mode) {

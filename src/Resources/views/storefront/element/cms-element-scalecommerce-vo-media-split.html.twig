@@ -7,7 +7,8 @@
         autoplay: config.autoplay.value ?? false,
         muted: config.muted.value ?? false,
         loop: config.loop.value ?? false,
-        posterSizes: '(min-width: 768px) 50vw, 100vw'
+        posterSizes: '(min-width: 768px) 50vw, 100vw',
+        layout: data.layout ?? {}
     } %}
     {% if data and data.videoUuid %}
         <div class="scalecommerce-vo-media-split{{ data.side == 'right' ? ' is-reversed' : '' }}">

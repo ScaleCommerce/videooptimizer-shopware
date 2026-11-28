@@ -33,6 +33,8 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    // Focal point of the element's "format" option (50% 50% = centred).
+    object-position: var(--scvo-pos, 50% 50%);
 
     // Players opened from a facade or in the lightbox show the whole video.
     &--contain {
@@ -56,6 +58,14 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: var(--scvo-pos, 50% 50%);
+}
+
+// Portrait formats (9:16, 4:5) must not fill a desktop screen: capped and centred.
+.scalecommerce-vo-surface--portrait,
+.scalecommerce-vo-video--portrait {
+    max-width: min(100%, 420px);
+    margin-inline: auto;
 }
 
 // Notice for a player whose video cannot be played (fatal HLS error, no MP4 fallback). The poster

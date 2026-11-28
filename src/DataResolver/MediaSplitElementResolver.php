@@ -65,6 +65,7 @@ class MediaSplitElementResolver extends AbstractCmsElementResolver
         $surface = $this->buildVideoSurface($config, $uuid, $this->client, $this->logger);
         $struct->setPlayerMode($surface['playerMode']);
         $struct->setEmbedUrl($surface['embedUrl']);
+        $struct->setLayout($surface['layout']);
         $struct->setEmbed($surface['embed']);
         $struct->setError($surface['error']);
     }

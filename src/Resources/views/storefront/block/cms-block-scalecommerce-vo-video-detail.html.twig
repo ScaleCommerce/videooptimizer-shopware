@@ -1,0 +1,6 @@
+{% block block_scalecommerce_vo_video_detail %}
+    {% set element = block.slots.getSlot('videoDetail') %}
+    <div class="col-12" data-cms-element-id="{{ element.id }}">
+        {% sw_include '@Storefront/storefront/element/cms-element-' ~ element.type ~ '.html.twig' ignore missing %}
+    </div>
+{% endblock %}

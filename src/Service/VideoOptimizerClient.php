@@ -25,10 +25,15 @@ class VideoOptimizerClient implements ResetInterface
     private const DEFAULT_BASE_URL = 'https://api.videooptimizer.eu/api/v1';
     private const DEFAULT_EMBED_BASE_URL = 'https://player.videooptimizer.eu';
     private const PAGE_LIMIT = 100;
+    private const CURSOR_PATTERN = '/^[A-Za-z0-9_=+\/.:-]{1,200}$/D';
+    private const LIST_FILL_CALLS = 3;
+    private const UNCACHED_LOOKUPS_PER_MINUTE = 30;
+    private const OWNER_MISSING_CACHE_TTL = 300;
     private const MAX_PAGES = 100;
     private const MAX_RETRY_AFTER = 5;
     private const EMBED_CACHE_TTL = 3600;
     private const EMBED_FAILURE_CACHE_TTL = 60;
+    private const STOREFRONT_LIST_CACHE_TTL = 300;
     private const ADMIN_MAX_DURATION = 30.0;
     /**
      * Total time budget for collecting all pages of a list in one admin request.
@@ -369,6 +374,7 @@ class VideoOptimizerClient implements ResetInterface
     public function forgetEmbed(string $uuid): void
     {
         $this->cache->delete($this->embedCacheKey($uuid));
+        $this->cache->delete($this->ownerCacheKey($uuid));
         // Called after a successful admin call, so the API is reachable again.
         $this->cache->delete(self::EMBED_API_UNAVAILABLE_KEY);
         // Pages showing this video were tagged while rendering (EmbedPageCacheSubscriber).
@@ -395,6 +401,200 @@ class VideoOptimizerClient implements ResetInterface
         }
         $validUuid = $uuid !== null && preg_match('/^[A-Za-z0-9_-]+$/D', $uuid) === 1 ? $uuid : null;
         $this->availability->markLibraryRendered($libraryId, $validUuid);
+    }
+
+    /**
+     * One page of a library's ready videos for the storefront list element: cached for five minutes
+     * (tagged with the library and the listed videos, see forgetLibrary()), capped like getEmbed() and
+     * never retried while rendering. A page shows only ready videos: while it has fewer than `$limit`
+     * and the API has more, further API pages are read (at most three calls, each asking for the
+     * missing count only), so it is never empty while older ready videos exist and never longer than
+     * `$limit`; the next cursor is exact. A failure is
+     * cached briefly and reported as `failed`, never thrown. Only a first page (no cursor) may flag
+     * the API as unavailable: a lookup driven by a query string never sets the site-wide fail-fast.
+     *
+     * @param list<string> $tags only videos carrying all of these tags
+     *
+     * @return array{items: list<array<string, mixed>>, nextCursor: ?string, failed: bool}
+     */
+    public function storefrontVideoPage(string $libraryId, ?string $cursor, int $limit, array $tags = []): array
+    {
+        $limit = max(1, min($limit, self::PAGE_LIMIT));
+        $cursor = $cursor !== null && preg_match(self::CURSOR_PATTERN, $cursor) === 1 ? $cursor : null;
+        $tags = array_values(array_filter($tags, static fn (mixed $tag): bool => \is_string($tag) && $tag !== ''));
+        $key = 'scalecommerce_vo_list_' . hash('sha256', implode('|', [$libraryId, (string) $cursor, $limit, implode(',', $tags)]));
+        $path = '/libraries/' . $this->pathId($libraryId) . '/videos';
+        $failed = ['items' => [], 'nextCursor' => null, 'failed' => true];
+
+        if ($this->embedApiUnavailable() && !($this->cache instanceof CacheItemPoolInterface && $this->cache->hasItem($key))) {
+            $this->availability->markDegraded();
+
+            return $failed;
+        }
+
+        // A page for a cursor from the URL costs the same budget as an unknown video (crafted cursors).
+        $listCached = $this->cache instanceof CacheItemPoolInterface && $this->cache->hasItem($key);
+        if ($cursor !== null && !$listCached && !$this->allowUncachedLookup()) {
+            $this->availability->markDegraded();
+
+            return $failed;
+        }
+
+        $result = $this->cache->get($key, function (ItemInterface $item) use ($path, $libraryId, $cursor, $limit, $tags, $failed): array {
+            $items = [];
+            $next = $cursor;
+            try {
+                for ($call = 0; $call < self::LIST_FILL_CALLS; ++$call) {
+                    // Follow-up calls only ask for what is still missing, so a page never exceeds its size.
+                    $query = ['limit' => max(1, $limit - \count($items))] + $this->videoFilterQuery($tags, []);
+                    if ($next !== null) {
+                        $query['cursor'] = $next;
+                    }
+                    $response = $this->request('GET', $path, ['query' => $query, 'max_duration' => self::EMBED_MAX_DURATION], true, false);
+                    array_push($items, ...array_values(array_filter(
+                        $this->listOf(is_array($response['data'] ?? null) ? $response['data'] : []),
+                        static fn (array $video): bool => ($video['status'] ?? null) === 'ready' && \is_string($video['uuid'] ?? null),
+                    )));
+                    $pagination = is_array($response['pagination'] ?? null) ? $response['pagination'] : [];
+                    $candidate = $pagination['next_cursor'] ?? null;
+                    $next = ($pagination['has_more'] ?? false) === true && \is_string($candidate) && preg_match(self::CURSOR_PATTERN, $candidate) === 1 ? $candidate : null;
+                    if ($next === null || \count($items) >= $limit) {
+                        break;
+                    }
+                }
+            } catch (\Throwable $e) {
+                if ($cursor === null && $this->indicatesApiUnavailable($e)) {
+                    $this->markEmbedApiUnavailable();
+                }
+                $this->logger->warning('VideoOptimizer video list lookup failed.', ['library' => $libraryId, 'error' => $e->getMessage()]);
+                $item->expiresAfter(self::EMBED_FAILURE_CACHE_TTL);
+
+                return $failed;
+            }
+            $item->expiresAfter(self::STOREFRONT_LIST_CACHE_TTL);
+            // The listed videos are the token's own: the detail page of a card needs no lookup of its own.
+            foreach ($items as $video) {
+                $this->seedOwner((string) $video['uuid'], $libraryId);
+            }
+            try {
+                // A change of one of the videos (title, poster) drops the list as well as the pages.
+                $item->tag([
+                    EmbedRenderState::libraryCacheTag($libraryId),
+                    ...array_map(static fn (array $video): string => EmbedRenderState::cacheTag((string) $video['uuid']), $items),
+                ]);
+            } catch (\LogicException) {
+            }
+
+            return ['items' => $items, 'nextCursor' => $next, 'failed' => false];
+        });
+
+        if (($result['failed'] ?? false) === true) {
+            $this->availability->markDegraded();
+        }
+
+        return $result;
+    }
+
+    /**
+     * The embed payload of a video if it is already cached - never asks the API. Lets list cards use
+     * the responsive posters of videos that were rendered before without one lookup per card.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function peekEmbed(string $uuid): ?array
+    {
+        if (preg_match('/^[A-Za-z0-9_-]+$/D', $uuid) !== 1 || !$this->cache instanceof CacheItemPoolInterface) {
+            return null;
+        }
+        $item = $this->cache->getItem($this->embedCacheKey($uuid));
+        $value = $item->isHit() ? $item->get() : null;
+
+        return is_array($value) && ($value['__scvo_failed'] ?? false) !== true ? $value : null;
+    }
+
+    /**
+     * Tags the page with a video that is shown without an embed lookup (list cards), so a change of
+     * that video invalidates the page.
+     */
+    public function markVideoRendered(string $uuid): void
+    {
+        if (preg_match('/^[A-Za-z0-9_-]+$/D', $uuid) === 1) {
+            $this->availability->markRendered($uuid);
+        }
+    }
+
+    /**
+     * Checks a video UUID that came from a URL against the organization of the token (authenticated
+     * `GET /videos/{uuid}`; the public embed proves nothing): `ok` with the video's library, `missing`
+     * for a foreign or unknown video (404 only), `unavailable` when the API cannot answer or refuses
+     * (400, 403, 5xx, rate limit). Cached: a found video
+     * for the embed TTL, a missing one for five minutes, an outage for one minute. Uncached lookups
+     * of unknown videos are limited to 30 per minute for the whole site (beyond that: `unavailable`,
+     * temporary, without asking the API and without caching anything), and a lookup like this never sets the site-wide fail-fast flag.
+     *
+     * @return array{status: 'ok'|'missing'|'unavailable', library: ?string}
+     */
+    public function storefrontVideoOwner(string $uuid): array
+    {
+        $key = $this->ownerCacheKey($uuid);
+        $path = '/videos/' . $this->pathId($uuid);
+        $missing = ['status' => 'missing', 'library' => null];
+        $unavailable = ['status' => 'unavailable', 'library' => null];
+        $cached = $this->cache instanceof CacheItemPoolInterface && $this->cache->hasItem($key);
+
+        if (!$cached) {
+            if ($this->embedApiUnavailable()) {
+                $this->availability->markDegraded();
+
+                return $unavailable;
+            }
+            // Over the budget is a temporary state, not an answer about the video: nothing is cached
+            // and the page is short-lived.
+            if (!$this->allowUncachedLookup()) {
+                $this->availability->markDegraded();
+
+                return $unavailable;
+            }
+        }
+
+        $result = $this->cache->get($key, function (ItemInterface $item) use ($path, $missing, $unavailable): array {
+            try {
+                $video = $this->requestData('GET', $path, ['max_duration' => self::EMBED_MAX_DURATION], true, false);
+            } catch (VideoOptimizerApiException $e) {
+                // Only a 404 is an answer about the video. 400/403 are plan limits, a trial lock, a locked
+                // organization or a token without the scope: temporary for the visitor, nothing to cache.
+                if ($e->getStatusCode() === 404) {
+                    $item->expiresAfter(self::OWNER_MISSING_CACHE_TTL);
+
+                    return $missing;
+                }
+                $item->expiresAfter(self::EMBED_FAILURE_CACHE_TTL);
+
+                return $unavailable;
+            } catch (\Throwable) {
+                $item->expiresAfter(self::EMBED_FAILURE_CACHE_TTL);
+
+                return $unavailable;
+            }
+            $item->expiresAfter(self::EMBED_CACHE_TTL);
+            $id = $video['library_id'] ?? null;
+
+            return ['status' => 'ok', 'library' => \is_string($id) && $id !== '' ? $id : null];
+        });
+
+        if (($result['status'] ?? null) === 'unavailable') {
+            $this->availability->markDegraded();
+        }
+
+        return \is_array($result) && isset($result['status']) ? $result : $unavailable;
+    }
+
+    /**
+     * Public URL of scene thumbnail $index (0..9); the endpoint needs no token and redirects to the CDN.
+     */
+    public function thumbnailUrl(string $uuid, int $index): string
+    {
+        return $this->baseUrl() . '/videos/' . $this->pathId($uuid) . '/thumbnails/' . max(0, min(9, $index));
     }
 
     public function listThumbnails(string $uuid): array
@@ -624,6 +824,55 @@ class VideoOptimizerClient implements ResetInterface
         $this->assertHttpsUrl($url, 'The VideoOptimizer embed base URL must be an absolute https URL.');
 
         return $url;
+    }
+
+    /**
+     * Records that a video belongs to the token's organization and library (from a list result).
+     */
+    private function seedOwner(string $uuid, string $libraryId): void
+    {
+        if (!$this->cache instanceof CacheItemPoolInterface || preg_match('/^[A-Za-z0-9_-]+$/D', $uuid) !== 1) {
+            return;
+        }
+        $item = $this->cache->getItem($this->ownerCacheKey($uuid));
+        $item->set(['status' => 'ok', 'library' => $libraryId]);
+        $item->expiresAfter(self::EMBED_CACHE_TTL);
+        $this->cache->save($item);
+    }
+
+    /**
+     * Cache key of the ownership answer: scoped by the token (another token, another organization)
+     * and dropped by forgetEmbed() when the video changes.
+     */
+    private function ownerCacheKey(string $uuid): string
+    {
+        try {
+            $scope = substr(hash('sha256', $this->token()), 0, 16);
+        } catch (\Throwable) {
+            $scope = 'notoken';
+        }
+
+        return 'scalecommerce_vo_video_owner_' . $scope . '_' . rawurlencode($uuid);
+    }
+
+    /**
+     * True for the first 30 uncached lookups per minute and site; counted in the cache.
+     */
+    private function allowUncachedLookup(): bool
+    {
+        if (!$this->cache instanceof CacheItemPoolInterface) {
+            return true;
+        }
+        $item = $this->cache->getItem('scalecommerce_vo_lookup_budget_' . intdiv(time(), 60));
+        $count = $item->isHit() ? (int) $item->get() : 0;
+        if ($count >= self::UNCACHED_LOOKUPS_PER_MINUTE) {
+            return false;
+        }
+        $item->set($count + 1);
+        $item->expiresAfter(120);
+        $this->cache->save($item);
+
+        return true;
     }
 
     /**

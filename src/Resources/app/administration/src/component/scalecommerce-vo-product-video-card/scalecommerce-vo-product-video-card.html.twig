@@ -1,0 +1,35 @@
+{% block scalecommerce_vo_product_video_card %}
+<sw-card
+    class="scalecommerce-vo-product-video-card"
+    :title="$tc('scalecommerce-vo.productVideo.title')"
+    :subtitle="$tc('scalecommerce-vo.productVideo.subtitle')"
+    position-identifier="scalecommerce-vo-product-video">
+    <scalecommerce-vo-api-notice :error="librariesError" />
+
+    <p v-if="isInherited" class="scalecommerce-vo-product-video-card__hint">
+        {{ $tc('scalecommerce-vo.productVideo.inherited') }}
+    </p>
+
+    <mt-select
+        :label="$tc('scalecommerce-vo.cms.library')"
+        :options="libraryOptions"
+        :model-value="selectedLibraryId"
+        :disabled="!canEdit"
+        @update:model-value="onLibraryChange" />
+
+    <scalecommerce-vo-video-gallery
+        :library-id="selectedLibraryId"
+        :selected-uuid="shown.uuid"
+        mode="select"
+        @select="onVideoSelect"
+        @upload-complete="onVideoSelect" />
+
+    <mt-button
+        v-if="own.uuid && canEdit"
+        size="small"
+        variant="secondary"
+        @click="onRemove">
+        {{ $tc('scalecommerce-vo.productVideo.remove') }}
+    </mt-button>
+</sw-card>
+{% endblock %}

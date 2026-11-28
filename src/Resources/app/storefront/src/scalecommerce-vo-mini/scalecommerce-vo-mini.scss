@@ -1,0 +1,50 @@
+// Floating mini player (see the plugin): the player box is pinned bottom right while the visitor
+// has scrolled past a playing video. The placeholder (the element) keeps the original height.
+.scalecommerce-vo-mini {
+    &__close {
+        display: none;
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        z-index: 2;
+        width: 32px;
+        height: 32px;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.65);
+        color: #fff;
+        font-size: 20px;
+        line-height: 1;
+        cursor: pointer;
+
+        &:focus-visible {
+            outline: 3px solid var(--vo-accent, #fff);
+            outline-offset: 2px;
+        }
+    }
+
+    // Below the modals (1055) and their backdrop (1050) of the storefront.
+    .is-pinned {
+        position: fixed;
+        right: max(16px, env(safe-area-inset-right));
+        bottom: max(16px, env(safe-area-inset-bottom));
+        z-index: 1040;
+        width: 320px;
+        max-width: calc(100vw - 32px);
+        margin: 0;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+
+        &.is-portrait {
+            width: 180px;
+        }
+
+        .scalecommerce-vo-mini__close {
+            display: flex;
+        }
+    }
+}

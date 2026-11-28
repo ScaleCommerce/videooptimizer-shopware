@@ -66,7 +66,20 @@
                 "label": "Label"
             },
             "embedBadge": "Embed",
-            "videoMissing": "The video no longer exists"
+            "videoMissing": "The video no longer exists",
+            "format": "Format",
+            "formatOriginal": "Original (video ratio)",
+            "format169": "16:9",
+            "format916": "9:16 (portrait)",
+            "format11": "1:1 (square)",
+            "format45": "4:5 (portrait)",
+            "format219": "21:9 (banner)",
+            "formatHint": "A fixed format crops the video to fill the area (portrait formats are limited to 420 px width).",
+            "focalX": "Focal point horizontal (%)",
+            "focalY": "Focal point vertical (%)",
+            "focalHint": "Which part stays visible when the video is cropped. Not supported by the hosted embed.",
+            "miniPlayer": "Floating mini player",
+            "miniPlayerHint": "Once a visitor has started the video (a click, or unmuting/seeking an autoplaying one) and it scrolls out of view, it is pinned bottom right (screens from 600 px)."
         },
         "mediaSplit": {
             "label": "VideoOptimizer media split",
@@ -324,6 +337,40 @@
             "lastDelivery": "Last delivery: {event}, {time}",
             "noDelivery": "No delivery received yet.",
             "openConfig": "Open plugin configuration"
+        },
+        "chapters": {
+            "label": "VideoOptimizer video with chapters",
+            "blockLabel": "VideoOptimizer video with chapters",
+            "headline": "Headline",
+            "sceneCount": "Number of scenes (3-10)",
+            "sceneTitles": "Scene titles",
+            "sceneTitlesHint": "One title per line, in the order of the scenes. Empty lines keep \"Scene n\". The previews are the video's ten automatic thumbnails, spread evenly.",
+            "scene": "Scene {number}"
+        },
+        "videoList": {
+            "label": "VideoOptimizer video list",
+            "blockLabel": "VideoOptimizer video list",
+            "headline": "Headline",
+            "intro": "Intro",
+            "pageSize": "Videos per page (3-48)",
+            "tags": "Only videos with these tags",
+            "detailPage": "Detail page",
+            "detailPageHelp": "Page with a \"VideoOptimizer video detail\" element; a card links there with the video in the URL. Without one, a card opens the hosted player in a lightbox.",
+            "libraryHint": "Only ready videos of the library are listed.",
+            "cardsPlaceholder": "Video"
+        },
+        "videoDetail": {
+            "label": "VideoOptimizer video detail",
+            "blockLabel": "VideoOptimizer video detail",
+            "defaultVideo": "Default video",
+            "libraryHint": "The video shown comes from the URL (?vo_video=...) and has to belong to your VideoOptimizer organization (and to this library, if one is selected); without a video in the URL the default video is shown.",
+            "titlePlaceholder": "Video title"
+        },
+        "productVideo": {
+            "title": "VideoOptimizer video",
+            "subtitle": "Shown as a slide in the product image gallery",
+            "inherited": "Inherited from the main product. Choose a video to replace it for this variant.",
+            "remove": "Remove video"
         }
     },
     "sw-privileges": {

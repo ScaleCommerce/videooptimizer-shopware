@@ -332,3 +332,51 @@ describe('lightbox as a native dialog (#32)', () => {
         expect(close).toHaveBeenCalledTimes(1);
     });
 });
+
+describe('format (#47)', () => {
+    function fixed(action) {
+        document.body.innerHTML = `<div class="block" data-vo-fit="cover" data-vo-player-mode="native" data-vo-title="D" data-vo-native-options='${NATIVE}'>
+            <button type="button" class="facade" data-vo-action="${action}">Play</button></div>`;
+        new ScalecommerceVoBlocks(document.querySelector('.block'));
+        document.querySelector('.facade').click();
+    }
+
+    it('lets the player opened from the facade fill a fixed-format surface', () => {
+        fixed('facade');
+
+        const video = document.querySelector('.block video');
+        expect(video.classList.contains('scalecommerce-vo-video__player--contain')).toBe(false);
+    });
+
+    it('keeps the whole video in the lightbox, which has its own 16:9 stage', () => {
+        fixed('lightbox');
+
+        const video = document.querySelector('.scalecommerce-vo-lightbox video');
+        expect(video.classList.contains('scalecommerce-vo-video__player--contain')).toBe(true);
+    });
+
+    it('still letterboxes the facade player without a format', () => {
+        setup({ action: 'facade' }).facade.click();
+
+        expect(document.querySelector('.block video').classList.contains('scalecommerce-vo-video__player--contain')).toBe(true);
+    });
+});
+
+describe('sound on click (#48)', () => {
+    function hosted(sound) {
+        document.body.innerHTML = `<div class="block" ${sound ? 'data-vo-sound="true"' : ''} data-vo-player-mode="embed" data-vo-embed-url="https://player.example/embed/abc?muted=0" data-vo-title="D" data-vo-native-options='{}'>
+            <button type="button" class="facade" data-vo-action="facade">Play</button></div>`;
+        new ScalecommerceVoBlocks(document.querySelector('.block'));
+        document.querySelector('.facade').click();
+        return new URL(document.querySelector('.block iframe').getAttribute('src')).searchParams;
+    }
+
+    it('starts a hosted player with sound when the element asks for it', () => {
+        expect(hosted(true).get('muted')).toBe('0');
+        expect(hosted(true).get('autoplay')).toBe('1');
+    });
+
+    it('keeps starting other hosted facades muted', () => {
+        expect(hosted(false).get('muted')).toBe('1');
+    });
+});

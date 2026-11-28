@@ -217,6 +217,19 @@ class MediaSplitElementResolverTest extends TestCase
         $resolver->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
     }
 
+    public function testFormatOptionsReachTheStruct(): void
+    {
+        $client = $this->createStub(VideoOptimizerClient::class);
+        $client->method('getEmbed')->willReturn(['sources' => [['src' => 'https://cdn/v.mp4', 'type' => 'video/mp4', 'codec' => 'h264', 'label' => '720p']]]);
+        $client->method('embedBaseUrl')->willReturn('https://videooptimizer.eu');
+
+        $slot = $this->slot(['video' => 'uuid-1', 'format' => '1-1', 'focalX' => 10, 'focalY' => 90]);
+        $this->resolver($client)->enrich($slot, $this->createStub(ResolverContext::class), new ElementDataCollection());
+
+        static::assertSame('1 / 1', $slot->getData()->getLayout()['aspect']);
+        static::assertSame('10% 90%', $slot->getData()->getLayout()['position']);
+    }
+
     private function resolver(VideoOptimizerClient $client, ?LoggerInterface $logger = null): MediaSplitElementResolver
     {
         return new MediaSplitElementResolver($client, new HtmlSanitizer(), $logger ?? new NullLogger());

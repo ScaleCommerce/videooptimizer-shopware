@@ -34,3 +34,24 @@ PluginManager.register(
     // The second selector keeps theme overrides of the pre-1.1 hero template working.
     '[data-scalecommerce-vo-hero], [data-scalecommerce-vo-hero-hls]'
 );
+PluginManager.register(
+    'ScalecommerceVoChapters',
+    load(
+        () =>
+            import('./scalecommerce-vo-chapters/scalecommerce-vo-chapters.plugin')
+    ),
+    '[data-scalecommerce-vo-chapters]'
+);
+PluginManager.register(
+    'ScalecommerceVoMini',
+    load(() => import('./scalecommerce-vo-mini/scalecommerce-vo-mini.plugin')),
+    '[data-scalecommerce-vo-mini]'
+);
+PluginManager.register(
+    'ScalecommerceVoProductVideo',
+    load(
+        () =>
+            import('./scalecommerce-vo-product-video/scalecommerce-vo-product-video.plugin')
+    ),
+    '[data-scalecommerce-vo-gallery-video]'
+);

@@ -53,6 +53,7 @@ class VideoOptimizerElementResolver extends AbstractCmsElementResolver
         $surface = $this->buildVideoSurface($fieldConfig, $uuid, $this->client, $this->logger);
         $struct->setPlayerMode($surface['playerMode']);
         $struct->setEmbedUrl($surface['embedUrl']);
+        $struct->setLayout($surface['layout']);
         if ($surface['error']) {
             $struct->setError(true);
 

@@ -12,6 +12,11 @@ class MediaSplitStruct extends Struct
 
     protected ?string $embedUrl = null;
 
+    /**
+     * @var array<string, mixed>
+     */
+    protected array $layout = [];
+
     protected ?array $embed = null;
 
     protected ?string $presentation = null;
@@ -29,6 +34,24 @@ class MediaSplitStruct extends Struct
     protected ?string $ctaUrl = null;
 
     protected bool $error = false;
+
+    /**
+     * Format, focal point and mini player flag, see VideoSurfaceTrait::layoutOptions().
+     *
+     * @return array<string, mixed>
+     */
+    public function getLayout(): array
+    {
+        return $this->layout;
+    }
+
+    /**
+     * @param array<string, mixed> $layout
+     */
+    public function setLayout(array $layout): void
+    {
+        $this->layout = $layout;
+    }
 
     public function getVideoUuid(): ?string
     {

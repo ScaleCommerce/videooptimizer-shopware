@@ -16,11 +16,23 @@ use Shopware\Core\Content\Cms\DataResolver\FieldConfigCollection;
 trait VideoSurfaceTrait
 {
     /**
-     * @return array{playerMode: string, embedUrl: string, embed: array<string, mixed>|null, error: bool}
+     * Aspect ratios of the "format" option (config value => CSS aspect-ratio).
+     */
+    private const FORMAT_ASPECTS = [
+        '16-9' => '16 / 9',
+        '9-16' => '9 / 16',
+        '1-1' => '1 / 1',
+        '4-5' => '4 / 5',
+        '21-9' => '21 / 9',
+    ];
+
+    /**
+     * @return array{playerMode: string, embedUrl: string, embed: array<string, mixed>|null, error: bool, layout: array<string, mixed>}
      */
     protected function buildVideoSurface(FieldConfigCollection $config, string $uuid, VideoOptimizerClient $client, LoggerInterface $logger): array
     {
         $playerMode = $config->get('playerMode')?->getValue() === 'embed' ? 'embed' : 'native';
+        $layout = $this->layoutOptions($config);
         $this->markLibraryRendered($config, $client, $uuid);
 
         try {
@@ -34,7 +46,7 @@ trait VideoSurfaceTrait
                 'error' => $e->getMessage(),
             ]);
 
-            return ['playerMode' => $playerMode, 'embedUrl' => '', 'embed' => null, 'error' => true];
+            return ['playerMode' => $playerMode, 'embedUrl' => '', 'embed' => null, 'error' => true, 'layout' => $layout];
         }
 
         // Always verify the video still exists upstream, regardless of player mode or
@@ -48,18 +60,43 @@ trait VideoSurfaceTrait
                 'error' => $e->getMessage(),
             ]);
 
-            return ['playerMode' => $playerMode, 'embedUrl' => $embedUrl, 'embed' => null, 'error' => true];
+            return ['playerMode' => $playerMode, 'embedUrl' => $embedUrl, 'embed' => null, 'error' => true, 'layout' => $layout];
         }
 
         if (!$this->isPlayable($embed)) {
             $this->logUnplayable($logger, $uuid);
 
-            return ['playerMode' => $playerMode, 'embedUrl' => $embedUrl, 'embed' => null, 'error' => true];
+            return ['playerMode' => $playerMode, 'embedUrl' => $embedUrl, 'embed' => null, 'error' => true, 'layout' => $layout];
         }
 
         $embed['jsonLd'] = $this->buildJsonLd($client, $uuid, $embed);
 
-        return ['playerMode' => $playerMode, 'embedUrl' => $embedUrl, 'embed' => $embed, 'error' => false];
+        return ['playerMode' => $playerMode, 'embedUrl' => $embedUrl, 'embed' => $embed, 'error' => false, 'layout' => $layout];
+    }
+
+    /**
+     * Presentation options of the video surface: the "format" (original ratio or a fixed one, with
+     * the video covering the surface), the focal point for object-position, and the floating mini
+     * player flag. Unknown or out-of-range values fall back to the defaults.
+     *
+     * @return array{format: string, aspect: ?string, portrait: bool, cover: bool, position: string, mini: bool}
+     */
+    protected function layoutOptions(FieldConfigCollection $config): array
+    {
+        $format = $config->get('format')?->getValue();
+        $format = is_string($format) && isset(self::FORMAT_ASPECTS[$format]) ? $format : 'original';
+        $axis = static function (mixed $value): int {
+            return is_numeric($value) ? max(0, min(100, (int) $value)) : 50;
+        };
+
+        return [
+            'format' => $format,
+            'aspect' => self::FORMAT_ASPECTS[$format] ?? null,
+            'portrait' => in_array($format, ['9-16', '4-5'], true),
+            'cover' => $format !== 'original',
+            'position' => $axis($config->get('focalX')?->getValue()) . '% ' . $axis($config->get('focalY')?->getValue()) . '%',
+            'mini' => $this->boolOption($config, 'miniPlayer', false),
+        ];
     }
 
     /**
@@ -101,6 +138,11 @@ trait VideoSurfaceTrait
             'loop' => $this->boolOption($config, 'loop', false) ? '1' : '0',
             'controls' => $this->boolOption($config, 'showControls', true) ? '1' : '0',
         ]);
+
+        // The hosted player fills a fixed-ratio surface instead of letterboxing the video.
+        if ($this->layoutOptions($config)['cover']) {
+            $query .= '&fit=cover';
+        }
 
         return $client->embedBaseUrl() . '/embed/' . rawurlencode($uuid) . '?' . $query;
     }
@@ -152,6 +194,7 @@ trait VideoSurfaceTrait
             'posterSrcset' => $posterSrcset,
             'posterSrcsetAttr' => EmbedSources::srcsetAttribute($posterSrcset),
             'title' => $embed['title'] ?? null,
+            'description' => is_string($embed['description'] ?? null) ? $embed['description'] : null,
             'uploadDate' => is_string($embed['uploadDate'] ?? null) && $embed['uploadDate'] !== '' ? $embed['uploadDate'] : null,
             'theme' => EmbedSources::theme($embed['theme'] ?? null),
             'tracks' => EmbedSources::tracks($embed['tracks'] ?? null),

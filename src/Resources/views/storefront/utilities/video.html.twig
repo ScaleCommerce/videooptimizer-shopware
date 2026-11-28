@@ -1,0 +1,27 @@
+{% sw_extends '@Storefront/storefront/utilities/video.html.twig' %}
+{% import "@ScaleVideoOptimizer/storefront/element/_scalecommerce-vo-surface.html.twig" as vo %}
+
+{# The video of a product (ProductVideoSlide) sits in the product image gallery as a media item of type video;
+   the gallery renders it through this utility: poster + play button in the slide, the poster in the
+   thumbnail strip and the zoom modal. Every other video is rendered by the core template. #}
+{% block video_utility %}
+    {% set scvoVideo = media.extensions.scalecommerceVoVideo ?? null %}
+    {% if scvoVideo %}
+        {# Poster images are decorative here (an empty alt on purpose). #}
+        {% set scvoDecorative = '' %}
+        {% set scvoClass = attributes.class ?? '' %}
+        {% set scvoTitle = scvoVideo.title ?: ('scalecommerce-vo.storefront.video'|trans) %}
+        {% set scvoPoster = scvoVideo.embed.poster ?? null %}
+        {% if 'gallery-slider-thumbnails-image' in scvoClass %}
+            {% if scvoPoster %}<span class="scalecommerce-vo-gallery-thumbwrap"><img class="{{ scvoClass }} scalecommerce-vo-gallery-thumb" src="{{ scvoPoster }}" alt="{{ scvoDecorative }}" loading="eager" decoding="async"><span class="scalecommerce-vo-gallery-thumbwrap__play" aria-hidden="true">▶</span></span>{% endif %}
+        {% elseif 'img-fluid' not in scvoClass %}
+            {% if scvoPoster %}<img class="{{ scvoClass }}" src="{{ scvoPoster }}" alt="{{ scvoDecorative }}" loading="lazy" decoding="async">{% endif %}
+        {% else %}
+            <div class="scalecommerce-vo-gallery-video" data-scalecommerce-vo-gallery-video="true">
+                {{ vo.surface(scvoVideo.embed, 'facade', scvoVideo.playerMode, scvoVideo.embedUrl, scvoTitle, { posterSizes: '(min-width: 992px) 50vw, 100vw', sound: true }) }}
+            </div>
+        {% endif %}
+    {% else %}
+        {{ parent() }}
+    {% endif %}
+{% endblock %}

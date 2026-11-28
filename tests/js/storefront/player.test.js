@@ -50,6 +50,36 @@ describe('native player (#34)', () => {
         expect(video.getAttribute('poster')).toBe('https://cdn/poster.jpg');
     });
 
+    it('does not autoplay with reduced motion or the data saver (#45)', async () => {
+        window.matchMedia = () => ({ matches: true });
+        const { video } = setup({ autoplay: true, mp4: 'https://cdn/v.mp4' });
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        observers.forEach((observer) => observer.show(true));
+
+        expect(video.paused).not.toBe(false);
+        expect(observers).toHaveLength(0);
+        delete window.matchMedia;
+    });
+
+    it('does not pause an autoplaying video that the visitor took over in the mini player', async () => {
+        const { el, video } = setup({ autoplay: true, mp4: 'https://cdn/v.mp4' });
+        el.setAttribute('data-scalecommerce-vo-mini', '');
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        observers.forEach((observer) => observer.show(true));
+        expect(video.paused).toBe(false);
+
+        el.__scvoMiniStarted = true;
+        observers.forEach((observer) => observer.show(false));
+
+        expect(video.paused).toBe(false);
+    });
+
+    it('publishes the attached source for other plugins (chapters, #46)', async () => {
+        const { el } = setup({ mp4: 'https://cdn/v.mp4' });
+
+        await expect(el.__scvoReady).resolves.toBeUndefined();
+    });
+
     it('mutes an autoplaying video and never uses the autoplay attribute', () => {
         const { video } = setup({ autoplay: true, mp4: 'https://cdn/v.mp4' });
 

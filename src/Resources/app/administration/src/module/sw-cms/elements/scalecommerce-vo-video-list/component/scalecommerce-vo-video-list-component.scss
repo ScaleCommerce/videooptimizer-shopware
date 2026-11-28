@@ -1,0 +1,32 @@
+.scalecommerce-vo-video-list-component {
+    width: 100%;
+
+    &__headline {
+        margin: 0 0 8px;
+        font-weight: 600;
+    }
+
+    &__items {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    &__thumb {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        aspect-ratio: 16 / 9;
+        border-radius: 3px;
+        background: #c9ced6;
+    }
+
+    &__title {
+        display: block;
+        margin-top: 4px;
+        font-size: 12px;
+    }
+}
