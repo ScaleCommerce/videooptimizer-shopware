@@ -2,7 +2,7 @@
 
 All notable changes to this package. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [2.2.0] - 2026-11-28
 
 ### Upgrade
 - The plugin extends the core template `storefront/utilities/video.html.twig` (the video of a product is rendered through it; every other video falls through to the core template): themes that also override it have to extend or merge it, and a product with a video shows one more slide/thumbnail in its image gallery. The new setting `productVideoPlayerMode` (native or hosted embed, default native) chooses the player ([#48](https://github.com/ScaleCommerce/videooptimizer-shopware/issues/48)).
